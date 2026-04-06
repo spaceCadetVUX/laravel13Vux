@@ -6,13 +6,27 @@
 
 ## Stack
 
-- **Framework:** Laravel 13
-- **PHP:** 8.5
-- **Runtime:** FrankenPHP + Octane
-- **Frontend:** Inertia.js + SSR
-- **Admin:** Filament 3
-- **Testing:** Pest
-- **Local dev:** Laragon (PostgreSQL 16 added manually) or Docker Compose
+| Layer | Choice |
+|-------|--------|
+| Framework | Laravel 13 |
+| Language | PHP 8.5 |
+| Runtime | FrankenPHP + Octane (persistent workers) |
+| Frontend | Inertia.js + Vue 3 (Composition API + `<script setup>`) |
+| SSR | Inertia SSR via Node.js |
+| CSS | Tailwind CSS 3 |
+| Assets | Vite (built into Laravel) |
+| Admin | Filament 3 |
+| Database | PostgreSQL 16 + PgBouncer |
+| Cache / Queue | Redis 7 |
+| Search | Meilisearch (self-hosted) |
+| Storage | Cloudflare R2 (S3-compatible) |
+| CDN | Cloudflare |
+| Email | Resend |
+| Payment | VNPay (custom driver behind `PaymentGateway` contract) |
+| Testing | Pest |
+| Local dev | Docker Compose (`postgres:16`, `redis:7`, `meilisearch`, `mailpit`) |
+| Hosting | Local VPS Vietnam + Laravel Forge |
+| CI/CD | GitHub Actions → Forge webhook |
 
 ---
 
@@ -22,7 +36,7 @@
 |----------|--------|-------|
 | Engine | **PostgreSQL 16** | Laragon: add pg16 binaries manually. VPS: Forge installs automatically |
 | IDs | **ULID** | `HasUlids` trait on every model. `Str::ulid()` in Laravel built-in |
-| Money | **BIGINT cents** | `2999` = $29.99. Use `moneyphp/money` for all arithmetic |
+| Money | **BIGINT — whole VND units** | `250000` = 250,000 VND. No decimals in VND. Use `moneyphp/money` for arithmetic. VNPay ×100 handled inside driver only |
 | Timestamps | **UTC** | `APP_TIMEZONE=UTC` in `.env`. Convert to local TZ at display only |
 | Soft deletes | **`deleted_at`** on all business tables | Hard delete only: `order_events`, `payment_events`, `audit_log`, `cart_items` |
 | Translations | **`spatie/laravel-translatable`** (JSON column) | 1 language now, add more later — zero schema change needed |
@@ -71,6 +85,44 @@ meta_desc       JSONB NULL       -- SEO meta description
 ```
 
 **Filament integration:** use `FilamentTiptapEditor` or `RichEditor` field in the Filament resource — connects directly to TinyMCE/Tiptap, output is sanitized HTML saved to `description`.
+
+**Complete `products` table schema:**
+```
+id              ULID PK
+brand_id        ULID NULL FK → brands
+sku             TEXT NOT NULL UNIQUE
+status          TEXT NOT NULL DEFAULT 'draft'   -- 'draft'|'published'|'archived'
+name            JSONB NOT NULL                  -- translatable
+slug            JSONB NOT NULL                  -- translatable, unique per locale
+description     JSONB NULL                      -- translatable rich HTML
+short_desc      JSONB NULL                      -- translatable plain text
+meta_title      JSONB NULL                      -- SEO override
+meta_desc       JSONB NULL                      -- SEO override
+price           BIGINT NOT NULL                 -- VND
+sale_price      BIGINT NULL                     -- VND, null = no sale
+sale_starts_at  TIMESTAMPTZ NULL
+sale_ends_at    TIMESTAMPTZ NULL
+qty_on_hand     INT NOT NULL DEFAULT 0
+qty_reserved    INT NOT NULL DEFAULT 0
+allow_backorder BOOLEAN NOT NULL DEFAULT false
+low_stock_alert INT NULL
+weight          NUMERIC(8,2) NULL               -- kg, for future weight-based shipping
+attributes      JSONB NULL                      -- {"color":"blue","material":"cotton"}
+last_synced_at  TIMESTAMPTZ NULL
+created_at      TIMESTAMPTZ
+updated_at      TIMESTAMPTZ
+deleted_at      TIMESTAMPTZ NULL
+```
+
+**`brands` table:**
+```
+id          ULID PK
+name        TEXT NOT NULL
+slug        TEXT NOT NULL UNIQUE
+logo_url    TEXT NULL
+created_at  TIMESTAMPTZ
+deleted_at  TIMESTAMPTZ NULL
+```
 
 ---
 
@@ -134,7 +186,7 @@ subtotal            BIGINT NOT NULL         -- sum of items (cents)
 discount_total      BIGINT NOT NULL DEFAULT 0
 shipping_total      BIGINT NOT NULL DEFAULT 0
 grand_total         BIGINT NOT NULL         -- what customer paid
-currency            CHAR(3) NOT NULL DEFAULT 'USD'
+currency            CHAR(3) NOT NULL DEFAULT 'VND'
 tax_inclusive       BOOLEAN DEFAULT true    -- prices include tax
 shipping_address    JSONB NOT NULL          -- snapshot at order time
 billing_address     JSONB NOT NULL          -- snapshot at order time
@@ -173,6 +225,26 @@ order_id    ULID FK → orders
 event       TEXT          -- 'order.placed', 'payment.authorized', 'order.shipped' ...
 payload     JSONB         -- full context snapshot
 created_at  TIMESTAMPTZ
+```
+
+**`carts` + `cart_items` schema:**
+```
+carts
+  id              ULID PK
+  user_id         ULID NULL FK → users    -- NULL = guest cart
+  session_id      TEXT NULL               -- guest identifier
+  expires_at      TIMESTAMPTZ NULL        -- guest carts expire after X days
+  created_at      TIMESTAMPTZ
+  updated_at      TIMESTAMPTZ
+
+cart_items
+  id              ULID PK
+  cart_id         ULID FK → carts
+  product_id      ULID FK → products
+  qty             INT NOT NULL DEFAULT 1
+  unit_price      BIGINT NOT NULL         -- price snapshot at time of add (VND)
+  created_at      TIMESTAMPTZ
+  updated_at      TIMESTAMPTZ
 ```
 
 ---
@@ -554,6 +626,27 @@ Cloudflare resizes on-fly: cdn.yourdomain.com/cdn-cgi/image/w=800,q=85/products/
 srcset in HTML:
   <img srcset="...w=400 400w, ...w=800 800w, ...w=1200 1200w"
        sizes="(max-width: 640px) 400px, 800px">
+```
+
+**`pages` + `page_translations` schema (DB CMS):**
+```
+pages
+  id          ULID PK
+  slug        TEXT NOT NULL UNIQUE    -- 'about', 'contact', 'privacy-policy'
+  type        TEXT NOT NULL           -- 'page' | 'faq' | 'policy'
+  is_active   BOOLEAN DEFAULT true
+  sort_order  SMALLINT DEFAULT 0
+  created_at  TIMESTAMPTZ
+  updated_at  TIMESTAMPTZ
+
+page_translations
+  id          ULID PK
+  page_id     ULID FK → pages
+  locale      CHAR(5) NOT NULL        -- 'vi', 'en'
+  title       TEXT NOT NULL
+  body        TEXT NOT NULL           -- TinyMCE HTML (sanitized)
+  meta_title  TEXT NULL
+  meta_desc   TEXT NULL
 ```
 
 **SEO fields on every public page (auto-resolved):**
@@ -1385,6 +1478,95 @@ Phase 4 — Quality & Security:
   laravel/pulse, laravel/telescope, spatie/laravel-activitylog,
   spatie/laravel-health, coderflex/laravel-turnstile,
   stevebauman/purify, enlightn/enlightn
+```
+
+---
+
+## Reviews
+
+| Decision | Chosen |
+|----------|--------|
+| Enabled | **Yes** |
+| Who can review | Verified buyers only (`order_id` required — no fake reviews) |
+| Moderation | Admin approves before public display |
+| Rating | 1–5 stars |
+| Rich text | No — plain text body only |
+
+**`reviews` schema:**
+```
+id              ULID PK
+product_id      ULID FK → products
+user_id         ULID FK → users
+order_id        ULID FK → orders        -- verified purchase gate
+rating          SMALLINT NOT NULL        -- 1 to 5
+title           TEXT NULL
+body            TEXT NULL
+status          TEXT DEFAULT 'pending'   -- 'pending'|'approved'|'rejected'
+approved_at     TIMESTAMPTZ NULL
+created_at      TIMESTAMPTZ
+deleted_at      TIMESTAMPTZ NULL
+```
+
+**Aggregate rating on `products` (denormalised for performance):**
+```
+review_count    INT NOT NULL DEFAULT 0
+review_avg      NUMERIC(3,2) NULL        -- e.g. 4.75
+```
+Updated via observer on `ReviewApproved` event — never calculate live.
+
+---
+
+## Wishlists
+
+| Decision | Chosen |
+|----------|--------|
+| Enabled | **Yes** |
+| Auth required | Yes — logged-in customers only |
+| Multiple lists | No — one wishlist per customer (keep simple) |
+
+**`wishlists` + `wishlist_items` schema:**
+```
+wishlists
+  id          ULID PK
+  user_id     ULID FK → users  UNIQUE   -- one per customer
+  created_at  TIMESTAMPTZ
+
+wishlist_items
+  id          ULID PK
+  wishlist_id ULID FK → wishlists
+  product_id  ULID FK → products
+  created_at  TIMESTAMPTZ
+  UNIQUE(wishlist_id, product_id)        -- no duplicate items
+```
+
+---
+
+## Roles & Permissions
+
+**Package:** `spatie/laravel-permission`
+
+| Role | Access |
+|------|--------|
+| `super_admin` | Full access — all Filament resources, settings, users |
+| `admin` | Products, orders, customers, coupons, blog, pages |
+| `staff` | Orders only — view, update status, print invoices |
+
+**Permission examples (spatie/laravel-permission):**
+```
+products.view     products.create    products.edit    products.delete
+orders.view       orders.update_status               orders.refund
+customers.view    customers.edit
+coupons.manage
+blog.manage
+settings.manage   ← super_admin only
+users.manage      ← super_admin only
+```
+
+**Filament guard:** admin panel uses `web` guard with role check:
+```php
+// FilamentServiceProvider:
+$panel->authGuard('web')
+      ->authorize(fn ($user) => $user->hasAnyRole(['super_admin', 'admin', 'staff']));
 ```
 
 ---
