@@ -130,7 +130,7 @@
 | 57 | SSR | No / Laravel + Inertia SSR | **Inertia SSR** — critical for SEO on dynamic pages |
 | 58 | Admin panel | Custom / Filament 3 | **Filament 3** — saves months, fully customizable |
 | 59 | CMS for pages | Hardcoded / DB pages / External CMS | **DB pages** (`pages` + `page_translations`) — team editable, no deploy |
-| 60 | Blog | No / Yes | If yes: `posts` table with author, tags, SEO fields from day one |
+| 60 | Blog | No / **Yes** | `posts`, `post_translations`, `post_categories`, `post_tags`, `post_related_products` — see Section 22 |
 | 61 | Image optimization | Raw upload / Spatie Media Library | **Spatie Media Library** + Cloudflare Image Resizing for srcset |
 | 62 | Sitemap generation | Manual / `spatie/laravel-sitemap` | **spatie/laravel-sitemap** + queue job on content change |
 | 63 | JSON-LD | Manual / Service class per page type | **Service class** — `JsonLdBuilder` per page type (see Section 17) |
@@ -699,8 +699,15 @@ deleted_at TIMESTAMPTZ NULL      ← soft delete
 ── reviews                    id, product_id, user_id, rating, body, status
 ── wishlists                  id, user_id, name
 ── wishlist_items             id, wishlist_id, variant_id
-── pages                      id, slug, type (faq, policy, blog)
-── page_translations          id, page_id, locale, title, body
+── pages                      id, slug, type (faq, policy, about, contact)
+── page_translations          id, page_id, locale, title, body (JSONB rich text)
+── posts                      id, slug, author_id, status, featured_image, published_at
+── post_translations          id, post_id, locale, title, excerpt, body (JSONB rich text), meta_title, meta_desc
+── post_categories            id, parent_id, slug
+── post_category_translations id, category_id, locale, name, slug
+── post_tags                  id, slug, name
+── post_tag_pivot             post_id, tag_id
+── post_related_products      post_id, product_id, sort_order
 ── audit_log                  id, user_id, action, model_type, model_id, before, after
 ```
 
@@ -1288,6 +1295,157 @@ resources/
         ├── meta.blade.php           ← included in layout <head>
         ├── jsonld.blade.php         ← script type=application/ld+json
         └── hreflang.blade.php       ← link rel=alternate tags
+```
+
+---
+
+## 22. Blog / Content Module
+
+### Purpose
+- Drive organic SEO traffic via long-form content
+- Link articles to products (`post_related_products`) → convert readers to buyers
+- Managed by admin team via Filament — no deploy needed to publish
+
+---
+
+### Blog Schema
+
+```
+posts
+  id                ULID PK
+  author_id         ULID FK → users
+  status            ENUM: draft | scheduled | published | archived
+  featured_image    TEXT (S3/R2 URL)
+  published_at      TIMESTAMPTZ NULL    ← NULL = not published yet
+  created_at        TIMESTAMPTZ
+  updated_at        TIMESTAMPTZ
+  deleted_at        TIMESTAMPTZ NULL    ← soft delete
+
+post_translations                       ← spatie/laravel-translatable
+  id                ULID PK
+  post_id           ULID FK → posts
+  locale            CHAR(5)             ← 'en', 'fr', etc.
+  title             TEXT NOT NULL
+  slug              TEXT NOT NULL       ← unique per locale
+  excerpt           TEXT NULL           ← short summary for listing cards
+  body              TEXT NOT NULL       ← full TinyMCE HTML (sanitized)
+  meta_title        TEXT NULL           ← SEO override
+  meta_desc         TEXT NULL           ← SEO meta description
+
+post_categories
+  id                ULID PK
+  parent_id         ULID NULL FK → post_categories
+  slug              TEXT NOT NULL
+  name              TEXT NOT NULL
+
+post_tags
+  id                ULID PK
+  slug              TEXT NOT NULL
+  name              TEXT NOT NULL
+
+post_tag_pivot
+  post_id           ULID FK → posts
+  tag_id            ULID FK → post_tags
+
+post_related_products                   ← link article to shop products
+  post_id           ULID FK → posts
+  product_id        ULID FK → products
+  sort_order        SMALLINT DEFAULT 0
+```
+
+---
+
+### Module Structure
+
+```
+Modules/Content/
+├── Models/
+│   ├── Post.php
+│   ├── PostCategory.php
+│   └── PostTag.php
+├── Actions/
+│   ├── CreatePost.php
+│   ├── PublishPost.php
+│   └── SchedulePost.php
+├── Events/
+│   └── PostPublished.php
+├── Jobs/
+│   ├── RegenerateBlogSitemap.php
+│   └── SyncPostToSearch.php          ← index title + excerpt in Meilisearch
+├── Http/
+│   └── Controllers/
+│       ├── PostController.php
+│       └── PostCategoryController.php
+└── ContentServiceProvider.php
+```
+
+---
+
+### Post Status Flow
+
+```
+draft → scheduled → published → archived
+  │                     │
+  └──────────────────────┘  (can unpublish back to draft)
+```
+
+- `scheduled` + `published_at` in future → queue job publishes automatically at that time
+- `published` + `published_at` in past → visible to public
+- `archived` → hidden from public, stays in DB
+
+---
+
+### SEO per Post (auto-generated if not set)
+
+| Field | Source |
+|-------|--------|
+| `<title>` | `meta_title` → fallback to `title` |
+| `<meta description>` | `meta_desc` → fallback to `excerpt` |
+| `og:image` | `featured_image` |
+| `og:type` | `article` |
+| JSON-LD | `Article` schema with `author`, `datePublished`, `image` |
+| URL | `/blog/[slug]/` |
+| Sitemap | Auto-added to `sitemap-blog.xml` on `PostPublished` event |
+
+---
+
+### Related Products Block
+
+Every post can link to N products via `post_related_products`.
+
+- Displayed as a product card grid at the bottom of the article
+- Sorted by `sort_order`
+- Managed in Filament post editor via a repeater field
+- Drives conversion: reader finishes article → sees relevant products
+
+---
+
+### Filament Admin Fields
+
+```
+Post resource form:
+  ├── title (translatable text)
+  ├── slug (auto-generated from title, editable)
+  ├── excerpt (translatable textarea)
+  ├── body (TinyMCE / Tiptap rich editor — translatable)
+  ├── featured_image (media upload → S3/R2)
+  ├── category (select)
+  ├── tags (multi-select)
+  ├── status (select: draft/scheduled/published)
+  ├── published_at (datetime picker — for scheduling)
+  ├── meta_title (text, optional SEO override)
+  ├── meta_desc (textarea, optional SEO override)
+  └── related_products (repeater → product search)
+```
+
+---
+
+### Indexing in Search (Meilisearch)
+
+```
+Indexed fields: title, excerpt, body (stripped HTML), tags, category
+Used for: blog search, autocomplete, "related articles" on product pages
+Sync trigger: PostPublished event → SyncPostToSearch job
 ```
 
 ---
