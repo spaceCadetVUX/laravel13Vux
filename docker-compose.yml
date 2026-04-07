@@ -1,0 +1,114 @@
+services:
+
+  # ─── Nginx ──────────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - .:/backend:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php-fpm
+    restart: unless-stopped
+
+  # ─── PHP-FPM (Laravel) ──────────────────────────────────────────────────────
+  php-fpm:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - .:/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/backend/docker/scripts/entrypoint.sh"]
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  # ─── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ─── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ─── Meilisearch ────────────────────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+    restart: unless-stopped
+
+  # ─── Horizon (queue worker) ─────────────────────────────────────────────────
+  horizon:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - .:/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /backend
+    command: ["sh", "-c", "until [ -f /backend/vendor/autoload.php ]; do sleep 3; done && php artisan horizon"]
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  # ─── Scheduler (artisan schedule:run every 60s) ──────────────────────────────
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - .:/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /backend
+    command: ["sh", "-c", "until [ -f /backend/vendor/autoload.php ]; do sleep 3; done && while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"]
+    restart: unless-stopped
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
+  redis_data:
+  meilisearch_data:
