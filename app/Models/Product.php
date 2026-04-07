@@ -2,6 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasActivityLog;
+use App\Traits\HasGeoProfile;
+use App\Traits\HasJsonldSchemas;
+use App\Traits\HasLlmsEntry;
+use App\Traits\HasMedia;
+use App\Traits\HasSeoMeta;
+use App\Traits\HasSitemapEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,6 +24,13 @@ class Product extends Model
     use HasUuids;
     use SoftDeletes;
     use Searchable;
+    use HasSeoMeta;
+    use HasGeoProfile;
+    use HasJsonldSchemas;
+    use HasSitemapEntry;
+    use HasLlmsEntry;
+    use HasMedia;
+    use HasActivityLog;
 
     // ── PK config ─────────────────────────────────────────────────────────────
 

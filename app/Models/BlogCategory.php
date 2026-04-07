@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasSeoMeta;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BlogCategory extends Model
 {
+    use HasSeoMeta;
+
     // ── PK config (bigint auto-increment) ─────────────────────────────────────
 
     protected $keyType    = 'int';
