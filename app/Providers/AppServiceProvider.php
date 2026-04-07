@@ -2,12 +2,15 @@
 
 namespace App\Providers;
 
+use App\Auth\EncryptedUserProvider;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogTag;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +29,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerMorphMap();
+        $this->registerEncryptedUserProvider();
+    }
+
+    // ── Encrypted user provider ───────────────────────────────────────────────
+    // Handles email_hash-based lookups for users with encrypted email columns.
+
+    private function registerEncryptedUserProvider(): void
+    {
+        Auth::provider('encrypted', function ($app, array $config) {
+            return new EncryptedUserProvider(
+                $app['hash'],
+                $config['model'] ?? User::class,
+            );
+        });
     }
 
     // ── Polymorphic alias map ─────────────────────────────────────────────────

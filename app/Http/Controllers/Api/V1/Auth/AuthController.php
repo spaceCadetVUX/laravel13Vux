@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\Api\UserResource;
 use App\Http\Resources\Traits\ApiResponse;
 use App\Services\Auth\AuthService;
@@ -76,17 +77,14 @@ class AuthController extends Controller
 
     /**
      * PUT /api/v1/auth/me  [auth:sanctum]
-     * Update the authenticated user's profile.
-     * (S22 — stub ready, filled in next sprint)
+     * Update the authenticated user's name and/or phone.
      */
-    public function update(Request $request): JsonResponse
+    public function update(UpdateProfileRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name'  => ['sometimes', 'string', 'max:255'],
-            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
-        ]);
-
-        $user = $this->authService->updateProfile($request->user(), $data);
+        $user = $this->authService->updateProfile(
+            $request->user(),
+            $request->validated()
+        );
 
         return $this->success(
             data: new UserResource($user),

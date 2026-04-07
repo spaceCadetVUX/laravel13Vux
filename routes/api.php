@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,6 +23,7 @@ Route::prefix('v1')->group(function () {
         // Public
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login',    [AuthController::class, 'login']);
+        Route::post('google',   [SocialAuthController::class, 'google']);  // S21
 
         // Protected
         Route::middleware('auth:sanctum')->group(function () {

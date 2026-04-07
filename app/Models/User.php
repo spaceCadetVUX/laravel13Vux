@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +16,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Crypt;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
@@ -28,6 +30,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'email_hash',
         'phone',
         'password',
         'role',
@@ -60,7 +63,12 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: fn (string $value) => Crypt::decryptString($value),
-            set: fn (string $value) => Crypt::encryptString($value),
+            set: function (string $value): array {
+                return [
+                    'email'      => Crypt::encryptString($value),
+                    'email_hash' => hash('sha256', strtolower($value)),
+                ];
+            },
         );
     }
 
@@ -98,5 +106,15 @@ class User extends Authenticatable
     public function blogComments(): HasMany
     {
         return $this->hasMany(BlogComment::class);
+    }
+
+    // ── Filament access control ───────────────────────────────────────────────
+
+    /**
+     * Restrict Filament admin panel access to users with role=admin.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->role === UserRole::Admin;
     }
 }

@@ -63,14 +63,11 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            // 'encrypted' driver handles email_hash lookups for encrypted-at-rest emails.
+            // Registered in AppServiceProvider::registerEncryptedUserProvider().
+            'driver' => 'encrypted',
+            'model'  => env('AUTH_MODEL', User::class),
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*
