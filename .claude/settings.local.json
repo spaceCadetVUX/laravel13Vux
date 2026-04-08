@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(composer show:*)"
+      "Bash(composer show:*)",
+      "Bash(find /c/Users/vusu3/Desktop/laravel13_Backbone/backbone/app/Models -name *.php)",
+      "Bash(docker-compose exec:*)",
+      "Bash(php artisan:*)"
     ]
   }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\CategoryResource\Pages;
-use App\Models\Category;
+use App\Filament\Resources\BlogCategoryResource\Pages;
+use App\Models\BlogCategory;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -11,16 +11,15 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
-class CategoryResource extends Resource
+class BlogCategoryResource extends Resource
 {
-    protected static ?string $model = Category::class;
+    protected static ?string $model = BlogCategory::class;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-folder';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Catalog';
+    protected static \UnitEnum|string|null $navigationGroup = 'Blog';
 
     public static function getNavigationBadge(): ?string
     {
@@ -46,21 +45,12 @@ class CategoryResource extends Resource
 
             Forms\Components\TextInput::make('slug')
                 ->required()
-                ->unique(table: Category::class, column: 'slug', ignoreRecord: true),
+                ->unique(table: BlogCategory::class, column: 'slug', ignoreRecord: true),
 
             Forms\Components\Textarea::make('description')
+                ->rows(3)
                 ->nullable()
-                ->rows(3),
-
-            Forms\Components\FileUpload::make('image_path')
-                ->disk('public')
-                ->directory('categories')
-                ->image()
-                ->nullable(),
-
-            Forms\Components\TextInput::make('sort_order')
-                ->numeric()
-                ->default(0),
+                ->columnSpanFull(),
 
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
@@ -70,26 +60,26 @@ class CategoryResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->withCount('products'))
+            ->modifyQueryUsing(fn ($query) => $query->withCount('posts'))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('slug')
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('parent.name')
                     ->label('Parent')
                     ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('sort_order')
-                    ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->trueColor('success')
                     ->falseColor('danger'),
 
-                Tables\Columns\TextColumn::make('products_count')
-                    ->label('Products')
+                Tables\Columns\TextColumn::make('posts_count')
+                    ->label('Posts')
                     ->numeric()
                     ->sortable(),
 
@@ -119,9 +109,9 @@ class CategoryResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListCategories::route('/'),
-            'create' => Pages\CreateCategory::route('/create'),
-            'edit'   => Pages\EditCategory::route('/{record}/edit'),
+            'index'  => Pages\ListBlogCategories::route('/'),
+            'create' => Pages\CreateBlogCategory::route('/create'),
+            'edit'   => Pages\EditBlogCategory::route('/{record}/edit'),
         ];
     }
 }

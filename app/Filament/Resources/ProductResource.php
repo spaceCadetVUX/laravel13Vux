@@ -4,10 +4,13 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
+use BackedEnum;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Set;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,18 +20,18 @@ class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cube';
 
-    protected static ?string $navigationGroup = 'Catalog';
+    protected static \UnitEnum|string|null $navigationGroup = 'Catalog';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Tabs::make('Tabs')
+        return $schema->schema([
+            Tabs::make('Tabs')
                 ->tabs([
 
                     // ── Tab 1: General ────────────────────────────────────────
-                    Forms\Components\Tabs\Tab::make('General')
+                    Tab::make('General')
                         ->schema([
                             Forms\Components\Select::make('category_id')
                                 ->label('Category')
@@ -63,7 +66,7 @@ class ProductResource extends Resource
                         ->columns(2),
 
                     // ── Tab 2: Pricing & Stock ────────────────────────────────
-                    Forms\Components\Tabs\Tab::make('Pricing & Stock')
+                    Tab::make('Pricing & Stock')
                         ->schema([
                             Forms\Components\TextInput::make('price')
                                 ->numeric()
@@ -81,14 +84,14 @@ class ProductResource extends Resource
                         ->columns(2),
 
                     // ── Tab 3: Description ────────────────────────────────────
-                    Forms\Components\Tabs\Tab::make('Description')
+                    Tab::make('Description')
                         ->schema([
                             Forms\Components\RichEditor::make('description')
                                 ->columnSpanFull(),
                         ]),
 
                     // ── Tab 4: Images ─────────────────────────────────────────
-                    Forms\Components\Tabs\Tab::make('Images')
+                    Tab::make('Images')
                         ->schema([
                             Forms\Components\Repeater::make('images')
                                 ->relationship()
@@ -113,7 +116,7 @@ class ProductResource extends Resource
                         ]),
 
                     // ── Tab 5: Videos ─────────────────────────────────────────
-                    Forms\Components\Tabs\Tab::make('Videos')
+                    Tab::make('Videos')
                         ->schema([
                             Forms\Components\Repeater::make('videos')
                                 ->relationship()
