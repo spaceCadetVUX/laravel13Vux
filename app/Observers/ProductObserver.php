@@ -2,21 +2,40 @@
 
 namespace App\Observers;
 
+use App\Jobs\Seo\SyncJsonldSchema;
+use App\Jobs\Seo\SyncLlmsEntry;
+use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Product;
+use App\Models\Seo\LlmsEntry;
+use App\Models\Seo\SitemapEntry;
 
-/**
- * Stub — filled in S33.
- * Dispatches SyncJsonldSchema, SyncSitemapEntry, SyncLlmsEntry on save/delete.
- */
 class ProductObserver
 {
+    /**
+     * Dispatch SEO sync jobs on every create or update.
+     * Fires after both created() and updated() — covers all writes.
+     */
     public function saved(Product $product): void
     {
-        // TODO S33: dispatch SEO sync jobs on 'seo' queue
+        dispatch(new SyncJsonldSchema($product))->onQueue('seo');
+        dispatch(new SyncSitemapEntry($product))->onQueue('seo');
+        dispatch(new SyncLlmsEntry($product))->onQueue('seo');
     }
 
+    /**
+     * Soft-delete deactivates SEO entries — never removes them.
+     * fired on soft-delete because Product uses SoftDeletes.
+     */
     public function deleted(Product $product): void
     {
-        // TODO S33: mark sitemap entry / llms entry inactive
+        $morphClass = $product->getMorphClass(); // 'product' via morphMap
+
+        SitemapEntry::where('model_type', $morphClass)
+            ->where('model_id', $product->getKey())
+            ->update(['is_active' => false]);
+
+        LlmsEntry::where('model_type', $morphClass)
+            ->where('model_id', $product->getKey())
+            ->update(['is_active' => false]);
     }
 }

@@ -2,21 +2,37 @@
 
 namespace App\Observers;
 
+use App\Jobs\Seo\SyncLlmsEntry;
+use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Category;
+use App\Models\Seo\LlmsEntry;
+use App\Models\Seo\SitemapEntry;
 
-/**
- * Stub — filled in S33.
- * Dispatches SyncJsonldSchema, SyncSitemapEntry, SyncLlmsEntry on save/delete.
- */
 class CategoryObserver
 {
+    /**
+     * Dispatch sitemap + llms sync on every create or update.
+     * Note: No JSON-LD for categories at launch — only sitemap + llms.
+     */
     public function saved(Category $category): void
     {
-        // TODO S33: dispatch SEO sync jobs on 'seo' queue
+        dispatch(new SyncSitemapEntry($category))->onQueue('seo');
+        dispatch(new SyncLlmsEntry($category))->onQueue('seo');
     }
 
+    /**
+     * Soft-delete deactivates SEO entries — never removes them.
+     */
     public function deleted(Category $category): void
     {
-        // TODO S33: mark sitemap entry / llms entry inactive
+        $morphClass = $category->getMorphClass(); // 'category' via morphMap
+
+        SitemapEntry::where('model_type', $morphClass)
+            ->where('model_id', $category->getKey())
+            ->update(['is_active' => false]);
+
+        LlmsEntry::where('model_type', $morphClass)
+            ->where('model_id', $category->getKey())
+            ->update(['is_active' => false]);
     }
 }
