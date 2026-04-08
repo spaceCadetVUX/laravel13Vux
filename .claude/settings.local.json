@@ -6,7 +6,9 @@
       "Bash(docker-compose exec:*)",
       "Bash(php artisan:*)",
       "Bash(php -r \"echo PHP_EOL;\")",
-      "Bash(find app/Services -name Sitemap* -o -name Llms*)"
+      "Bash(find app/Services -name Sitemap* -o -name Llms*)",
+      "Bash(php artisan tinker --execute=\":*)",
+      "Bash(grep -v \"^\\\\s*$\")"
     ]
   }
 }
