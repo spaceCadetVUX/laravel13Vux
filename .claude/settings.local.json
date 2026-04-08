@@ -4,7 +4,9 @@
       "Bash(composer show:*)",
       "Bash(find /c/Users/vusu3/Desktop/laravel13_Backbone/backbone/app/Models -name *.php)",
       "Bash(docker-compose exec:*)",
-      "Bash(php artisan:*)"
+      "Bash(php artisan:*)",
+      "Bash(php -r \"echo PHP_EOL;\")",
+      "Bash(find app/Services -name Sitemap* -o -name Llms*)"
     ]
   }
 }
