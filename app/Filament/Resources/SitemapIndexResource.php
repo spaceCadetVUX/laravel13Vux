@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SitemapIndexResource\Pages;
 use App\Models\Seo\SitemapIndex;
+use App\Services\Seo\SitemapService;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Forms\Components\Placeholder;
@@ -81,12 +82,11 @@ class SitemapIndexResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Regenerate Sitemap')
                     ->modalDescription('This will regenerate the sitemap file. The actual generation logic runs in S36.')
-                    ->action(function (SitemapIndex $record): void {
-                        // SitemapService::regenerate($record) — wired in S36
-                        $record->touch('last_generated_at');
+                    ->action(function (SitemapIndex $record, SitemapService $service): void {
+                        $service->generateChild($record);
 
                         Notification::make()
-                            ->title('Sitemap queued for regeneration')
+                            ->title('Sitemap regenerated: ' . $record->filename)
                             ->success()
                             ->send();
                     }),
