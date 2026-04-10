@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\HealthController;
 use App\Http\Controllers\Web\LlmsController;
 use App\Http\Controllers\Web\SitemapController;
 use Illuminate\Support\Facades\Route;
@@ -18,3 +19,6 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::get('llms-full.txt', [LlmsController::class, 'full']);
     Route::get('llms-{slug}.txt', [LlmsController::class, 'scoped']);
 });
+
+// ── System: Health Check ─────────────────────────────────────────────────────
+Route::get('health', HealthController::class);
