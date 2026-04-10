@@ -7,6 +7,7 @@ use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Category;
 use App\Models\Seo\LlmsEntry;
 use App\Models\Seo\SitemapEntry;
+use App\Services\Category\CategoryService;
 
 class CategoryObserver
 {
@@ -18,6 +19,9 @@ class CategoryObserver
     {
         dispatch(new SyncSitemapEntry($category))->onQueue('seo');
         dispatch(new SyncLlmsEntry($category))->onQueue('seo');
+
+        // Bust the cached category tree so the API reflects the change immediately.
+        app(CategoryService::class)->bustTreeCache();
     }
 
     /**
@@ -34,5 +38,7 @@ class CategoryObserver
         LlmsEntry::where('model_type', $morphClass)
             ->where('model_id', $category->getKey())
             ->update(['is_active' => false]);
+
+        app(CategoryService::class)->bustTreeCache();
     }
 }

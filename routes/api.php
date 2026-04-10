@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\Category\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,7 +35,8 @@ Route::prefix('v1')->group(function () {
     });
 
     // ── Catalog (S45–S47) ─────────────────────────────────────────────────
-    // Route::get('products', ...)
+    Route::get('categories',        [CategoryController::class, 'index']);
+    Route::get('categories/{slug}', [CategoryController::class, 'show']);
 
     // ── Cart & Orders (S48–S50) ───────────────────────────────────────────
     // Route::middleware('auth:sanctum')->group(...)
