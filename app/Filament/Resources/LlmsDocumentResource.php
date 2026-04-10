@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Enums\LlmsScope;
 use App\Filament\Resources\LlmsDocumentResource\Pages;
 use App\Models\Seo\LlmsDocument;
+use App\Services\Seo\LlmsGeneratorService;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Forms\Components\Placeholder;
@@ -101,13 +102,12 @@ class LlmsDocumentResource extends Resource
                     ->color('info')
                     ->requiresConfirmation()
                     ->modalHeading('Regenerate LLMs Document')
-                    ->modalDescription('This will regenerate the .md file for this document. The actual generation logic runs in S37.')
-                    ->action(function (LlmsDocument $record): void {
-                        // LlmsGeneratorService::regenerate($record) — wired in S37
-                        $record->touch('last_generated_at');
+                    ->modalDescription('This will regenerate the .txt file for this document.')
+                    ->action(function (LlmsDocument $record, LlmsGeneratorService $service): void {
+                        $service->generateDocument($record);
 
                         Notification::make()
-                            ->title('LLMs document queued for regeneration')
+                            ->title('LLMs document regenerated: ' . $record->slug . '.txt')
                             ->success()
                             ->send();
                     }),
