@@ -8,7 +8,9 @@
       "Bash(php -r \"echo PHP_EOL;\")",
       "Bash(find app/Services -name Sitemap* -o -name Llms*)",
       "Bash(php artisan tinker --execute=\":*)",
-      "Bash(grep -v \"^\\\\s*$\")"
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(php -l app/Services/Seo/JsonldService.php)",
+      "Bash(php -l app/Jobs/Seo/SyncJsonldSchema.php)"
     ]
   }
 }
