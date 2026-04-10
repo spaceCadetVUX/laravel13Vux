@@ -45,7 +45,6 @@ class HealthController extends Controller
     {
         try {
             DB::connection()->getPdo();
-
             return 'ok';
         } catch (Throwable $e) {
             return 'error: ' . $e->getMessage();

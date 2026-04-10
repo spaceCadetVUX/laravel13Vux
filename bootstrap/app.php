@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // CORS — allow Nuxt 3 frontend origin
         $middleware->web(append: [
             \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\HandleRedirects::class,
         ]);
 
         // Force JSON on all API requests (ForceJsonResponse)
