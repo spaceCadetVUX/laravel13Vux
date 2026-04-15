@@ -43,12 +43,11 @@ class ProductObserver
     }
 
     /**
-     * Force-delete: permanently remove all related data.
-     * DB CASCADE covers product_images and product_videos rows, but we must
-     * delete through Eloquent first so the model booted() events fire and
-     * physical files are removed from storage.
+     * Runs BEFORE the SQL DELETE — must happen before DB CASCADE wipes
+     * product_images / product_videos, otherwise images() returns empty
+     * and physical files are never removed from storage.
      */
-    public function forceDeleted(Product $product): void
+    public function forceDeleting(Product $product): void
     {
         $morphClass = $product->getMorphClass();
 

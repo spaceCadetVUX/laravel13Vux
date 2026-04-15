@@ -17,8 +17,14 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
 
 class ProductResource extends Resource
@@ -38,11 +44,14 @@ class ProductResource extends Resource
                     // ── Tab 1: General ────────────────────────────────────────
                     Tab::make('General')
                         ->schema([
-                            Forms\Components\Select::make('category_id')
-                                ->label('Category')
-                                ->relationship('category', 'name')
+                            Forms\Components\Select::make('categories')
+                                ->label('Categories')
+                                ->relationship('categories', 'name')
+                                ->multiple()
                                 ->searchable()
-                                ->required(),
+                                ->preload()
+                                ->native(false)
+                                ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('name')
                                 ->required()
@@ -153,7 +162,7 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['thumbnail', 'category']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['thumbnail', 'categories']))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\ImageColumn::make('thumbnail.path')
@@ -168,8 +177,10 @@ class ProductResource extends Resource
                     ->label('SKU')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('category.name')
-                    ->label('Category'),
+                Tables\Columns\TextColumn::make('categories.name')
+                    ->label('Categories')
+                    ->badge()
+                    ->separator(','),
 
                 Tables\Columns\TextColumn::make('price')
                     ->money('VND')
@@ -197,19 +208,32 @@ class ProductResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
 
-                Tables\Filters\SelectFilter::make('category_id')
+                Tables\Filters\SelectFilter::make('categories')
                     ->label('Category')
-                    ->relationship('category', 'name'),
+                    ->relationship('categories', 'name')
+                    ->multiple(),
+
+                TrashedFilter::make(),
             ])
             ->actions([
                 EditAction::make(),
+                RestoreAction::make(),
                 DeleteAction::make(),
+                ForceDeleteAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
                     DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScope(SoftDeletingScope::class);
     }
 
     public static function getPages(): array

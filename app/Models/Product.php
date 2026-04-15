@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -41,7 +41,6 @@ class Product extends Model
     // ── Mass assignment ───────────────────────────────────────────────────────
 
     protected $fillable = [
-        'category_id',
         'name',
         'slug',
         'sku',
@@ -86,8 +85,9 @@ class Product extends Model
             'name'              => $this->name,
             'sku'               => $this->sku,
             'short_description' => $this->short_description,
-            'category_id'       => $this->category_id,
-            'category'          => $this->relationLoaded('category') ? $this->category?->name : null,
+            'categories'        => $this->relationLoaded('categories')
+                                    ? $this->categories->pluck('name')->all()
+                                    : [],
             'price'             => (float) $this->price,
             'sale_price'        => $this->sale_price ? (float) $this->sale_price : null,
             'stock_quantity'    => $this->stock_quantity,
@@ -113,9 +113,9 @@ class Product extends Model
 
     // ── Relationships ─────────────────────────────────────────────────────────
 
-    public function category(): BelongsTo
+    public function categories(): BelongsToMany
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsToMany(Category::class);
     }
 
     public function images(): HasMany
