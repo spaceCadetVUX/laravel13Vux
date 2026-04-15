@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Product;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Search\SearchRequest;
 use App\Http\Resources\Traits\ApiResponse;
 use App\Models\BlogPost;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Throwable;
 
 class ProductSearchController extends Controller
@@ -15,91 +15,110 @@ class ProductSearchController extends Controller
     use ApiResponse;
 
     /**
-     * GET /api/v1/search?q={term}
+     * GET /api/v1/search?q={term}&type={products|blog|all}&page={n}&per_page={n}
      *
-     * Searches products (name, sku, short_description) and published blog posts
-     * (title, excerpt) using Scout (Meilisearch in production).
-     *
-     * When SCOUT_DRIVER=null or Meilisearch is unreachable, falls back to
-     * Eloquent LIKE queries so the endpoint works in development.
-     *
-     * Returns a combined result set with a 'type' discriminator on each item.
+     * Full-text search via Meilisearch (Scout). Falls back to Eloquent LIKE
+     * queries when SCOUT_DRIVER=null or Meilisearch is unreachable.
      */
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(SearchRequest $request): JsonResponse
     {
-        $q = trim((string) $request->query('q', ''));
+        $q       = $request->validated('q');
+        $type    = $request->validated('type', 'all') ?? 'all';
+        $perPage = (int) ($request->validated('per_page', 20) ?? 20);
+        $page    = (int) ($request->validated('page', 1) ?? 1);
 
-        if ($q === '') {
-            return $this->success(data: ['products' => [], 'blog_posts' => []]);
-        }
+        [$products, $blog, $totalProducts, $totalBlog] = $this->isScoutEnabled()
+            ? $this->scoutSearch($q, $type, $perPage, $page)
+            : $this->likeSearch($q, $type, $perPage, $page);
 
-        [$products, $blogPosts] = $this->useScoutDriver()
-            ? $this->scoutSearch($q)
-            : $this->likeSearch($q);
-
-        return $this->success(data: [
-            'products'   => $products,
-            'blog_posts' => $blogPosts,
-        ]);
+        return $this->success(
+            data: compact('products', 'blog'),
+            meta: [
+                'query'          => $q,
+                'total_products' => $totalProducts,
+                'total_blog'     => $totalBlog,
+            ]
+        );
     }
 
-    // ── Strategy selector ─────────────────────────────────────────────────────
+    // ── Driver detection ──────────────────────────────────────────────────────
 
-    private function useScoutDriver(): bool
+    private function isScoutEnabled(): bool
     {
-        return config('scout.driver') !== 'null'
-            && config('scout.driver') !== null;
+        $driver = config('scout.driver');
+
+        return $driver !== 'null' && $driver !== null && $driver !== 'collection';
     }
 
-    // ── Scout (Meilisearch) path ───────────────────────────────────────────────
+    // ── Scout (Meilisearch) path ──────────────────────────────────────────────
 
-    private function scoutSearch(string $q): array
+    private function scoutSearch(string $q, string $type, int $perPage, int $page): array
     {
         try {
-            $products = Product::search($q)
-                ->query(fn ($query) => $query->where('is_active', true)->with('category', 'images'))
-                ->get()
-                ->map(fn ($p) => $this->formatProduct($p));
+            $products      = [];
+            $blog          = [];
+            $totalProducts = 0;
+            $totalBlog     = 0;
 
-            $blogPosts = BlogPost::search($q)
-                ->query(fn ($query) => $query->published())
-                ->get()
-                ->map(fn ($b) => $this->formatBlogPost($b));
+            if ($type === 'all' || $type === 'products') {
+                $result        = Product::search($q)
+                    ->where('is_active', true)
+                    ->paginate($perPage, 'page', $page);
+                $totalProducts = $result->total();
+                $products      = $result->map(fn ($p) => $this->formatProduct($p))->all();
+            }
 
-            return [$products, $blogPosts];
+            if ($type === 'all' || $type === 'blog') {
+                $result    = BlogPost::search($q)
+                    ->where('status', 'published')
+                    ->paginate($perPage, 'page', $page);
+                $totalBlog = $result->total();
+                $blog      = $result->map(fn ($b) => $this->formatBlogPost($b))->all();
+            }
+
+            return [$products, $blog, $totalProducts, $totalBlog];
         } catch (Throwable) {
-            // Meilisearch unavailable — fall back to LIKE search
-            return $this->likeSearch($q);
+            // Meilisearch unavailable — fall back to Eloquent LIKE search
+            return $this->likeSearch($q, $type, $perPage, $page);
         }
     }
 
-    // ── Eloquent LIKE fallback (dev / SCOUT_DRIVER=null) ─────────────────────
+    // ── Eloquent LIKE fallback (SCOUT_DRIVER=null / dev) ──────────────────────
 
-    private function likeSearch(string $q): array
+    private function likeSearch(string $q, string $type, int $perPage, int $page): array
     {
-        $term = '%' . $q . '%';
+        $term          = '%' . $q . '%';
+        $products      = [];
+        $blog          = [];
+        $totalProducts = 0;
+        $totalBlog     = 0;
 
-        $products = Product::with(['category', 'images'])
-            ->where('is_active', true)
-            ->where(function ($query) use ($term) {
-                $query->where('name', 'like', $term)
-                    ->orWhere('sku', 'like', $term)
-                    ->orWhere('short_description', 'like', $term);
-            })
-            ->limit(20)
-            ->get()
-            ->map(fn ($p) => $this->formatProduct($p));
+        if ($type === 'all' || $type === 'products') {
+            $paginator = Product::with(['category', 'images'])
+                ->where('is_active', true)
+                ->where(fn ($query) => $query
+                    ->where('name', 'ilike', $term)
+                    ->orWhere('sku', 'ilike', $term)
+                    ->orWhere('short_description', 'ilike', $term))
+                ->paginate($perPage, ['*'], 'page', $page);
 
-        $blogPosts = BlogPost::published()
-            ->where(function ($query) use ($term) {
-                $query->where('title', 'like', $term)
-                    ->orWhere('excerpt', 'like', $term);
-            })
-            ->limit(10)
-            ->get()
-            ->map(fn ($b) => $this->formatBlogPost($b));
+            $totalProducts = $paginator->total();
+            $products      = $paginator->map(fn ($p) => $this->formatProduct($p))->all();
+        }
 
-        return [$products, $blogPosts];
+        if ($type === 'all' || $type === 'blog') {
+            $paginator = BlogPost::with('blogCategory')
+                ->published()
+                ->where(fn ($query) => $query
+                    ->where('title', 'ilike', $term)
+                    ->orWhere('excerpt', 'ilike', $term))
+                ->paginate($perPage, ['*'], 'page', $page);
+
+            $totalBlog = $paginator->total();
+            $blog      = $paginator->map(fn ($b) => $this->formatBlogPost($b))->all();
+        }
+
+        return [$products, $blog, $totalProducts, $totalBlog];
     }
 
     // ── Formatters ────────────────────────────────────────────────────────────
@@ -107,7 +126,6 @@ class ProductSearchController extends Controller
     private function formatProduct(Product $p): array
     {
         return [
-            'type'              => 'product',
             'id'                => $p->id,
             'name'              => $p->name,
             'slug'              => $p->slug,
@@ -116,14 +134,13 @@ class ProductSearchController extends Controller
             'price'             => (string) $p->price,
             'sale_price'        => $p->sale_price ? (string) $p->sale_price : null,
             'category'          => $p->category?->name,
-            'thumbnail'         => $p->images->first()?->url,
+            'thumbnail'         => $p->images->first()?->url ?? null,
         ];
     }
 
     private function formatBlogPost(BlogPost $b): array
     {
         return [
-            'type'    => 'blog_post',
             'id'      => $b->id,
             'title'   => $b->title,
             'slug'    => $b->slug,

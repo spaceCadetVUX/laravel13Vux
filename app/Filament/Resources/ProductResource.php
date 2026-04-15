@@ -42,7 +42,6 @@ class ProductResource extends Resource
                                 ->label('Category')
                                 ->relationship('category', 'name')
                                 ->searchable()
-                                ->preload()
                                 ->required(),
 
                             Forms\Components\TextInput::make('name')
@@ -151,12 +150,11 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['images', 'category']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['thumbnail', 'category']))
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\ImageColumn::make('thumbnail')
+                Tables\Columns\ImageColumn::make('thumbnail.path')
                     ->label('Thumbnail')
-                    ->state(fn (Product $record): ?string => $record->images->first()?->path)
                     ->disk('public'),
 
                 Tables\Columns\TextColumn::make('name')

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 
@@ -67,17 +68,16 @@ class Product extends Model
     // ── Scout — Meilisearch ───────────────────────────────────────────────────
 
     /**
-     * Index name in Meilisearch.
-     * Defaults to 'products' (table name) — explicit for clarity.
+     * Index name in Meilisearch (prefix from scout.prefix config).
      */
     public function searchableAs(): string
     {
-        return 'products';
+        return config('scout.prefix') . 'products';
     }
 
     /**
      * Fields sent to Meilisearch on every save.
-     * Loads category relationship eagerly to include category name.
+     * Includes all filterable and sortable attributes required by the search index.
      */
     public function toSearchableArray(): array
     {
@@ -86,9 +86,13 @@ class Product extends Model
             'name'              => $this->name,
             'sku'               => $this->sku,
             'short_description' => $this->short_description,
-            'category'          => $this->category?->name,
+            'category_id'       => $this->category_id,
+            'category'          => $this->relationLoaded('category') ? $this->category?->name : null,
             'price'             => (float) $this->price,
+            'sale_price'        => $this->sale_price ? (float) $this->sale_price : null,
+            'stock_quantity'    => $this->stock_quantity,
             'is_active'         => $this->is_active,
+            'created_at'        => $this->created_at?->timestamp,
         ];
     }
 
@@ -117,6 +121,15 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Chỉ lấy ảnh đầu tiên (sort_order nhỏ nhất) — dùng cho thumbnail ở list view.
+     * Tránh load toàn bộ images collection chỉ để lấy ->first().
+     */
+    public function thumbnail(): HasOne
+    {
+        return $this->hasOne(ProductImage::class)->orderBy('sort_order');
     }
 
     public function videos(): HasMany

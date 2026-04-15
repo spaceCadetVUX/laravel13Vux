@@ -81,18 +81,20 @@ class BlogPost extends Model
 
     public function searchableAs(): string
     {
-        return 'blog_posts';
+        return config('scout.prefix') . 'blog_posts';
     }
 
     public function toSearchableArray(): array
     {
         return [
-            'id'       => $this->id,
-            'title'    => $this->title,
-            'excerpt'  => $this->excerpt,
-            'author'   => $this->author?->name,
-            'category' => $this->blogCategory?->name,
-            'status'   => $this->status?->value,
+            'id'               => $this->id,
+            'title'            => $this->title,
+            'excerpt'          => $this->excerpt,
+            'author'           => $this->author?->name,
+            'blog_category_id' => $this->blog_category_id,
+            'category'         => $this->blogCategory?->name,
+            'status'           => $this->status?->value,
+            'published_at'     => $this->published_at?->timestamp,
         ];
     }
 
