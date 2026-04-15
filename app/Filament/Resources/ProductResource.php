@@ -103,8 +103,11 @@ class ProductResource extends Resource
                                     Forms\Components\FileUpload::make('path')
                                         ->label('Image')
                                         ->disk('public')
+                                        ->visibility('public')
                                         ->directory(fn () => 'products/' . now()->format('Y/m'))
                                         ->image()
+                                        ->imagePreviewHeight('120')
+                                        ->imageEditor()
                                         ->required(),
 
                                     Forms\Components\TextInput::make('alt_text')

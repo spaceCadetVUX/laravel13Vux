@@ -10,7 +10,18 @@
       "Bash(php artisan tinker --execute=\":*)",
       "Bash(grep -v \"^\\\\s*$\")",
       "Bash(php -l app/Services/Seo/JsonldService.php)",
-      "Bash(php -l app/Jobs/Seo/SyncJsonldSchema.php)"
+      "Bash(php -l app/Jobs/Seo/SyncJsonldSchema.php)",
+      "Bash(cmd.exe /c \"rmdir public\\\\storage\")",
+      "Bash(cmd.exe /c \"dir C:\\\\Users\\\\vusu3\\\\Desktop\\\\laravel13_Backbone\\\\backbone\\\\public\\\\storage\")",
+      "Bash(cmd.exe /c \"dir C:\\\\Users\\\\vusu3\\\\Desktop\\\\laravel13_Backbone\\\\backbone\\\\public\\\\\")",
+      "Bash(cmd.exe /c dir C:\\\\Users\\\\vusu3\\\\Desktop\\\\laravel13_Backbone\\\\backbone\\\\public)",
+      "Bash(cmd.exe /c dir C:/Users/vusu3/Desktop/laravel13_Backbone/backbone/public)",
+      "Bash(cmd.exe /c mklink /J C:/Users/vusu3/Desktop/laravel13_Backbone/backbone/public/storage C:/Users/vusu3/Desktop/laravel13_Backbone/backbone/storage/app/public)",
+      "Bash(php -r \"echo file_exists\\('public/storage/products/2026/04/01KP8VS1K7RVGP9F3J5CQYADKW.jpg'\\) ? 'OK' : 'NOT FOUND';\")",
+      "Bash(php -r \"var_dump\\(is_dir\\('public/storage'\\)\\); var_dump\\(is_link\\('public/storage'\\)\\); var_dump\\(realpath\\('public/storage'\\)\\);\")",
+      "Bash(powershell -Command \"Remove-Item -Force -Path 'public/storage'\")",
+      "Bash(powershell -Command \"New-Item -ItemType Junction -Path 'public/storage' -Target \\(Resolve-Path 'storage/app/public'\\)\")",
+      "Bash(php -r \"echo file_exists\\('public/storage/products/2026/04/01KP8VS1K7RVGP9F3J5CQYADKW.jpg'\\) ? 'OK - FILE ACCESSIBLE' : 'NOT FOUND';\")"
     ]
   }
 }

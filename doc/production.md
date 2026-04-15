@@ -98,8 +98,15 @@ LOG_LEVEL=error
 Ảnh sản phẩm upload lên `storage/app/public/`, được serve qua `public/storage/`.
 Symlink này không tự tạo — phải chạy:
 
+**Linux/macOS (production):**
 ```bash
 php artisan storage:link
+```
+
+**Windows (local dev) — `php artisan storage:link` tạo object hỏng, dùng PowerShell:**
+```powershell
+Remove-Item -Force -Path 'public/storage'
+New-Item -ItemType Junction -Path 'public/storage' -Target (Resolve-Path 'storage/app/public')
 ```
 
 Nếu không chạy → ảnh upload thành công nhưng URL trả về 404.
