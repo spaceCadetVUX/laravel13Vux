@@ -9,6 +9,21 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductVideo extends Model
 {
+    // ── Model events ──────────────────────────────────────────────────────────
+
+    protected static function booted(): void
+    {
+        static::deleted(function (ProductVideo $video): void {
+            if ($video->path && Storage::disk('public')->exists($video->path)) {
+                Storage::disk('public')->delete($video->path);
+            }
+
+            if ($video->thumbnail_path && Storage::disk('public')->exists($video->thumbnail_path)) {
+                Storage::disk('public')->delete($video->thumbnail_path);
+            }
+        });
+    }
+
     protected $fillable = [
         'product_id',
         'path',

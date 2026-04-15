@@ -6,7 +6,10 @@ use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Product;
+use App\Models\Seo\GeoEntityProfile;
+use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
+use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
 
 class ProductObserver
@@ -23,12 +26,12 @@ class ProductObserver
     }
 
     /**
-     * Soft-delete deactivates SEO entries — never removes them.
-     * fired on soft-delete because Product uses SoftDeletes.
+     * Soft-delete: deactivate SEO entries so they stop appearing in sitemap/llms.
+     * Files and child records are intentionally kept — product may be restored.
      */
     public function deleted(Product $product): void
     {
-        $morphClass = $product->getMorphClass(); // 'product' via morphMap
+        $morphClass = $product->getMorphClass();
 
         SitemapEntry::where('model_type', $morphClass)
             ->where('model_id', $product->getKey())
@@ -37,5 +40,29 @@ class ProductObserver
         LlmsEntry::where('model_type', $morphClass)
             ->where('model_id', $product->getKey())
             ->update(['is_active' => false]);
+    }
+
+    /**
+     * Force-delete: permanently remove all related data.
+     * DB CASCADE covers product_images and product_videos rows, but we must
+     * delete through Eloquent first so the model booted() events fire and
+     * physical files are removed from storage.
+     */
+    public function forceDeleted(Product $product): void
+    {
+        $morphClass = $product->getMorphClass();
+
+        // Delete images via Eloquent → triggers ProductImage::booted() → deletes files
+        $product->images()->each(fn ($image) => $image->delete());
+
+        // Delete videos via Eloquent → triggers ProductVideo::booted() → deletes files + thumbnails
+        $product->videos()->each(fn ($video) => $video->delete());
+
+        // Remove all polymorphic SEO records
+        SeoMeta::where('model_type', $morphClass)->where('model_id', $product->getKey())->delete();
+        GeoEntityProfile::where('model_type', $morphClass)->where('model_id', $product->getKey())->delete();
+        JsonldSchema::where('model_type', $morphClass)->where('model_id', $product->getKey())->delete();
+        SitemapEntry::where('model_type', $morphClass)->where('model_id', $product->getKey())->delete();
+        LlmsEntry::where('model_type', $morphClass)->where('model_id', $product->getKey())->delete();
     }
 }
