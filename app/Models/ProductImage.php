@@ -9,6 +9,17 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductImage extends Model
 {
+    // ── Model events ──────────────────────────────────────────────────────────
+
+    protected static function booted(): void
+    {
+        static::deleted(function (ProductImage $image): void {
+            if ($image->path && Storage::disk('public')->exists($image->path)) {
+                Storage::disk('public')->delete($image->path);
+            }
+        });
+    }
+
     protected $fillable = [
         'product_id',
         'path',

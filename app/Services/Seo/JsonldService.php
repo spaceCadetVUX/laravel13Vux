@@ -209,8 +209,10 @@ class JsonldService
         $map['canonical_url'] = $canonicalUrl;
 
         // Product: first product image URL
+        // ->value('url') fails because 'url' is a computed Attribute, not a DB column.
+        // Must fetch the model instance first, then access the accessor.
         $map['first_image_url'] = method_exists($model, 'images')
-            ? ((string) ($model->images()->value('url') ?? ''))
+            ? ((string) ($model->images()->first()?->url ?? ''))
             : '';
 
         // BlogPost: author display name via author() relation

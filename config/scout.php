@@ -42,7 +42,10 @@ return [
     |
     */
 
-    'queue' => env('SCOUT_QUEUE', false),
+    'queue' => [
+        'connection' => env('SCOUT_QUEUE_CONNECTION', 'redis'),
+        'queue'      => env('SCOUT_QUEUE_NAME', 'seo'),
+    ],
 
     /*
     |--------------------------------------------------------------------------
