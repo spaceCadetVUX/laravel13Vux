@@ -7,6 +7,8 @@ use App\Models\Product;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use App\Models\Category;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Set;
@@ -51,6 +53,7 @@ class ProductResource extends Resource
                                 ->searchable()
                                 ->preload()
                                 ->native(false)
+                                ->live()
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('name')
@@ -100,6 +103,9 @@ class ProductResource extends Resource
                     Tab::make('Description')
                         ->schema([
                             Forms\Components\RichEditor::make('description')
+                                ->fileAttachmentsDisk('public')
+                                ->fileAttachmentsDirectory('products/description')
+                                ->fileAttachmentsVisibility('public')
                                 ->columnSpanFull(),
                         ]),
 
@@ -117,16 +123,37 @@ class ProductResource extends Resource
                                         ->image()
                                         ->imagePreviewHeight('120')
                                         ->imageEditor()
-                                        ->required(),
+                                        ->required()
+                                        ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('alt_text')
                                         ->label('Alt Text'),
 
-                                    Forms\Components\TextInput::make('sort_order')
+                                    Forms\Components\Select::make('categories')
+                                        ->label('Attributes')
+                                        ->relationship('categories', 'name')
+                                        ->options(function (Get $get) {
+                                            $ids = $get('../../categories');
+                                            if (empty($ids)) {
+                                                return [];
+                                            }
+                                            return Category::whereIn('id', $ids)
+                                                ->pluck('name', 'id');
+                                        })
+                                        ->multiple()
+                                        ->native(false)
+                                        ->placeholder('— chọn sau khi chọn categories —')
+                                        ->columnSpan(2),
+
+                                    Forms\Components\TextInput::make('price')
+                                        ->label('Price override')
                                         ->numeric()
-                                        ->default(0),
+                                        ->prefix('₫')
+                                        ->placeholder('Để trống = dùng giá sản phẩm'),
                                 ])
                                 ->orderColumn('sort_order')
+                                ->reorderable()
+                                ->reorderableWithDragAndDrop()
                                 ->columns(3)
                                 ->columnSpanFull(),
                         ]),
@@ -150,6 +177,7 @@ class ProductResource extends Resource
                                         ->directory(fn () => 'products/' . now()->format('Y/m'))
                                         ->image(),
                                 ])
+                                ->defaultItems(0)
                                 ->columns(2)
                                 ->columnSpanFull(),
                         ]),

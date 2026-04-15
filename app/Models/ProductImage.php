@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
 
 class ProductImage extends Model
@@ -25,6 +26,7 @@ class ProductImage extends Model
         'path',
         'alt_text',
         'sort_order',
+        'price',
     ];
 
     // ── Casts ─────────────────────────────────────────────────────────────────
@@ -33,6 +35,7 @@ class ProductImage extends Model
     {
         return [
             'sort_order' => 'integer',
+            'price'      => 'decimal:2',
         ];
     }
 
@@ -51,5 +54,11 @@ class ProductImage extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /** Categories this image is tagged with (subset of product's categories). */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_product_image');
     }
 }
