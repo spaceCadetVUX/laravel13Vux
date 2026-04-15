@@ -245,6 +245,11 @@ class ProductResource extends Resource
             ])
             ->actions([
                 EditAction::make(),
+                \Filament\Actions\Action::make('toggleActive')
+                    ->label(fn (Product $record) => $record->is_active ? 'Hide' : 'Show')
+                    ->icon(fn (Product $record) => $record->is_active ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
+                    ->color(fn (Product $record) => $record->is_active ? 'warning' : 'success')
+                    ->action(fn (Product $record) => $record->update(['is_active' => ! $record->is_active])),
                 RestoreAction::make(),
                 DeleteAction::make(),
                 ForceDeleteAction::make(),
