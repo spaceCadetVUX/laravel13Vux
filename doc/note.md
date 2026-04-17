@@ -193,6 +193,135 @@ PHP
 
 ---
 
+## S50 — Address API
+
+### Tổng quan
+
+| Endpoint | Auth | Làm gì |
+|---|---|---|
+| `GET /api/v1/addresses` | Bearer token | Danh sách địa chỉ của user (default lên đầu) |
+| `POST /api/v1/addresses` | Bearer token | Tạo địa chỉ mới |
+| `PUT /api/v1/addresses/{id}` | Bearer token | Cập nhật địa chỉ |
+| `DELETE /api/v1/addresses/{id}` | Bearer token | Xoá địa chỉ (403 nếu không phải chủ) |
+| `PATCH /api/v1/addresses/{id}/default` | Bearer token | Đặt làm địa chỉ mặc định, clear các địa chỉ còn lại |
+
+### Các file liên quan
+
+```
+app/Services/Address/AddressService.php
+app/Http/Controllers/Api/V1/Address/AddressController.php
+app/Http/Requests/Address/StoreAddressRequest.php
+app/Http/Requests/Address/UpdateAddressRequest.php
+app/Http/Resources/Api/Address/AddressResource.php
+app/Policies/AddressPolicy.php                 ← policy: modify (view/update/delete)
+```
+
+### Test case thủ công (curl)
+
+```bash
+BASE="http://localhost:8000/api/v1"
+
+TOKEN=$(curl -s -X POST "$BASE/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+```
+
+#### 1. Tạo địa chỉ
+
+```bash
+curl -s -X POST "$BASE/addresses" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "label": "home",
+    "full_name": "Nguyen Van A",
+    "phone": "0912345678",
+    "address_line": "123 Le Loi",
+    "city": "Ho Chi Minh",
+    "district": "District 1",
+    "ward": "Ben Nghe",
+    "is_default": true
+  }'
+
+# Expected: 201, is_default=true
+```
+
+#### 2. Tạo địa chỉ thứ hai (office)
+
+```bash
+ADDR2=$(curl -s -X POST "$BASE/addresses" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "label": "office",
+    "full_name": "Nguyen Van A",
+    "phone": "0987654321",
+    "address_line": "456 Nguyen Hue",
+    "city": "Ho Chi Minh",
+    "district": "District 1",
+    "ward": "Ben Thanh",
+    "is_default": false
+  }')
+
+ADDR2_ID=$(echo "$ADDR2" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['id'])")
+```
+
+#### 3. Đặt địa chỉ 2 làm mặc định
+
+```bash
+curl -s -X PATCH "$BASE/addresses/$ADDR2_ID/default" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Expected: is_default=true cho addr2, addr1 bị clear về false
+```
+
+#### 4. Xem danh sách — xác nhận chỉ 1 cái is_default
+
+```bash
+curl -s "$BASE/addresses" -H "Authorization: Bearer $TOKEN"
+
+# Expected: addr2 lên đầu (is_default=true), addr1 is_default=false
+```
+
+#### 5. Cập nhật địa chỉ
+
+```bash
+curl -s -X PUT "$BASE/addresses/$ADDR2_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"full_name": "Nguyen Van B"}'
+
+# Expected: full_name đã đổi
+```
+
+#### 6. Xoá địa chỉ
+
+```bash
+ADDR1_ID="<id của địa chỉ đầu tiên>"
+
+curl -s -X DELETE "$BASE/addresses/$ADDR1_ID" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Expected: message "Address deleted"
+```
+
+#### 7. Kiểm tra 403 (user khác xoá địa chỉ)
+
+```bash
+OTHER_TOKEN=$(curl -s -X POST "$BASE/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"other@example.com","password":"password"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+
+curl -s -X DELETE "$BASE/addresses/$ADDR2_ID" \
+  -H "Authorization: Bearer $OTHER_TOKEN"
+
+# Expected: 403 "This action is unauthorized."
+```
+
+---
+
 ## Ghi chú kiến trúc
 
 - `shipping_address` được lưu dạng `encrypted:array` → cột phải là `text`, không phải `jsonb`
