@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use App\Http\Controllers\Api\V1\Blog\BlogCategoryController;
+use App\Http\Controllers\Api\V1\Blog\BlogCommentController;
 use App\Http\Controllers\Api\V1\Blog\BlogPostController;
 use App\Http\Controllers\Api\V1\Blog\BlogTagController;
 use App\Http\Controllers\Api\V1\Cart\CartController;
@@ -79,5 +80,9 @@ Route::prefix('v1')->group(function () {
     Route::get('blog/categories', [BlogCategoryController::class, 'index']);
     Route::get('blog/tags',       [BlogTagController::class, 'index']);
     Route::get('blog/{slug}',     [BlogPostController::class, 'show']);
+
+    // ── Blog Comments (S52) ───────────────────────────────────────────────────
+    Route::get('blog/{slug}/comments', [BlogCommentController::class, 'index']);
+    Route::middleware('auth:sanctum')->post('blog/{slug}/comments', [BlogCommentController::class, 'store']);
 
 });

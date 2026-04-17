@@ -437,6 +437,104 @@ PHP
 
 ---
 
+## S52 — Blog Comments API
+
+### Tổng quan
+
+| Endpoint | Auth | Làm gì |
+|---|---|---|
+| `GET /api/v1/blog/{slug}/comments` | Public | Danh sách comment đã duyệt (paginated) |
+| `POST /api/v1/blog/{slug}/comments` | Bearer token | Gửi comment mới — lưu `is_approved=false` chờ duyệt |
+
+**Flow moderation:**
+- Comment mới luôn lưu `is_approved = false`
+- Admin duyệt trong Filament → `is_approved = true`
+- `GET` chỉ trả comment đã duyệt (`scopeApproved`)
+- Slug không tồn tại hoặc bài là draft → 404 ở cả hai endpoints
+
+### Các file liên quan
+
+```
+app/Http/Controllers/Api/V1/Blog/BlogCommentController.php
+app/Http/Requests/Blog/StoreBlogCommentRequest.php
+app/Http/Resources/Api/Blog/BlogCommentResource.php
+```
+
+### Test case thủ công (curl)
+
+```bash
+BASE="http://localhost:8000/api/v1"
+
+TOKEN=$(curl -s -X POST "$BASE/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+
+SLUG="how-casambi-mesh-works"
+```
+
+#### 1. Xem comments (public)
+
+```bash
+curl -s "$BASE/blog/$SLUG/comments"
+
+# Expected: paginated list, chỉ comment is_approved=true
+```
+
+#### 2. Gửi comment (auth)
+
+```bash
+curl -s -X POST "$BASE/blog/$SLUG/comments" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"Great article, very helpful!"}'
+
+# Expected: 201, message "Comment submitted and pending approval", is_approved=false
+```
+
+#### 3. Gửi comment không có token → 401
+
+```bash
+curl -s -X POST "$BASE/blog/$SLUG/comments" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"No token here"}'
+
+# Expected: 401 Unauthenticated
+```
+
+#### 4. Body quá ngắn → 422
+
+```bash
+curl -s -X POST "$BASE/blog/$SLUG/comments" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"Hi"}'
+
+# Expected: 422, lỗi validation body min:3
+```
+
+#### 5. Slug bài draft → 404
+
+```bash
+curl -s "$BASE/blog/draft-post-slug/comments"
+
+# Expected: 404
+```
+
+#### 6. Duyệt comment bằng tinker (giả lập admin approve)
+
+```bash
+php artisan tinker --no-interaction <<'PHP'
+$comment = App\Models\BlogComment::latest()->first();
+$comment->update(['is_approved' => true]);
+echo "Approved: " . $comment->id;
+PHP
+
+# Sau đó GET lại endpoint → comment xuất hiện
+```
+
+---
+
 ## Ghi chú kiến trúc
 
 - `shipping_address` được lưu dạng `encrypted:array` → cột phải là `text`, không phải `jsonb`
