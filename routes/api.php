@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use App\Http\Controllers\Api\V1\Cart\CartController;
 use App\Http\Controllers\Api\V1\Cart\CartItemController;
 use App\Http\Controllers\Api\V1\Category\CategoryController;
+use App\Http\Controllers\Api\V1\Address\AddressController;
 use App\Http\Controllers\Api\V1\Order\OrderController;
 use App\Http\Controllers\Api\V1\Product\ProductController;
 use App\Http\Controllers\Api\V1\Product\ProductSearchController;
@@ -54,6 +55,12 @@ Route::prefix('v1')->group(function () {
     Route::put('cart/items/{cartItem}',         [CartItemController::class, 'update']);
     Route::delete('cart/items/{cartItem}',      [CartItemController::class, 'destroy']);
     Route::middleware('auth:sanctum')->post('cart/merge', [CartController::class, 'merge']);
+
+    // ── Addresses (S50) ──────────────────────────────────────────────────
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::apiResource('addresses', AddressController::class);
+        Route::patch('addresses/{address}/default', [AddressController::class, 'setDefault']);
+    });
 
     // ── Orders (S49) ─────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
