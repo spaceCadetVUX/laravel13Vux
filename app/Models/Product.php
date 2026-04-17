@@ -80,12 +80,17 @@ class Product extends Model
      */
     public function toSearchableArray(): array
     {
+        $categoriesLoaded = $this->relationLoaded('categories');
+
         return [
             'id'                => $this->id,
             'name'              => $this->name,
             'sku'               => $this->sku,
             'short_description' => $this->short_description,
-            'categories'        => $this->relationLoaded('categories')
+            'category_ids'      => $categoriesLoaded
+                                    ? $this->categories->pluck('id')->all()
+                                    : [],
+            'categories'        => $categoriesLoaded
                                     ? $this->categories->pluck('name')->all()
                                     : [],
             'price'             => (float) $this->price,
@@ -94,6 +99,14 @@ class Product extends Model
             'is_active'         => $this->is_active,
             'created_at'        => $this->created_at?->timestamp,
         ];
+    }
+
+    /**
+     * Eager-load categories when running scout:import to populate category_ids.
+     */
+    public function makeAllSearchableUsing(Builder $query): Builder
+    {
+        return $query->with('categories');
     }
 
     /**

@@ -47,7 +47,7 @@ class ProductSearchController extends Controller
     {
         $driver = config('scout.driver');
 
-        return $driver !== 'null' && $driver !== null && $driver !== 'collection';
+        return $driver !== 'null' && $driver !== null;
     }
 
     // ── Scout (Meilisearch) path ──────────────────────────────────────────────

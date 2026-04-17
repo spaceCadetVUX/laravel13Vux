@@ -16,7 +16,6 @@ class ProductFactory extends Factory
         $name = fake()->unique()->words(fake()->numberBetween(2, 4), true);
 
         return [
-            'category_id'       => null,
             'name'              => ucwords($name),
             'slug'              => Str::slug($name) . '-' . fake()->unique()->numberBetween(1000, 99999),
             'sku'               => strtoupper(Str::random(3) . '-' . fake()->unique()->numerify('####')),

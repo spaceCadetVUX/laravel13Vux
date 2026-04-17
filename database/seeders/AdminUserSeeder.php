@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
@@ -15,14 +14,16 @@ class AdminUserSeeder extends Seeder
     {
         // User model does not have HasUuids or HasRoles yet (added in S11).
         // UUID is supplied explicitly; Spatie role is assigned via raw DB insert.
-        $user = User::where('email', 'admin@example.com')->first();
+        // Email is encrypted — must look up via email_hash (SHA-256 of plaintext).
+        $emailHash = hash('sha256', strtolower('admin@example.com'));
+        $user      = User::where('email_hash', $emailHash)->first();
 
         if (! $user) {
             $user = new User();
             $user->id                = (string) Str::uuid();
             $user->name              = 'Admin';
-            $user->email             = 'admin@example.com';
-            $user->password          = Hash::make('password');
+            $user->email             = 'admin@example.com'; // setter encrypts + sets email_hash
+            $user->password          = 'password';           // 'hashed' cast bcrypts this — do NOT pre-hash
             $user->role              = 'admin';
             $user->email_verified_at = now();
             $user->save();

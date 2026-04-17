@@ -143,9 +143,16 @@ return [
         'host' => env('MEILISEARCH_HOST', 'http://localhost:7700'),
         'key' => env('MEILISEARCH_KEY'),
         'index-settings' => [
-            // 'users' => [
-            //     'filterableAttributes'=> ['id', 'name', 'email'],
-            // ],
+            'app_products' => [
+                'searchableAttributes' => ['name', 'sku', 'short_description'],
+                'filterableAttributes' => ['category_ids', 'price', 'sale_price', 'is_active', 'stock_quantity'],
+                'sortableAttributes'   => ['price', 'created_at', 'name'],
+            ],
+            'app_blog_posts' => [
+                'searchableAttributes' => ['title', 'excerpt'],
+                'filterableAttributes' => ['status', 'blog_category_id'],
+                'sortableAttributes'   => ['published_at'],
+            ],
         ],
     ],
 
