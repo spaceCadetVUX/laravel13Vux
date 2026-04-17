@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use App\Http\Controllers\Api\V1\Cart\CartController;
 use App\Http\Controllers\Api\V1\Cart\CartItemController;
 use App\Http\Controllers\Api\V1\Category\CategoryController;
+use App\Http\Controllers\Api\V1\Order\OrderController;
 use App\Http\Controllers\Api\V1\Product\ProductController;
 use App\Http\Controllers\Api\V1\Product\ProductSearchController;
 use Illuminate\Support\Facades\Route;
@@ -54,8 +55,13 @@ Route::prefix('v1')->group(function () {
     Route::delete('cart/items/{cartItem}',      [CartItemController::class, 'destroy']);
     Route::middleware('auth:sanctum')->post('cart/merge', [CartController::class, 'merge']);
 
-    // ── Orders (S49–S50) ─────────────────────────────────────────────────
-    // Route::middleware('auth:sanctum')->group(...)
+    // ── Orders (S49) ─────────────────────────────────────────────────────
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('orders',                    [OrderController::class, 'index']);
+        Route::post('orders',                   [OrderController::class, 'store']);
+        Route::get('orders/{order}',            [OrderController::class, 'show']);
+        Route::patch('orders/{order}/cancel',   [OrderController::class, 'cancel']);
+    });
 
     // ── Blog (S51–S52) ────────────────────────────────────────────────────
     // Route::get('blog', ...)

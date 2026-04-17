@@ -22,8 +22,13 @@ class CartService
      */
     public function resolveCart(Request $request): Cart
     {
-        if ($request->user()) {
-            $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+        // Cart routes are public (no auth:sanctum middleware) so we ask the
+        // Sanctum guard directly — it returns the user from the Bearer token
+        // without throwing, falling back to null for unauthenticated requests.
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        if ($user) {
+            $cart = Cart::firstOrCreate(['user_id' => $user->id]);
         } else {
             $sessionId = $request->header('X-Session-ID');
 
@@ -155,8 +160,10 @@ class CartService
     {
         $cart = $item->cart;
 
-        $owns = $request->user()
-            ? (string) $cart->user_id === (string) $request->user()->id
+        $user = $request->user() ?? auth('sanctum')->user();
+
+        $owns = $user
+            ? (string) $cart->user_id === (string) $user->id
             : $cart->session_id === $request->header('X-Session-ID');
 
         abort_unless($owns, 403, 'This item does not belong to your cart.');
