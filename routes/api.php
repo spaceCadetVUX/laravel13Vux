@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\Cart\CartController;
+use App\Http\Controllers\Api\V1\Cart\CartItemController;
 use App\Http\Controllers\Api\V1\Category\CategoryController;
 use App\Http\Controllers\Api\V1\Product\ProductController;
 use App\Http\Controllers\Api\V1\Product\ProductSearchController;
@@ -43,7 +45,16 @@ Route::prefix('v1')->group(function () {
     Route::get('products/{slug}',   [ProductController::class, 'show']);
     Route::get('search',            ProductSearchController::class);
 
-    // ── Cart & Orders (S48–S50) ───────────────────────────────────────────
+    // ── Cart (S48) ────────────────────────────────────────────────────────
+    // Guest + auth (X-Session-ID for guests, Bearer token for auth)
+    Route::get('cart',                          [CartController::class, 'show']);
+    Route::delete('cart',                       [CartController::class, 'clear']);
+    Route::post('cart/items',                   [CartItemController::class, 'store']);
+    Route::put('cart/items/{cartItem}',         [CartItemController::class, 'update']);
+    Route::delete('cart/items/{cartItem}',      [CartItemController::class, 'destroy']);
+    Route::middleware('auth:sanctum')->post('cart/merge', [CartController::class, 'merge']);
+
+    // ── Orders (S49–S50) ─────────────────────────────────────────────────
     // Route::middleware('auth:sanctum')->group(...)
 
     // ── Blog (S51–S52) ────────────────────────────────────────────────────
