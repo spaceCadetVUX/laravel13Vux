@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\Blog\BlogCategoryController;
+use App\Http\Controllers\Api\V1\Blog\BlogPostController;
+use App\Http\Controllers\Api\V1\Blog\BlogTagController;
 use App\Http\Controllers\Api\V1\Cart\CartController;
 use App\Http\Controllers\Api\V1\Cart\CartItemController;
 use App\Http\Controllers\Api\V1\Category\CategoryController;
@@ -70,7 +73,11 @@ Route::prefix('v1')->group(function () {
         Route::patch('orders/{order}/cancel',   [OrderController::class, 'cancel']);
     });
 
-    // ── Blog (S51–S52) ────────────────────────────────────────────────────
-    // Route::get('blog', ...)
+    // ── Blog (S51) ────────────────────────────────────────────────────────
+    // blog/categories and blog/tags must come before blog/{slug}
+    Route::get('blog',            [BlogPostController::class, 'index']);
+    Route::get('blog/categories', [BlogCategoryController::class, 'index']);
+    Route::get('blog/tags',       [BlogTagController::class, 'index']);
+    Route::get('blog/{slug}',     [BlogPostController::class, 'show']);
 
 });

@@ -322,6 +322,121 @@ curl -s -X DELETE "$BASE/addresses/$ADDR2_ID" \
 
 ---
 
+## S51 — Blog API
+
+### Tổng quan
+
+| Endpoint | Auth | Làm gì |
+|---|---|---|
+| `GET /api/v1/blog` | Public | Danh sách bài viết đã publish (paginated, có filter) |
+| `GET /api/v1/blog/categories` | Public | Cây danh mục blog (root + children) |
+| `GET /api/v1/blog/tags` | Public | Tất cả tags |
+| `GET /api/v1/blog/{slug}` | Public | Chi tiết bài viết + SEO + JSON-LD (draft → 404) |
+
+**Query params cho `GET /blog`:**
+- `category` — slug của danh mục
+- `tag` — slug của tag
+- `sort` — `newest` (mặc định) hoặc `oldest`
+- `per_page` — số bài mỗi trang (mặc định 12)
+
+### Các file liên quan
+
+```
+app/Services/Blog/BlogPostService.php
+app/Http/Controllers/Api/V1/Blog/BlogPostController.php
+app/Http/Controllers/Api/V1/Blog/BlogCategoryController.php
+app/Http/Controllers/Api/V1/Blog/BlogTagController.php
+app/Http/Resources/Api/Blog/BlogPostResource.php         ← list shape
+app/Http/Resources/Api/Blog/BlogPostDetailResource.php   ← detail + seo + jsonld_schemas
+app/Http/Resources/Api/Blog/BlogCategoryResource.php
+app/Http/Resources/Api/Blog/BlogTagResource.php
+```
+
+### Test case thủ công (curl)
+
+```bash
+BASE="http://localhost:8000/api/v1"
+```
+
+#### 1. Danh sách bài viết (published only)
+
+```bash
+curl -s "$BASE/blog"
+
+# Expected: paginated list, chỉ bài status=published và published_at <= now
+# Draft posts không xuất hiện
+```
+
+#### 2. Filter theo danh mục
+
+```bash
+curl -s "$BASE/blog?category=technology"
+
+# Expected: chỉ bài thuộc category slug=technology
+```
+
+#### 3. Filter theo tag + sort oldest
+
+```bash
+curl -s "$BASE/blog?tag=casambi&sort=oldest"
+
+# Expected: bài có tag slug=casambi, sắp xếp từ cũ → mới
+```
+
+#### 4. Chi tiết bài viết
+
+```bash
+curl -s "$BASE/blog/how-casambi-mesh-works"
+
+# Expected: 200, có thêm trường content, seo{meta_title, meta_description, og_image, canonical_url}, jsonld_schemas[]
+```
+
+#### 5. Truy cập draft → 404
+
+```bash
+curl -s "$BASE/blog/draft-post-slug"
+
+# Expected: 404 (bài draft không expose ra API)
+```
+
+#### 6. Danh sách danh mục (cây)
+
+```bash
+curl -s "$BASE/blog/categories"
+
+# Expected: mảng root categories, mỗi category có children[]
+```
+
+#### 7. Tất cả tags
+
+```bash
+curl -s "$BASE/blog/tags"
+
+# Expected: mảng flat [{id, name, slug}, ...]
+```
+
+#### 8. Tạo bài test nhanh bằng tinker (nếu DB trống)
+
+```bash
+php artisan tinker --no-interaction <<'PHP'
+$cat = App\Models\BlogCategory::create(['name' => 'Technology', 'slug' => 'technology', 'is_active' => true]);
+$user = App\Models\User::first();
+$post = App\Models\BlogPost::create([
+    'author_id'        => $user->id,
+    'blog_category_id' => $cat->id,
+    'title'            => 'How Casambi Mesh Works',
+    'slug'             => 'how-casambi-mesh-works',
+    'excerpt'          => 'Short summary here.',
+    'content'          => '<p>Full content here.</p>',
+    'status'           => 'published',
+    'published_at'     => now(),
+]);
+echo $post->slug;
+PHP
+```
+
+---
+
 ## Ghi chú kiến trúc
 
 - `shipping_address` được lưu dạng `encrypted:array` → cột phải là `text`, không phải `jsonb`
