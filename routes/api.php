@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
+use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
 use App\Http\Controllers\Api\V1\Blog\BlogCategoryController;
 use App\Http\Controllers\Api\V1\Blog\BlogCommentController;
@@ -31,16 +33,28 @@ Route::prefix('v1')->group(function () {
     // ── Auth (S20–S22) ────────────────────────────────────────────────────
     Route::prefix('auth')->group(function () {
 
-        // Public
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('login',    [AuthController::class, 'login']);
-        Route::post('google',   [SocialAuthController::class, 'google']);  // S21
+        // Public — rate-limited to 5 req/min per IP
+        Route::middleware('throttle:5,1')->group(function () {
+            Route::post('register', [AuthController::class, 'register']);
+            Route::post('login',    [AuthController::class, 'login']);
+        });
+        Route::post('google', [SocialAuthController::class, 'google']);  // S21
+
+        // Password reset (public)
+        Route::post('forgot-password', [PasswordResetController::class, 'forgot']);
+        Route::post('reset-password',  [PasswordResetController::class, 'reset']);
+
+        // Email verification
+        Route::get('email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+            ->middleware('signed')
+            ->name('api.auth.email.verify');
 
         // Protected
         Route::middleware('auth:sanctum')->group(function () {
-            Route::post('logout', [AuthController::class, 'logout']);
-            Route::get('me',      [AuthController::class, 'me']);
-            Route::put('me',      [AuthController::class, 'update']);   // S22
+            Route::post('logout',        [AuthController::class, 'logout']);
+            Route::get('me',             [AuthController::class, 'me']);
+            Route::put('me',             [AuthController::class, 'update']);
+            Route::post('email/resend',  [EmailVerificationController::class, 'resend']);
         });
     });
 

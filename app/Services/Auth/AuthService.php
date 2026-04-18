@@ -43,6 +43,8 @@ class AuthService
         // Assign Spatie 'customer' role
         $user->assignRole('customer');
 
+        $user->sendEmailVerificationNotification();
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return [
