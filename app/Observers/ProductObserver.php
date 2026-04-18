@@ -43,6 +43,16 @@ class ProductObserver
     }
 
     /**
+     * Restore: reactivate SEO entries so the product reappears in sitemap/llms.
+     */
+    public function restored(Product $product): void
+    {
+        dispatch(new SyncJsonldSchema($product))->onQueue('seo');
+        dispatch(new SyncSitemapEntry($product))->onQueue('seo');
+        dispatch(new SyncLlmsEntry($product))->onQueue('seo');
+    }
+
+    /**
      * Runs BEFORE the SQL DELETE — must happen before DB CASCADE wipes
      * product_images / product_videos, otherwise images() returns empty
      * and physical files are never removed from storage.

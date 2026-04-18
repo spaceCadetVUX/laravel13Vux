@@ -129,7 +129,12 @@ class SitemapService
             return;
         }
 
-        $slug     = (string) ($model->getAttribute('slug') ?? '');
+        $slug = (string) ($model->getAttribute('slug') ?? '');
+
+        if ($slug === '') {
+            return;
+        }
+
         $baseUrl  = rtrim((string) config('app.url'), '/');
         $url      = $baseUrl . $config['path_prefix'] . $slug;
         $isActive = (bool) ($model->getAttribute('is_active') ?? true);

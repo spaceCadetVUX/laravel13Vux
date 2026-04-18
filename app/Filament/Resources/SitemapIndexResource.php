@@ -81,7 +81,7 @@ class SitemapIndexResource extends Resource
                     ->color('info')
                     ->requiresConfirmation()
                     ->modalHeading('Regenerate Sitemap')
-                    ->modalDescription('This will regenerate the sitemap file. The actual generation logic runs in S36.')
+                    ->modalDescription('This will regenerate the sitemap file synchronously. The table entry count and last_generated_at will be updated.')
                     ->action(function (SitemapIndex $record, SitemapService $service): void {
                         $service->generateChild($record);
 

@@ -19,6 +19,17 @@ class BlogPostObserver
     public function saved(BlogPost $blogPost): void
     {
         if ($blogPost->status !== BlogPostStatus::Published) {
+            // Post is no longer published — deactivate any existing SEO entries.
+            $morphClass = $blogPost->getMorphClass();
+
+            SitemapEntry::where('model_type', $morphClass)
+                ->where('model_id', $blogPost->getKey())
+                ->update(['is_active' => false]);
+
+            LlmsEntry::where('model_type', $morphClass)
+                ->where('model_id', $blogPost->getKey())
+                ->update(['is_active' => false]);
+
             return;
         }
 

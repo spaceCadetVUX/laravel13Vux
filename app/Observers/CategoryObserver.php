@@ -41,4 +41,15 @@ class CategoryObserver
 
         app(CategoryService::class)->bustTreeCache();
     }
+
+    /**
+     * Restore: reactivate SEO entries and re-sync sitemap/llms.
+     */
+    public function restored(Category $category): void
+    {
+        dispatch(new SyncSitemapEntry($category))->onQueue('seo');
+        dispatch(new SyncLlmsEntry($category))->onQueue('seo');
+
+        app(CategoryService::class)->bustTreeCache();
+    }
 }
