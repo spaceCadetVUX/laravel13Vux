@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class BlogTag extends Model
 {
+    use HasFactory;
     // ── PK config (bigint auto-increment) ─────────────────────────────────────
 
     protected $keyType    = 'int';
