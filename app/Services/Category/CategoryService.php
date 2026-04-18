@@ -63,7 +63,6 @@ class CategoryService
     {
         return $category->products()
             ->where('is_active', true)
-            ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate($perPage);
     }

@@ -26,7 +26,10 @@ class ProductResource extends JsonResource
             'sale_price'        => $this->sale_price ? (string) $this->sale_price : null,
             'stock_quantity'    => $this->stock_quantity,
             'is_active'         => $this->is_active,
-            'category'          => $this->whenLoaded('category', fn () => new CategoryResource($this->category)),
+            'category'          => $this->whenLoaded('categories', fn () => $this->categories->first()
+                ? new CategoryResource($this->categories->first())
+                : null
+            ),
             'thumbnail'         => $this->whenLoaded(
                 'images',
                 fn () => $this->images->first()?->url,

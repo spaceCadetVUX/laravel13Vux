@@ -19,12 +19,12 @@ class ProductService
      */
     public function list(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = Product::with(['category', 'images'])
+        $query = Product::with(['categories', 'images'])
             ->where('is_active', true);
 
         // ── Category filter ────────────────────────────────────────────────────
         if (! empty($filters['category'])) {
-            $query->whereHas('category', fn ($q) => $q->where('slug', $filters['category']));
+            $query->whereHas('categories', fn ($q) => $q->where('slug', $filters['category']));
         }
 
         // ── Price range filters ────────────────────────────────────────────────
@@ -62,7 +62,7 @@ class ProductService
     {
         /** @var Product $product */
         $product = Product::with([
-            'category',
+            'categories',
             'images',
             'videos',
             'seoMeta',
