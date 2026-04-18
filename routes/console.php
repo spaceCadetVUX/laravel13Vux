@@ -10,10 +10,36 @@ Artisan::command('inspire', function () {
 
 // ── SEO generation ────────────────────────────────────────────────────────────
 // Run after midnight when traffic is lowest.
-// withoutOverlapping() prevents concurrent runs if a previous job is still running.
+// withoutOverlapping() prevents double-runs; runInBackground() keeps scheduler tick free.
 
-Schedule::command('sitemap:generate')->daily()->at('02:00')->withoutOverlapping();
-Schedule::command('llms:generate')->daily()->at('02:30')->withoutOverlapping();
+Schedule::command('sitemap:generate')
+    ->dailyAt('02:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+Schedule::command('llms:generate')
+    ->dailyAt('02:30')
+    ->withoutOverlapping()
+    ->runInBackground();
 
 // ── Maintenance ───────────────────────────────────────────────────────────────
-Schedule::command('cart:prune')->daily()->at('03:00')->withoutOverlapping();
+Schedule::command('cart:prune')
+    ->dailyAt('03:00')
+    ->withoutOverlapping();
+
+// ── Queue monitoring ──────────────────────────────────────────────────────────
+// Saves Horizon metrics snapshot to DB every 5 min — required for the Horizon dashboard graphs.
+Schedule::command('horizon:snapshot')
+    ->everyFiveMinutes();
+
+// ── Search index rebuild ──────────────────────────────────────────────────────
+// Full re-import every Sunday as a safety net in case incremental sync missed records.
+Schedule::command('scout:import "App\Models\Product"')
+    ->weekly()
+    ->sundays()
+    ->at('04:00');
+
+Schedule::command('scout:import "App\Models\BlogPost"')
+    ->weekly()
+    ->sundays()
+    ->at('04:30');
