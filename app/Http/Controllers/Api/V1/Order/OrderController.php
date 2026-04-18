@@ -77,7 +77,7 @@ class OrderController extends Controller
         $order = $this->orderService->cancel($order);
 
         return $this->success(
-            data: new OrderResource($order),
+            data: new OrderResource($order->load('items')),
             message: 'Order cancelled',
         );
     }

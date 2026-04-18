@@ -9,6 +9,7 @@ use App\Models\BlogTag;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ── N+1 Detection safety net ──────────────────────────────────────────
+        // Throws LazyLoadingViolationException for any lazy-loaded relationship
+        // in non-production environments. This forces eager loading discipline
+        // and makes N+1 problems surface immediately in dev/test.
+        Model::preventLazyLoading(! app()->isProduction());
+
         $this->registerMorphMap();
         $this->registerEncryptedUserProvider();
     }

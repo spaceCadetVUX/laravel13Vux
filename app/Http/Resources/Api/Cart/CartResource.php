@@ -12,7 +12,7 @@ class CartResource extends JsonResource
         return [
             'id'         => $this->id,
             'expires_at' => $this->expires_at->toIso8601String(),
-            'items'      => CartItemResource::collection($this->items),
+            'items'      => CartItemResource::collection($this->whenLoaded('items')),
             'total'      => number_format($this->total, 2, '.', ''),
             'item_count' => $this->item_count,
         ];
