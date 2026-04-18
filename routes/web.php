@@ -22,3 +22,8 @@ Route::middleware('throttle:30,1')->group(function () {
 
 // ── System: Health Check ─────────────────────────────────────────────────────
 Route::get('health', HealthController::class);
+
+// ── API Docs: local + staging only ───────────────────────────────────────────
+if (app()->isLocal() || app()->environment('staging')) {
+    Route::get('docs', fn () => view('scribe.index'));
+}
