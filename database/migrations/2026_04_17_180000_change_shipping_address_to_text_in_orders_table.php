@@ -16,14 +16,19 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        // Cast existing jsonb column (likely empty in dev) to text first,
-        // then alter to text type.
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE orders ALTER COLUMN shipping_address TYPE text USING shipping_address::text');
     }
 
     public function down(): void
     {
-        // Revert only works if all values are valid JSON.
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE orders ALTER COLUMN shipping_address TYPE jsonb USING shipping_address::jsonb');
     }
 };
