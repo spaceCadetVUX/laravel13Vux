@@ -1,6 +1,13 @@
+php artisan migrate --seed
+
+
+
+Muốn test nhanh thì mở 2 terminal:
+- Terminal 1: php artisan horizon
+- Terminal 2: chạy app bình thường (php artisan serve)
+
+  Rồi vào http://localhost:8000/horizon để xem dashboard.
 # php artisan migrate:fresh --seed
-
-
   S48 — Cart (Giỏ hàng)
 
   Cho phép người dùng thêm/sửa/xoá sản phẩm vào giỏ hàng.

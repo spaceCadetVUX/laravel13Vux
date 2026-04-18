@@ -90,6 +90,7 @@ Route::prefix('auth')->middleware('throttle:5,1')->group(function () {
 **Vấn đề:** Token hiện tại không có expiry — một lần tạo dùng mãi mãi.
 
 **Fix trong** `config/sanctum.php`:
+
 ```php
 'expiration' => 60 * 24 * 30, // 30 ngày (minutes)
 ```

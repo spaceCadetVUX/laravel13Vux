@@ -2647,13 +2647,10 @@ Schedule::command('scout:import "App\Models\Product"')
 Schedule::command('scout:import "App\Models\BlogPost"')
   ->weekly()->sundays()->at('04:30');
 
-Verify Docker scheduler service runs:
-docker compose logs scheduler
-→ Should show "* * * * * php artisan schedule:run" output
 
 Test: php artisan schedule:list → all commands listed with next run time
 
-Output: All scheduled tasks configured and running via Docker
+
 ```
 
 ---
@@ -2887,7 +2884,7 @@ After S60 — run this full verification:
 □ php artisan migrate:fresh --seed → no errors
 □ php artisan test → all tests green
 □ php artisan route:list → all routes listed
-□ php artisan horizon → starts without errors
+□ php artisan horizon → starts without errors    (re)
 □ php artisan schedule:list → all tasks listed
 □ php artisan scribe:generate → docs generated
 □ php artisan sitemap:generate → XML files created
