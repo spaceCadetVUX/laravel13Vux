@@ -27,6 +27,11 @@ Schedule::command('cart:prune')
     ->dailyAt('03:00')
     ->withoutOverlapping();
 
+// Clean up Livewire temporary uploads older than 24 hours.
+Schedule::command('livewire:purge-temp', ['--hours' => 24])
+    ->dailyAt('03:30')
+    ->withoutOverlapping();
+
 // ── Queue monitoring ──────────────────────────────────────────────────────────
 // Saves Horizon metrics snapshot to DB every 5 min — required for the Horizon dashboard graphs.
 Schedule::command('horizon:snapshot')
