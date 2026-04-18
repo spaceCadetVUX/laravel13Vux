@@ -701,7 +701,7 @@ endpoints:
         name: type
         description: ''
         required: false
-        example: blog
+        example: products
         type: string
         enumValues:
           - products
@@ -734,7 +734,7 @@ endpoints:
         deprecated: false
     cleanBodyParameters:
       q: b
-      type: blog
+      type: products
       page: 22
       per_page: 7
     fileParameters: []
@@ -932,14 +932,14 @@ endpoints:
         name: cartItem_id
         description: 'The ID of the cartItem.'
         required: true
-        example: 2
+        example: 16
         type: integer
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      cartItem_id: 2
+      cartItem_id: 16
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters:
@@ -993,14 +993,14 @@ endpoints:
         name: cartItem_id
         description: 'The ID of the cartItem.'
         required: true
-        example: 2
+        example: 16
         type: integer
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      cartItem_id: 2
+      cartItem_id: 16
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
@@ -1138,7 +1138,7 @@ endpoints:
         name: label
         description: ''
         required: false
-        example: home
+        example: office
         type: string
         enumValues:
           - home
@@ -1225,7 +1225,7 @@ endpoints:
         nullable: false
         deprecated: false
     cleanBodyParameters:
-      label: home
+      label: office
       full_name: b
       phone: ngzmiyvdljnikhwa
       address_line: 'y'
@@ -1269,14 +1269,14 @@ endpoints:
         name: id
         description: 'The ID of the address.'
         required: true
-        example: 019d9c3f-73cc-7151-8943-e16f86ac65c5
+        example: architecto
         type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      id: 019d9c3f-73cc-7151-8943-e16f86ac65c5
+      id: architecto
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters:
@@ -1285,7 +1285,7 @@ endpoints:
         name: label
         description: ''
         required: false
-        example: home
+        example: other
         type: string
         enumValues:
           - home
@@ -1365,21 +1365,21 @@ endpoints:
         name: is_default
         description: ''
         required: false
-        example: false
+        example: true
         type: boolean
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanBodyParameters:
-      label: home
+      label: other
       full_name: b
       phone: ngzmiyvdljnikhwa
       address_line: 'y'
       city: k
       district: c
       ward: m
-      is_default: false
+      is_default: true
     fileParameters: []
     responses: []
     responseFields: []
@@ -1415,14 +1415,14 @@ endpoints:
         name: id
         description: 'The ID of the address.'
         required: true
-        example: 019d9c3f-73cc-7151-8943-e16f86ac65c5
+        example: architecto
         type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      id: 019d9c3f-73cc-7151-8943-e16f86ac65c5
+      id: architecto
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
@@ -1462,14 +1462,14 @@ endpoints:
         name: address_id
         description: 'The ID of the address.'
         required: true
-        example: 019d9c3f-73cc-7151-8943-e16f86ac65c5
+        example: architecto
         type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      address_id: 019d9c3f-73cc-7151-8943-e16f86ac65c5
+      address_id: architecto
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
@@ -1619,14 +1619,14 @@ endpoints:
         name: order_id
         description: 'The ID of the order.'
         required: true
-        example: 019d9c46-b6de-70f0-b20a-62f22906da14
+        example: architecto
         type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      order_id: 019d9c46-b6de-70f0-b20a-62f22906da14
+      order_id: architecto
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
@@ -1678,14 +1678,14 @@ endpoints:
         name: order_id
         description: 'The ID of the order.'
         required: true
-        example: 019d9c46-b6de-70f0-b20a-62f22906da14
+        example: architecto
         type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      order_id: 019d9c46-b6de-70f0-b20a-62f22906da14
+      order_id: architecto
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
