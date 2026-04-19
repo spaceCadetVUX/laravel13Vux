@@ -124,6 +124,31 @@ class ProductResource extends Resource
                                         ->disk('public')
                                         ->visibility('public')
                                         ->directory(fn () => 'products/' . now()->format('Y/m'))
+                                        ->getUploadedFileNameForStorageUsing(function ($file): string {
+                                            $dir  = 'products/' . now()->format('Y/m');
+                                            $name = Str::slug(
+                                                pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)
+                                            );
+                                            $ext  = strtolower($file->getClientOriginalExtension());
+
+                                            // Fallback if slug is empty (e.g. all special chars)
+                                            if (empty($name)) {
+                                                $name = 'image-' . now()->format('YmdHis');
+                                            }
+
+                                            $filename = "{$name}.{$ext}";
+                                            $counter  = 1;
+
+                                            while (Storage::disk('public')->exists("{$dir}/{$filename}")) {
+                                                $filename = "{$name}-{$counter}.{$ext}";
+                                                $counter++;
+                                            }
+
+                                            return $filename;
+                                        })
+                                        ->hint('The file name will automatically be converted to Latin without accents. If the name is duplicated, the system will automatically add a numeric suffix (e.g., den-led-1.jpg)).')
+                                        ->hintIcon('heroicon-o-information-circle')
+                                        ->hintColor('warning')
                                         ->image()
                                         ->imagePreviewHeight('120')
                                         ->imageEditor()
@@ -148,12 +173,6 @@ class ProductResource extends Resource
                                         ->native(false)
                                         ->placeholder('— chọn sau khi chọn categories —')
                                         ->columnSpan(2),
-
-                                    Forms\Components\TextInput::make('price')
-                                        ->label('Price override')
-                                        ->numeric()
-                                        ->prefix('₫')
-                                        ->placeholder('Để trống = dùng giá sản phẩm'),
                                 ])
                                 ->orderColumn('sort_order')
                                 ->reorderable()
