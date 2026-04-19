@@ -7,6 +7,8 @@ use App\Models\Category;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -69,6 +71,50 @@ class CategoryResource extends Resource
 
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
+
+            // ── SEO ───────────────────────────────────────────────────────────
+            Group::make()
+                ->relationship('seoMeta')
+                ->schema([
+                    Section::make('SEO')
+                        ->icon('heroicon-o-magnifying-glass')
+                        ->schema([
+                            Forms\Components\TextInput::make('meta_title')
+                                ->label('Meta Title')
+                                ->maxLength(70)
+                                ->placeholder('Auto-filled from category name')
+                                ->hint('Auto-filled from category name')
+                                ->hintIcon('heroicon-o-sparkles')
+                                ->hintColor('info')
+                                ->helperText('Optimal: 50–70 characters.')
+                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                    if (empty($state) && $livewire->record?->name) {
+                                        $set('meta_title', $livewire->record->name);
+                                    }
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\Textarea::make('meta_description')
+                                ->label('Meta Description')
+                                ->rows(3)
+                                ->maxLength(160)
+                                ->placeholder('Auto-filled from category description')
+                                ->hint('Auto-filled from category description')
+                                ->hintIcon('heroicon-o-sparkles')
+                                ->hintColor('info')
+                                ->helperText('Optimal: 120–160 characters.')
+                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                    if (empty($state) && $livewire->record?->description) {
+                                        $set('meta_description', $livewire->record->description);
+                                    }
+                                })
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(2)
+                        ->collapsible()
+                        ->collapsed(),
+                ])
+                ->columnSpanFull(),
         ]);
     }
 

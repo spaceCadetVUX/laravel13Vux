@@ -4,7 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Enums\OgType;
 use App\Filament\Resources\ProductResource\Pages;
+use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Manufacturer;
 use App\Models\Product;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -60,12 +62,29 @@ class ProductResource extends Resource
                                 ->live()
                                 ->columnSpanFull(),
 
+                            Forms\Components\Select::make('brand_id')
+                                ->label('Brand')
+                                ->relationship('brand', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->nullable()
+                                ->native(false),
+
+                            Forms\Components\Select::make('manufacturer_id')
+                                ->label('Manufacturer')
+                                ->relationship('manufacturer', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->nullable()
+                                ->native(false),
+
                             Forms\Components\TextInput::make('name')
                                 ->required()
                                 ->live(debounce: 500)
                                 ->afterStateUpdated(fn (Set $set, ?string $state) =>
                                     $set('slug', Str::slug($state ?? ''))
-                                ),
+                                )
+                                ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('slug')
                                 ->required()
@@ -187,19 +206,57 @@ class ProductResource extends Resource
                             Forms\Components\Repeater::make('videos')
                                 ->relationship()
                                 ->schema([
+                                    // ── Files ─────────────────────────────────
                                     Forms\Components\FileUpload::make('path')
                                         ->label('Video File')
                                         ->disk('public')
                                         ->directory(fn () => 'products/' . now()->format('Y/m'))
                                         ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
-                                        ->required(),
+                                        ->required()
+                                        ->columnSpan(1),
 
                                     Forms\Components\FileUpload::make('thumbnail_path')
                                         ->label('Thumbnail')
                                         ->disk('public')
                                         ->directory(fn () => 'products/' . now()->format('Y/m'))
-                                        ->image(),
+                                        ->image()
+                                        ->imagePreviewHeight('100')
+                                        ->columnSpan(1),
+
+                                    // ── SEO fields ────────────────────────────
+                                    Forms\Components\TextInput::make('title')
+                                        ->label('Title')
+                                        ->maxLength(255)
+                                        ->hint('Required for VideoObject rich results')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('warning')
+                                        ->columnSpan(2),
+
+                                    Forms\Components\Textarea::make('description')
+                                        ->label('Description')
+                                        ->rows(2)
+                                        ->hint('Required for VideoObject rich results')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('warning')
+                                        ->columnSpan(2),
+
+                                    Forms\Components\TextInput::make('duration')
+                                        ->label('Duration (ISO 8601)')
+                                        ->placeholder('PT2M30S')
+                                        ->hint('e.g. PT30S = 30s, PT2M30S = 2m30s, PT1H = 1h')
+                                        ->hintIcon('heroicon-o-clock')
+                                        ->hintColor('info')
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('sort_order')
+                                        ->label('Sort Order')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->columnSpan(1),
                                 ])
+                                ->orderColumn('sort_order')
+                                ->reorderable()
+                                ->reorderableWithDragAndDrop()
                                 ->defaultItems(0)
                                 ->columns(2)
                                 ->columnSpanFull(),

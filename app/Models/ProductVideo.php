@@ -28,6 +28,10 @@ class ProductVideo extends Model
         'product_id',
         'path',
         'thumbnail_path',
+        'title',
+        'description',
+        'duration',
+        'sort_order',
     ];
 
     // ── Computed attributes ───────────────────────────────────────────────────
