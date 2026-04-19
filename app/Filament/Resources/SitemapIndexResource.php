@@ -48,9 +48,13 @@ class SitemapIndexResource extends Resource
 
                 TextColumn::make('filename')
                     ->label('File')
+                    ->url(fn (SitemapIndex $record): string => url($record->filename))
+                    ->openUrlInNewTab()
+                    ->color('primary')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->iconPosition(\Filament\Support\Enums\IconPosition::After)
                     ->copyable()
-                    ->copyMessage('Filename copied')
-                    ->color('gray'),
+                    ->copyMessage('URL copied'),
 
                 TextColumn::make('entry_count')
                     ->label('Entries')
@@ -75,6 +79,13 @@ class SitemapIndexResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
+                Action::make('view')
+                    ->label('View')
+                    ->icon('heroicon-o-globe-alt')
+                    ->color('gray')
+                    ->url(fn (SitemapIndex $record): string => url($record->filename))
+                    ->openUrlInNewTab(),
+
                 Action::make('regenerate')
                     ->label('Regenerate')
                     ->icon('heroicon-o-arrow-path')
