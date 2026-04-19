@@ -4,24 +4,29 @@ namespace App\Services\Address;
 
 use App\Models\Address;
 use App\Models\User;
+use App\Repositories\Eloquent\AddressRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AddressService
 {
+    public function __construct(
+        private readonly AddressRepository $addressRepository,
+    ) {}
+
     public function list(User $user): Collection
     {
-        return $user->addresses()->orderByDesc('is_default')->orderBy('created_at')->get();
+        return $this->addressRepository->getForUser($user);
     }
 
     public function create(User $user, array $data): Address
     {
         return DB::transaction(function () use ($user, $data) {
             if (! empty($data['is_default'])) {
-                $user->addresses()->update(['is_default' => false]);
+                $this->addressRepository->clearDefault($user);
             }
 
-            return $user->addresses()->create($data);
+            return $this->addressRepository->createForUser($user, $data);
         });
     }
 
@@ -29,29 +34,24 @@ class AddressService
     {
         return DB::transaction(function () use ($address, $data) {
             if (! empty($data['is_default'])) {
-                $address->user->addresses()
-                    ->where('id', '!=', $address->id)
-                    ->update(['is_default' => false]);
+                $this->addressRepository->clearDefault($address->user, $address->id);
             }
 
-            $address->update($data);
-
-            return $address->fresh();
+            return $this->addressRepository->update($address, $data);
         });
     }
 
     public function delete(Address $address): void
     {
-        $address->delete();
+        $this->addressRepository->delete($address);
     }
 
     public function setDefault(User $user, Address $address): Address
     {
         return DB::transaction(function () use ($user, $address) {
-            $user->addresses()->update(['is_default' => false]);
-            $address->update(['is_default' => true]);
+            $this->addressRepository->clearDefault($user);
 
-            return $address->fresh();
+            return $this->addressRepository->setDefault($address);
         });
     }
 }

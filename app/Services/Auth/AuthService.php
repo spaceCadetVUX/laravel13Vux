@@ -4,11 +4,16 @@ namespace App\Services\Auth;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Repositories\Eloquent\UserRepository;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
+    public function __construct(
+        private readonly UserRepository $userRepository,
+    ) {}
+
     /**
      * Register a new customer account.
      *
@@ -22,35 +27,25 @@ class AuthService
      */
     public function register(array $data): array
     {
-        // Plaintext duplicate check — iterate encrypted rows
-        $emailExists = User::all()->first(
-            fn (User $u) => strtolower($u->email) === strtolower($data['email'])
-        );
-
-        if ($emailExists) {
+        if ($this->userRepository->findByEmail($data['email'])) {
             throw ValidationException::withMessages([
                 'email' => ['The email has already been taken.'],
             ]);
         }
 
-        $user = User::create([
+        $user = $this->userRepository->createUser([
             'name'     => $data['name'],
             'email'    => $data['email'],
-            'password' => $data['password'], // casted to 'hashed' in model
+            'password' => $data['password'],
             'role'     => UserRole::Customer,
         ]);
 
-        // Assign Spatie 'customer' role
         $user->assignRole('customer');
-
         $user->sendEmailVerificationNotification();
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        return [
-            'token' => $token,
-            'user'  => $user,
-        ];
+        return ['token' => $token, 'user' => $user];
     }
 
     /**
@@ -66,10 +61,7 @@ class AuthService
      */
     public function login(array $credentials): array
     {
-        // Find user by decrypted email
-        $user = User::all()->first(
-            fn (User $u) => strtolower($u->email) === strtolower($credentials['email'])
-        );
+        $user = $this->userRepository->findByEmailWithTrashed($credentials['email']);
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -85,10 +77,7 @@ class AuthService
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        return [
-            'token' => $token,
-            'user'  => $user,
-        ];
+        return ['token' => $token, 'user' => $user];
     }
 
     /**
@@ -96,7 +85,6 @@ class AuthService
      */
     public function logout(User $user): void
     {
-        // currentAccessToken() is set by Sanctum after auth:sanctum middleware resolves
         $user->currentAccessToken()->delete();
     }
 
@@ -105,8 +93,6 @@ class AuthService
      */
     public function updateProfile(User $user, array $data): User
     {
-        $user->fill($data)->save();
-
-        return $user->fresh();
+        return $this->userRepository->updateProfile($user, $data);
     }
 }
