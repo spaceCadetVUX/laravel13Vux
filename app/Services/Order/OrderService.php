@@ -3,32 +3,28 @@
 namespace App\Services\Order;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Jobs\Order\SendOrderConfirmationEmail;
-use App\Models\Cart;
 use App\Models\Order;
 use App\Models\User;
+use App\Repositories\Eloquent\CartRepository;
+use App\Repositories\Eloquent\OrderRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
-    /**
-     * Place a new order from the user's active cart.
-     *
-     * Runs in a DB transaction:
-     *   1. Validate cart is not empty
-     *   2. Check stock per item
-     *   3. Snapshot shipping address
-     *   4. Create Order + OrderItems (price snapshot at checkout time)
-     *   5. Deduct stock_quantity per product
-     *   6. Clear cart
-     *   7. Dispatch confirmation email (queue: orders)
-     */
+    public function __construct(
+        private readonly OrderRepository $orderRepository,
+        private readonly CartRepository  $cartRepository,
+    ) {}
+
+    // ── Place order ───────────────────────────────────────────────────────────
+
     public function placeOrder(User $user, array $data): Order
     {
-        $cart = Cart::where('user_id', $user->id)
-            ->with('items.product')
-            ->first();
+        $cart = $this->orderRepository->getCartWithItems($user);
 
         if (! $cart || $cart->items->isEmpty()) {
             throw ValidationException::withMessages([
@@ -36,7 +32,6 @@ class OrderService
             ]);
         }
 
-        // Verify address belongs to this user
         $address = $user->addresses()->findOrFail($data['address_id']);
 
         return DB::transaction(function () use ($user, $cart, $address, $data) {
@@ -44,54 +39,40 @@ class OrderService
             foreach ($cart->items as $item) {
                 if ($item->product->stock_quantity < $item->quantity) {
                     throw ValidationException::withMessages([
-                        'cart' => [
-                            "\"{$item->product->name}\" only has {$item->product->stock_quantity} unit(s) in stock.",
-                        ],
+                        'cart' => ["\"{$item->product->name}\" only has {$item->product->stock_quantity} unit(s) in stock."],
                     ]);
                 }
             }
 
-            // ── Address snapshot (decrypt → plain array) ──────────────────────
+            // ── Shipping address snapshot ─────────────────────────────────────
             $shippingSnapshot = [
                 'full_name'    => $address->full_name,
-                'phone'        => $address->phone,        // decrypted by accessor
-                'address_line' => $address->address_line, // decrypted by accessor
+                'phone'        => $address->phone,
+                'address_line' => $address->address_line,
                 'city'         => $address->city,
                 'district'     => $address->district,
                 'ward'         => $address->ward,
             ];
 
-            // ── Calculate total ───────────────────────────────────────────────
-            $total = $cart->items->sum(fn ($item) =>
-                $item->quantity * (float) ($item->product->sale_price ?? $item->product->price)
+            // ── Total ─────────────────────────────────────────────────────────
+            $total = $cart->items->sum(
+                fn ($item) => $item->quantity * (float) ($item->product->sale_price ?? $item->product->price)
             );
 
-            // ── Create order ──────────────────────────────────────────────────
-            $order = Order::create([
+            // ── Create order + items + deduct stock ───────────────────────────
+            $order = $this->orderRepository->createOrder([
                 'user_id'          => $user->id,
                 'status'           => OrderStatus::Pending,
                 'total_amount'     => $total,
-                'shipping_address' => $shippingSnapshot, // encrypted:array cast handles encryption
-                'payment_status'   => \App\Enums\PaymentStatus::Unpaid,
+                'shipping_address' => $shippingSnapshot,
+                'payment_status'   => PaymentStatus::Unpaid,
                 'note'             => $data['note'] ?? null,
             ]);
 
-            // ── Create order items (price snapshot) ───────────────────────────
-            foreach ($cart->items as $item) {
-                $order->items()->create([
-                    'product_id'   => $item->product_id,
-                    'product_name' => $item->product->name,
-                    'product_sku'  => $item->product->sku,
-                    'quantity'     => $item->quantity,
-                    'unit_price'   => $item->product->sale_price ?? $item->product->price,
-                ]);
-
-                // ── Deduct stock ──────────────────────────────────────────────
-                $item->product->decrement('stock_quantity', $item->quantity);
-            }
+            $this->orderRepository->createOrderItems($order, $cart);
 
             // ── Clear cart ────────────────────────────────────────────────────
-            $cart->items()->delete();
+            $this->cartRepository->clearItems($cart);
             $cart->touch();
 
             // ── Dispatch confirmation email ───────────────────────────────────
@@ -101,11 +82,8 @@ class OrderService
         });
     }
 
-    /**
-     * Cancel a pending order.
-     * Only allowed when status = pending.
-     * Restores stock for each item.
-     */
+    // ── Cancel ────────────────────────────────────────────────────────────────
+
     public function cancel(Order $order): Order
     {
         if ($order->status !== OrderStatus::Pending) {
@@ -115,16 +93,26 @@ class OrderService
         }
 
         DB::transaction(function () use ($order) {
-            // Restore stock
-            foreach ($order->items()->with('product')->get() as $item) {
-                if ($item->product) {
-                    $item->product->increment('stock_quantity', $item->quantity);
-                }
-            }
-
+            $this->orderRepository->restoreStock($order);
             $order->update(['status' => OrderStatus::Cancelled]);
         });
 
         return $order->fresh();
+    }
+
+    // ── List / Detail ─────────────────────────────────────────────────────────
+
+    public function listForUser(User $user, ?string $status, int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->orderRepository->paginateForUser($user, $status, $perPage);
+    }
+
+    public function getForUser(User $user, string $orderId): Order
+    {
+        $order = $this->orderRepository->findForUser($user, $orderId);
+
+        abort_if(! $order, 404, 'Order not found.');
+
+        return $order;
     }
 }
