@@ -10,9 +10,11 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Manufacturer;
 use App\Models\Product;
+use App\Models\Review;
 use App\Models\User;
 use App\Observers\BrandObserver;
 use App\Observers\ManufacturerObserver;
+use App\Observers\ReviewObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
@@ -65,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Brand::observe(BrandObserver::class);
         Manufacturer::observe(ManufacturerObserver::class);
+        Review::observe(ReviewObserver::class);
     }
 
     private function registerMorphMap(): void

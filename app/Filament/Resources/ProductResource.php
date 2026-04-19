@@ -262,7 +262,127 @@ class ProductResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                    // ── Tab 6: SEO ────────────────────────────────────────────
+                    // ── Tab 6: Attributes ─────────────────────────────────────
+                    Tab::make('Attributes')
+                        ->icon('heroicon-o-list-bullet')
+                        ->schema([
+                            Forms\Components\Repeater::make('attributes')
+                                ->relationship()
+                                ->label('')
+                                ->schema([
+                                    Forms\Components\TextInput::make('name')
+                                        ->label('Attribute')
+                                        ->placeholder('e.g. Material, Weight, Voltage')
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('value')
+                                        ->label('Value')
+                                        ->placeholder('e.g. Aluminum, 500g, 220V')
+                                        ->required()
+                                        ->columnSpan(1),
+                                ])
+                                ->hint('Used in Product JSON-LD as additionalProperty (PropertyValue). Helps Google understand product specs.')
+                                ->hintIcon('heroicon-o-magnifying-glass')
+                                ->hintColor('info')
+                                ->orderColumn('sort_order')
+                                ->reorderable()
+                                ->reorderableWithDragAndDrop()
+                                ->addActionLabel('Add attribute')
+                                ->defaultItems(0)
+                                ->columns(2)
+                                ->columnSpanFull(),
+                        ]),
+
+                    // ── Tab 7: Variants ───────────────────────────────────────
+                    Tab::make('Variants')
+                        ->icon('heroicon-o-squares-2x2')
+                        ->schema([
+                            Forms\Components\Repeater::make('variants')
+                                ->relationship()
+                                ->label('')
+                                ->schema([
+                                    // ── Option ────────────────────────────────
+                                    Forms\Components\TextInput::make('option_name')
+                                        ->label('Option')
+                                        ->placeholder('e.g. Color, Size, Storage')
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('option_value')
+                                        ->label('Value')
+                                        ->placeholder('e.g. Red, XL, 256GB')
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    // ── SKU & Pricing ─────────────────────────
+                                    Forms\Components\TextInput::make('sku')
+                                        ->label('SKU')
+                                        ->required()
+                                        ->unique(table: 'product_variants', column: 'sku', ignoreRecord: true)
+                                        ->columnSpan(1),
+
+                                    Forms\Components\Select::make('image_id')
+                                        ->label('Variant Image')
+                                        ->options(function (Get $get) {
+                                            $productId = $get('../../id') ?? $get('product_id');
+                                            if (! $productId) {
+                                                return [];
+                                            }
+                                            return \App\Models\ProductImage::where('product_id', $productId)
+                                                ->orderBy('sort_order')
+                                                ->get()
+                                                ->mapWithKeys(fn ($img) => [
+                                                    $img->id => $img->alt_text
+                                                        ? "#{$img->id} — {$img->alt_text}"
+                                                        : "Image #{$img->id}",
+                                                ]);
+                                        })
+                                        ->nullable()
+                                        ->native(false)
+                                        ->placeholder('— same as product —')
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('price')
+                                        ->label('Price')
+                                        ->numeric()
+                                        ->prefix('₫')
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('sale_price')
+                                        ->label('Sale Price')
+                                        ->numeric()
+                                        ->prefix('₫')
+                                        ->nullable()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('stock_quantity')
+                                        ->label('Stock')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\Toggle::make('is_active')
+                                        ->label('Active')
+                                        ->default(true)
+                                        ->inline(false)
+                                        ->columnSpan(1),
+                                ])
+                                ->hint('Each variant maps to an Offer in Product JSON-LD schema. Stock = 0 → "OutOfStock" on Google.')
+                                ->hintIcon('heroicon-o-magnifying-glass')
+                                ->hintColor('info')
+                                ->orderColumn('sort_order')
+                                ->reorderable()
+                                ->reorderableWithDragAndDrop()
+                                ->addActionLabel('Add variant')
+                                ->defaultItems(0)
+                                ->columns(2)
+                                ->columnSpanFull(),
+                        ]),
+
+                    // ── Tab 8: SEO ────────────────────────────────────────────
                     Tab::make('SEO')
                         ->icon('heroicon-o-magnifying-glass')
                         ->schema([
