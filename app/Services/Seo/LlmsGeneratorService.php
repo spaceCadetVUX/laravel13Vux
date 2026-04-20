@@ -88,8 +88,17 @@ class LlmsGeneratorService
 
     /**
      * Upsert a single llms_entries row for a model.
-     * Loads the GEO profile and flattens key_facts + faq to plain text.
-     * Updates the parent document entry_count after upsert.
+     *
+     * Sources (in priority order):
+     *   summary        = geoProfile.ai_summary → fallback: model.short_description
+     *                    + appended: use_cases, target_audience, llm_context_hint
+     *   key_facts_text = brand + manufacturer (if present)
+     *                    + Technical Specs (product_attributes if present)
+     *                    + geoProfile.key_facts
+     *   faq_text       = geoProfile.faq
+     *
+     * No migration needed — extra data is embedded as labelled sections
+     * in the existing text columns.
      *
      * @param  LlmsDocument|null  $document  Pass explicitly to avoid a repeated DB lookup.
      */
@@ -115,16 +124,89 @@ class LlmsGeneratorService
         $slug    = (string) ($model->getAttribute('slug') ?? '');
         $baseUrl = rtrim((string) config('app.url'), '/');
         $url     = $baseUrl . (self::URL_PREFIXES[$morphAlias] ?? '/') . $slug;
-        $summary = (string) ($geoProfile?->ai_summary ?? '');
 
-        // ── key_facts jsonb → indented plain text ─────────────────────────────
+        // ── Summary block ─────────────────────────────────────────────────────
+        // Priority: ai_summary → short_description → empty
+        // Appended: use_cases, target_audience, llm_context_hint (if filled)
+        $summaryParts = [];
+
+        $aiSummary        = trim((string) ($geoProfile?->ai_summary ?? ''));
+        $shortDescription = trim((string) ($model->getAttribute('short_description') ?? ''));
+
+        $summaryParts[] = filled($aiSummary) ? $aiSummary : $shortDescription;
+
+        if (filled($geoProfile?->use_cases)) {
+            $summaryParts[] = 'Use Cases: ' . trim($geoProfile->use_cases);
+        }
+
+        if (filled($geoProfile?->target_audience)) {
+            $summaryParts[] = 'Target Audience: ' . trim($geoProfile->target_audience);
+        }
+
+        if (filled($geoProfile?->llm_context_hint)) {
+            $summaryParts[] = 'Additional Context: ' . trim($geoProfile->llm_context_hint);
+        }
+
+        $summary = implode("\n\n", array_filter($summaryParts));
+
+        // ── Key facts block ───────────────────────────────────────────────────
+        // Sections: [Brand / Manufacturer] + [Technical Specs] + [Key Facts]
+        $keyFactsSections = [];
+
+        // Brand & Manufacturer (product-specific — silently skip if not present)
+        $brandLines = [];
+        if (method_exists($model, 'brand')) {
+            $model->loadMissing('brand');
+            $brandName = $model->getRelationValue('brand')?->name;
+            if (filled($brandName)) {
+                $brandLines[] = "  - Brand: {$brandName}";
+            }
+        }
+        if (method_exists($model, 'manufacturer')) {
+            $model->loadMissing('manufacturer');
+            $mfrName = $model->getRelationValue('manufacturer')?->name;
+            if (filled($mfrName)) {
+                $brandLines[] = "  - Manufacturer: {$mfrName}";
+            }
+        }
+        if (! empty($brandLines)) {
+            $keyFactsSections[] = implode("\n", $brandLines);
+        }
+
+        // Technical Specs from product_attributes (product-specific)
+        // Uses getRelationValue() to avoid conflict with Eloquent's magic $attributes property.
+        if (method_exists($model, 'attributes')) {
+            try {
+                $model->loadMissing('attributes');
+                $attrs = $model->getRelationValue('attributes');
+
+                if ($attrs && $attrs->isNotEmpty()) {
+                    $specLines = $attrs->map(
+                        fn ($attr): string => "  - {$attr->name}: {$attr->value}"
+                    )->all();
+
+                    $keyFactsSections[] = "Technical Specs:\n" . implode("\n", $specLines);
+                }
+            } catch (\Throwable) {
+                // Silently skip — not all models have an attributes relationship.
+            }
+        }
+
+        // GEO key_facts jsonb → indented plain text
         // Stored as {"Label": "Value", ...} by the Filament KeyValue component.
-        $keyFacts     = (array) ($geoProfile?->key_facts ?? []);
-        $keyFactsText = collect($keyFacts)
-            ->map(fn (string $value, string $key): string => "  - {$key}: {$value}")
-            ->implode("\n");
+        $keyFacts = (array) ($geoProfile?->key_facts ?? []);
+        if (! empty($keyFacts)) {
+            $factLines = collect($keyFacts)
+                ->map(fn (string $v, string $k): string => "  - {$k}: {$v}")
+                ->values()
+                ->all();
 
-        // ── faq jsonb → indented Q&A plain text ──────────────────────────────
+            $keyFactsSections[] = "Key Facts:\n" . implode("\n", $factLines);
+        }
+
+        $keyFactsText = implode("\n\n", $keyFactsSections);
+
+        // ── FAQ jsonb → indented Q&A plain text ──────────────────────────────
         // Stored as [{"question": "...", "answer": "..."}, ...] by Repeater.
         $faq     = (array) ($geoProfile?->faq ?? []);
         $faqText = collect($faq)
@@ -135,6 +217,7 @@ class LlmsGeneratorService
             })
             ->implode("\n\n");
 
+        // ── Upsert ────────────────────────────────────────────────────────────
         LlmsEntry::updateOrCreate(
             [
                 'llms_document_id' => $document->id,
@@ -164,9 +247,11 @@ class LlmsGeneratorService
      *
      * ## {title}
      * URL: {url}
-     * Summary: {summary}
-     * Key Facts:
-     * {key_facts_text}
+     *
+     * {summary}          ← may include use_cases / target_audience / llm_context_hint
+     *
+     * {key_facts_text}   ← may include Brand, Technical Specs, Key Facts sections
+     *
      * FAQ:
      * {faq_text}
      */
@@ -178,15 +263,17 @@ class LlmsGeneratorService
         $lines[] = 'URL: ' . $entry->url;
 
         if (filled($entry->summary)) {
-            $lines[] = 'Summary: ' . $entry->summary;
+            $lines[] = '';
+            $lines[] = $entry->summary;
         }
 
         if (filled($entry->key_facts_text)) {
-            $lines[] = 'Key Facts:';
+            $lines[] = '';
             $lines[] = $entry->key_facts_text;
         }
 
         if (filled($entry->faq_text)) {
+            $lines[] = '';
             $lines[] = 'FAQ:';
             $lines[] = $entry->faq_text;
         }
