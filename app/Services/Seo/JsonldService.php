@@ -88,10 +88,15 @@ class JsonldService
 
             $resolved = $this->resolvePlaceholders($template->template ?? [], $model);
 
-            // Product-specific: enrich with relationship data that can't be
-            // expressed as simple {{placeholder}} tokens in the template.
-            if ($morphAlias === 'product' && $schemaType === JsonldSchemaType::Product) {
-                $resolved = $this->enrichProductSchema($resolved, $model);
+            // Product-specific enrichments applied after placeholder resolution.
+            if ($morphAlias === 'product') {
+                if ($schemaType === JsonldSchemaType::Product) {
+                    $resolved = $this->enrichProductSchema($resolved, $model);
+                }
+
+                if ($schemaType === JsonldSchemaType::BreadcrumbList) {
+                    $resolved = $this->buildProductBreadcrumb($model);
+                }
             }
 
             JsonldSchema::updateOrCreate(
@@ -230,7 +235,21 @@ class JsonldService
             $model->loadMissing('brand');
             $brand = $model->getRelationValue('brand');
             if ($brand && filled($brand->name)) {
-                $payload['brand'] = ['@type' => 'Brand', 'name' => $brand->name];
+                $brandSchema = ['@type' => 'Brand', 'name' => $brand->name];
+
+                // Official brand website → helps Google disambiguate the entity
+                if (filled($brand->website)) {
+                    $brandSchema['url']    = $brand->website;
+                    $brandSchema['sameAs'] = $brand->website;
+                }
+
+                // Brand logo → used by Google Knowledge Panel
+                if (filled($brand->logo)) {
+                    $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+                    $brandSchema['logo'] = $baseUrl . '/storage/' . ltrim((string) $brand->logo, '/');
+                }
+
+                $payload['brand'] = $brandSchema;
             }
         }
 
@@ -239,7 +258,20 @@ class JsonldService
             $model->loadMissing('manufacturer');
             $mfr = $model->getRelationValue('manufacturer');
             if ($mfr && filled($mfr->name)) {
-                $payload['manufacturer'] = ['@type' => 'Organization', 'name' => $mfr->name];
+                $mfrSchema = ['@type' => 'Organization', 'name' => $mfr->name];
+
+                // Official manufacturer website
+                if (filled($mfr->website)) {
+                    $mfrSchema['url']    = $mfr->website;
+                    $mfrSchema['sameAs'] = $mfr->website;
+                }
+
+                // Country of origin → useful context for Google
+                if (filled($mfr->country)) {
+                    $mfrSchema['address'] = ['@type' => 'PostalAddress', 'addressCountry' => $mfr->country];
+                }
+
+                $payload['manufacturer'] = $mfrSchema;
             }
         }
 
@@ -302,7 +334,56 @@ class JsonldService
             }
         }
 
+        // ── @id — canonical entity identifier ────────────────────────────────
+        // Google uses @id for entity disambiguation across pages.
+        if (isset($payload['url']) && ! isset($payload['@id'])) {
+            $payload['@id'] = $payload['url'];
+        }
+
+        // ── Cast price fields to float (Schema.org requires number, not string) ─
+        // Template placeholder substitution always produces strings — fix here.
+        if (isset($payload['offers']['price'])) {
+            $payload['offers']['price'] = (float) $payload['offers']['price'];
+        }
+
         return $payload;
+    }
+
+    /**
+     * Build a BreadcrumbList payload for a product from its first category.
+     * Structure: Home → {Category} → {Product}
+     *
+     * Falls back to Home → Product if no categories are assigned.
+     * Breadcrumbs are built at save time as a best-effort approximation;
+     * the frontend may override with a more accurate render-time breadcrumb.
+     */
+    private function buildProductBreadcrumb(Model $model): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $name    = (string) ($model->getAttribute('name') ?? '');
+        $slug    = (string) ($model->getAttribute('slug') ?? '');
+
+        $items = [
+            ['name' => 'Home', 'url' => $baseUrl],
+        ];
+
+        // Use the first category as the middle breadcrumb level.
+        if (method_exists($model, 'categories')) {
+            $model->loadMissing('categories');
+            $categories = $model->getRelationValue('categories');
+
+            if ($categories && $categories->isNotEmpty()) {
+                $cat     = $categories->first();
+                $items[] = [
+                    'name' => (string) ($cat->name ?? ''),
+                    'url'  => $baseUrl . '/categories/' . ($cat->slug ?? ''),
+                ];
+            }
+        }
+
+        $items[] = ['name' => $name, 'url' => $baseUrl . '/products/' . $slug];
+
+        return $this->buildBreadcrumbSchema($items);
     }
 
     /**
