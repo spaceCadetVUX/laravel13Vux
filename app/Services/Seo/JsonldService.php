@@ -14,11 +14,12 @@ class JsonldService
     /**
      * Schema types applicable to each morph alias.
      * BreadcrumbList is included for every public model.
+     * FAQPage for products is generated conditionally — only when geoProfile.faq has data.
      */
     private const MODEL_SCHEMA_TYPES = [
-        'product'   => [JsonldSchemaType::Product,        JsonldSchemaType::BreadcrumbList],
-        'blog_post' => [JsonldSchemaType::Article,         JsonldSchemaType::BreadcrumbList],
-        'category'  => [JsonldSchemaType::CollectionPage,  JsonldSchemaType::BreadcrumbList],
+        'product'   => [JsonldSchemaType::Product, JsonldSchemaType::BreadcrumbList],
+        'blog_post' => [JsonldSchemaType::Article,  JsonldSchemaType::BreadcrumbList],
+        'category'  => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
     ];
 
     /**
@@ -38,6 +39,7 @@ class JsonldService
         JsonldSchemaType::Article->value        => 10,
         JsonldSchemaType::CollectionPage->value => 10,
         JsonldSchemaType::FaqPage->value        => 50,
+        JsonldSchemaType::VideoObject->value    => 60,
         JsonldSchemaType::BreadcrumbList->value => 90,
     ];
 
@@ -46,6 +48,15 @@ class JsonldService
     /**
      * Sync all applicable auto-generated JSON-LD schemas for a model.
      * Skips rows where is_auto_generated=false (manual admin overrides).
+     *
+     * Product-specific enrichment is applied after placeholder resolution:
+     *   - brand + manufacturer (relationships)
+     *   - aggregateRating (from approved reviews)
+     *   - additionalProperty (from product_attributes)
+     *   - image array (all product images)
+     *
+     * FAQPage and VideoObject schemas for products are handled separately
+     * after the main loop since they depend on conditional data.
      */
     public function syncForModel(Model $model): void
     {
@@ -77,6 +88,12 @@ class JsonldService
 
             $resolved = $this->resolvePlaceholders($template->template ?? [], $model);
 
+            // Product-specific: enrich with relationship data that can't be
+            // expressed as simple {{placeholder}} tokens in the template.
+            if ($morphAlias === 'product' && $schemaType === JsonldSchemaType::Product) {
+                $resolved = $this->enrichProductSchema($resolved, $model);
+            }
+
             JsonldSchema::updateOrCreate(
                 [
                     'model_type'  => $morphAlias,
@@ -91,6 +108,12 @@ class JsonldService
                     'sort_order'        => self::SORT_ORDER[$schemaType->value] ?? 50,
                 ]
             );
+        }
+
+        // ── Product-only conditional schemas ──────────────────────────────────
+        if ($morphAlias === 'product') {
+            $this->syncFaqPageForProduct($model);
+            $this->syncVideoObjectsForProduct($model);
         }
     }
 
@@ -190,6 +213,238 @@ class JsonldService
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
+     * Enrich the resolved Product schema payload with relationship data
+     * that cannot be expressed as simple {{placeholder}} template tokens.
+     *
+     * Added fields:
+     *   brand            → { @type: Brand, name: ... }
+     *   manufacturer     → { @type: Organization, name: ... }
+     *   image            → array of all product image URLs (replaces single URL)
+     *   aggregateRating  → { @type: AggregateRating, ... } from approved reviews
+     *   additionalProperty → [ { @type: PropertyValue, ... } ] from product_attributes
+     */
+    private function enrichProductSchema(array $payload, Model $model): array
+    {
+        // ── Brand ─────────────────────────────────────────────────────────────
+        if (method_exists($model, 'brand')) {
+            $model->loadMissing('brand');
+            $brand = $model->getRelationValue('brand');
+            if ($brand && filled($brand->name)) {
+                $payload['brand'] = ['@type' => 'Brand', 'name' => $brand->name];
+            }
+        }
+
+        // ── Manufacturer ──────────────────────────────────────────────────────
+        if (method_exists($model, 'manufacturer')) {
+            $model->loadMissing('manufacturer');
+            $mfr = $model->getRelationValue('manufacturer');
+            if ($mfr && filled($mfr->name)) {
+                $payload['manufacturer'] = ['@type' => 'Organization', 'name' => $mfr->name];
+            }
+        }
+
+        // ── Images array (all images, not just first) ─────────────────────────
+        if (method_exists($model, 'images')) {
+            $model->loadMissing('images');
+            $images = $model->getRelationValue('images');
+            if ($images && $images->isNotEmpty()) {
+                $urls = $images
+                    ->map(fn ($img): string => (string) ($img->url ?? ''))
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if (! empty($urls)) {
+                    // Single image → string; multiple images → array (schema.org spec)
+                    $payload['image'] = count($urls) === 1 ? $urls[0] : $urls;
+                }
+            }
+        }
+
+        // ── AggregateRating from approved reviews ─────────────────────────────
+        // Only injected when there is at least 1 approved review.
+        // Google requires reviewCount ≥ 1 to show star ratings in search results.
+        if (method_exists($model, 'approvedReviews')) {
+            $model->loadMissing('approvedReviews');
+            $reviews = $model->getRelationValue('approvedReviews');
+
+            if ($reviews && $reviews->count() > 0) {
+                $payload['aggregateRating'] = [
+                    '@type'       => 'AggregateRating',
+                    'ratingValue' => round((float) $reviews->avg('rating'), 1),
+                    'reviewCount' => $reviews->count(),
+                    'bestRating'  => 5,
+                    'worstRating' => 1,
+                ];
+            }
+        }
+
+        // ── additionalProperty from product_attributes ────────────────────────
+        // Maps to Schema.org PropertyValue — helps Google understand product specs.
+        // Uses getRelationValue() to avoid conflict with Eloquent's $attributes magic.
+        if (method_exists($model, 'attributes')) {
+            try {
+                $model->loadMissing('attributes');
+                $attrs = $model->getRelationValue('attributes');
+
+                if ($attrs && $attrs->isNotEmpty()) {
+                    $payload['additionalProperty'] = $attrs
+                        ->map(fn ($a): array => [
+                            '@type' => 'PropertyValue',
+                            'name'  => (string) $a->name,
+                            'value' => (string) $a->value,
+                        ])
+                        ->values()
+                        ->all();
+                }
+            } catch (\Throwable) {
+                // Silently skip — not all models have an attributes relationship.
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Generate a FAQPage schema for a product IF geoProfile.faq has content.
+     * Skips if: no FAQ data, manual override exists, or geoProfile is missing.
+     */
+    private function syncFaqPageForProduct(Model $model): void
+    {
+        $morphAlias = $model->getMorphClass();
+        $geoProfile = method_exists($model, 'geoProfile') ? $model->geoProfile : null;
+        $faq        = (array) ($geoProfile?->faq ?? []);
+
+        if (empty($faq)) {
+            return;
+        }
+
+        // Never overwrite a manually curated FAQ schema.
+        $hasManualOverride = JsonldSchema::where('model_type', $morphAlias)
+            ->where('model_id', $model->getKey())
+            ->where('schema_type', JsonldSchemaType::FaqPage->value)
+            ->where('is_auto_generated', false)
+            ->exists();
+
+        if ($hasManualOverride) {
+            return;
+        }
+
+        $mainEntity = collect($faq)
+            ->map(fn (array $item): array => [
+                '@type' => 'Question',
+                'name'  => trim((string) ($item['question'] ?? '')),
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text'  => trim((string) ($item['answer'] ?? '')),
+                ],
+            ])
+            ->filter(fn (array $q): bool => filled($q['name']))
+            ->values()
+            ->all();
+
+        if (empty($mainEntity)) {
+            return;
+        }
+
+        JsonldSchema::updateOrCreate(
+            [
+                'model_type'  => $morphAlias,
+                'model_id'    => $model->getKey(),
+                'schema_type' => JsonldSchemaType::FaqPage->value,
+            ],
+            [
+                'label'             => 'FAQ Schema',
+                'payload'           => [
+                    '@context'   => 'https://schema.org',
+                    '@type'      => 'FAQPage',
+                    'mainEntity' => $mainEntity,
+                ],
+                'is_active'         => true,
+                'is_auto_generated' => true,
+                'sort_order'        => self::SORT_ORDER[JsonldSchemaType::FaqPage->value] ?? 50,
+            ]
+        );
+    }
+
+    /**
+     * Generate a VideoObject schema for each active product video IF it has
+     * title + description (minimum required by Google for VideoObject rich results).
+     * Skips videos that are missing required SEO fields.
+     */
+    private function syncVideoObjectsForProduct(Model $model): void
+    {
+        if (! method_exists($model, 'videos')) {
+            return;
+        }
+
+        $morphAlias = $model->getMorphClass();
+        $baseUrl    = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $slug       = (string) ($model->getAttribute('slug') ?? '');
+
+        $model->loadMissing('videos');
+        $videos = $model->getRelationValue('videos');
+
+        if (! $videos || $videos->isEmpty()) {
+            return;
+        }
+
+        foreach ($videos as $video) {
+            // Google requires name + description for VideoObject rich results.
+            if (empty($video->title) || empty($video->description)) {
+                continue;
+            }
+
+            $schemaKey = JsonldSchemaType::VideoObject->value;
+
+            // Never overwrite manually curated video schemas.
+            $hasManualOverride = JsonldSchema::where('model_type', $morphAlias)
+                ->where('model_id', $model->getKey())
+                ->where('schema_type', $schemaKey)
+                ->where('label', 'Video: ' . $video->title)
+                ->where('is_auto_generated', false)
+                ->exists();
+
+            if ($hasManualOverride) {
+                continue;
+            }
+
+            $payload = [
+                '@context'     => 'https://schema.org',
+                '@type'        => 'VideoObject',
+                'name'         => $video->title,
+                'description'  => $video->description,
+                'contentUrl'   => $baseUrl . '/storage/' . ltrim((string) ($video->path ?? ''), '/'),
+                'embedUrl'     => $baseUrl . '/products/' . $slug . '#video-' . $video->id,
+                'thumbnailUrl' => $video->thumbnail_path
+                    ? ($baseUrl . '/storage/' . ltrim((string) $video->thumbnail_path, '/'))
+                    : '',
+                'uploadDate'   => $video->created_at?->toIso8601String() ?? '',
+            ];
+
+            // ISO 8601 duration (e.g. "PT2M30S") — optional but recommended.
+            if (filled($video->duration)) {
+                $payload['duration'] = $video->duration;
+            }
+
+            JsonldSchema::updateOrCreate(
+                [
+                    'model_type'  => $morphAlias,
+                    'model_id'    => $model->getKey(),
+                    'schema_type' => $schemaKey,
+                    'label'       => 'Video: ' . $video->title,
+                ],
+                [
+                    'payload'           => $payload,
+                    'is_active'         => true,
+                    'is_auto_generated' => true,
+                    'sort_order'        => self::SORT_ORDER[$schemaKey] ?? 60,
+                ]
+            );
+        }
+    }
+
+    /**
      * Build a flat field→value map covering DB attributes and computed values
      * that templates reference but that don't exist as raw DB columns.
      */
@@ -225,6 +480,17 @@ class JsonldService
         $map['availability'] = $stockQty > 0
             ? 'https://schema.org/InStock'
             : 'https://schema.org/OutOfStock';
+
+        // Product: currency — per-product field, fallback to VND
+        $map['price_currency'] = (string) ($model->getAttribute('currency') ?: config('seo.currency', 'VND'));
+
+        // Product: brand and manufacturer names (used as simple placeholders in template)
+        if (method_exists($model, 'brand')) {
+            $map['brand_name'] = (string) ($model->brand?->name ?? '');
+        }
+        if (method_exists($model, 'manufacturer')) {
+            $map['manufacturer_name'] = (string) ($model->manufacturer?->name ?? '');
+        }
 
         // ── Normalise datetime values → ISO 8601 strings ─────────────────────
         foreach ($map as $key => $val) {

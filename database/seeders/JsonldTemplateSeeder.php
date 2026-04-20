@@ -29,7 +29,7 @@ class JsonldTemplateSeeder extends Seeder
                     'offers'      => [
                         '@type'           => 'Offer',
                         'price'           => '{{product.price}}',
-                        'priceCurrency'   => 'USD',
+                        'priceCurrency'   => '{{product.price_currency}}',
                         'availability'    => '{{product.availability}}',
                         'url'             => '{{product.canonical_url}}',
                     ],
@@ -40,6 +40,7 @@ class JsonldTemplateSeeder extends Seeder
                     '{{product.short_description}}'  => 'short_description',
                     '{{product.sku}}'                => 'sku',
                     '{{product.price}}'              => 'price',
+                    '{{product.price_currency}}'     => 'price_currency',
                     '{{product.first_image_url}}'    => 'first_image_url',
                     '{{product.canonical_url}}'      => 'canonical_url',
                     '{{product.availability}}'       => 'availability',

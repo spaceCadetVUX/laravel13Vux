@@ -51,6 +51,7 @@ class Product extends Model
         'description',
         'price',
         'sale_price',
+        'currency',
         'stock_quantity',
         'is_active',
     ];

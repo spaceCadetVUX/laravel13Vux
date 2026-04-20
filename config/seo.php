@@ -32,4 +32,12 @@ return [
     */
     'logo_url' => env('APP_URL', 'http://localhost') . '/logo.png',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Currency
+    | Used as fallback in JSON-LD priceCurrency when product.currency is empty.
+    |--------------------------------------------------------------------------
+    */
+    'currency' => env('DEFAULT_CURRENCY', 'VND'),
+
 ];
