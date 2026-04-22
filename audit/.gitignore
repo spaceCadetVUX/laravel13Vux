@@ -1,0 +1,3 @@
+# Ignore all generated audit reports, keep directory structure
+*.md
+!.gitkeep

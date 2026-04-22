@@ -999,6 +999,22 @@ class ProductResource extends Resource
                     ->icon(fn (Product $record) => $record->is_active ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
                     ->color(fn (Product $record) => $record->is_active ? 'warning' : 'success')
                     ->action(fn (Product $record) => $record->update(['is_active' => ! $record->is_active])),
+
+                \Filament\Actions\Action::make('audit')
+                    ->label('Audit')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->color('info')
+                    ->action(function (Product $record): \Symfony\Component\HttpFoundation\StreamedResponse {
+                        $content  = app(\App\Services\Audit\ProductAuditService::class)->buildReport($record);
+                        $filename = $record->slug . '-audit-' . now()->format('Ymd-Hi') . '.md';
+
+                        return response()->streamDownload(
+                            fn () => print($content),
+                            $filename,
+                            ['Content-Type' => 'text/markdown; charset=utf-8'],
+                        );
+                    }),
+
                 RestoreAction::make(),
                 DeleteAction::make(),
                 ForceDeleteAction::make(),
