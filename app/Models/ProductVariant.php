@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ProductVariant extends Model
 {
@@ -15,8 +16,6 @@ class ProductVariant extends Model
         'price',
         'sale_price',
         'stock_quantity',
-        'option_name',
-        'option_value',
         'is_active',
         'sort_order',
     ];
@@ -44,12 +43,28 @@ class ProductVariant extends Model
         return $query->where('stock_quantity', '>', 0);
     }
 
-    // ── Computed ──────────────────────────────────────────────────────────────
+    // ── Computed attributes ───────────────────────────────────────────────────
 
     /** Effective selling price — sale_price if set, otherwise base price. */
     public function getEffectivePriceAttribute(): string
     {
         return $this->sale_price ?? $this->price;
+    }
+
+    /**
+     * Human-readable combination label: "Red / M / 256GB"
+     * Requires optionValues.optionType to be loaded.
+     */
+    public function getCombinationLabelAttribute(): string
+    {
+        if (! $this->relationLoaded('optionValues')) {
+            return '';
+        }
+
+        return $this->optionValues
+            ->sortBy(fn ($v) => $v->optionType?->sort_order ?? 0)
+            ->pluck('value')
+            ->join(' / ');
     }
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -62,5 +77,19 @@ class ProductVariant extends Model
     public function image(): BelongsTo
     {
         return $this->belongsTo(ProductImage::class, 'image_id');
+    }
+
+    /**
+     * The selected option values that make up this variant's combination.
+     * e.g. [Color=Red, Size=M] for a "Red / M" variant.
+     */
+    public function optionValues(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            ProductOptionValue::class,
+            'product_variant_options',
+            'variant_id',
+            'option_value_id',
+        )->withTimestamps();
     }
 }

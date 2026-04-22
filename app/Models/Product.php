@@ -169,6 +169,11 @@ class Product extends Model
         return $this->hasMany(ProductAttribute::class)->orderBy('sort_order');
     }
 
+    public function optionTypes(): HasMany
+    {
+        return $this->hasMany(ProductOptionType::class)->orderBy('sort_order');
+    }
+
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class)->orderBy('sort_order');

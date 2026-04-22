@@ -345,88 +345,234 @@ class ProductResource extends Resource
                     Tab::make('Variants')
                         ->icon('heroicon-o-squares-2x2')
                         ->schema([
-                            Forms\Components\Repeater::make('variants')
-                                ->relationship()
-                                ->label('')
+
+                            // ── Step 1: Define option types & values ──────────
+                            Section::make('Step 1 — Define Options')
+                                ->description('Add option types (e.g. Color, Size) and their possible values. Then click Generate.')
+                                ->icon('heroicon-o-tag')
                                 ->schema([
-                                    // ── Option ────────────────────────────────
-                                    Forms\Components\TextInput::make('option_name')
-                                        ->label('Option')
-                                        ->placeholder('e.g. Color, Size, Storage')
-                                        ->required()
-                                        ->columnSpan(1),
+                                    Forms\Components\Repeater::make('optionTypes')
+                                        ->relationship()
+                                        ->label('')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('name')
+                                                ->label('Option Name')
+                                                ->placeholder('e.g. Color, Size, Storage, Material')
+                                                ->required()
+                                                ->distinct()
+                                                ->columnSpan(1),
 
-                                    Forms\Components\TextInput::make('option_value')
-                                        ->label('Value')
-                                        ->placeholder('e.g. Red, XL, 256GB')
-                                        ->required()
-                                        ->columnSpan(1),
+                                            Forms\Components\Repeater::make('values')
+                                                ->relationship()
+                                                ->label('Values')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('value')
+                                                        ->label('')
+                                                        ->placeholder('e.g. Red')
+                                                        ->required(),
+                                                ])
+                                                ->orderColumn('sort_order')
+                                                ->reorderable()
+                                                ->reorderableWithDragAndDrop()
+                                                ->addActionLabel('+ Add value')
+                                                ->defaultItems(1)
+                                                ->columns(1)
+                                                ->columnSpan(3),
+                                        ])
+                                        ->itemLabel(fn (array $state): ?string =>
+                                            filled($state['name'] ?? '')
+                                                ? '⚙ ' . $state['name']
+                                                : null
+                                        )
+                                        ->collapsed()
+                                        ->orderColumn('sort_order')
+                                        ->reorderable()
+                                        ->addActionLabel('+ Add option')
+                                        ->defaultItems(0)
+                                        ->columns(4)
+                                        ->columnSpanFull(),
+                                ]),
 
-                                    // ── SKU & Pricing ─────────────────────────
-                                    Forms\Components\TextInput::make('sku')
-                                        ->label('SKU')
-                                        ->required()
-                                        ->unique(table: 'product_variants', column: 'sku', ignoreRecord: true)
-                                        ->columnSpan(1),
+                            // ── Generate button ───────────────────────────────
+                            \Filament\Schemas\Components\Actions::make([
+                                \Filament\Actions\Action::make('generate_variants')
+                                    ->label('⚡ Generate Combinations')
+                                    ->icon('heroicon-o-bolt')
+                                    ->color('primary')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Generate Variant Combinations')
+                                    ->modalDescription('This will create all missing combinations from your option types. Existing variants are never modified or deleted.')
+                                    ->modalSubmitActionLabel('Generate')
+                                    ->action(function ($livewire): void {
+                                        $product = $livewire->record;
 
-                                    Forms\Components\Select::make('image_id')
-                                        ->label('Variant Image')
-                                        ->options(function (Get $get) {
-                                            $productId = $get('../../id') ?? $get('product_id');
-                                            if (! $productId) {
-                                                return [];
-                                            }
-                                            return \App\Models\ProductImage::where('product_id', $productId)
-                                                ->orderBy('sort_order')
-                                                ->get()
-                                                ->mapWithKeys(fn ($img) => [
-                                                    $img->id => $img->alt_text
-                                                        ? "#{$img->id} — {$img->alt_text}"
-                                                        : "Image #{$img->id}",
-                                                ]);
+                                        if (! $product?->exists) {
+                                            Notification::make()
+                                                ->title('Save the product first')
+                                                ->body('Please save the product before generating variant combinations.')
+                                                ->warning()
+                                                ->send();
+                                            return;
+                                        }
+
+                                        $result = app(\App\Services\Product\VariantGeneratorService::class)
+                                            ->generate($product);
+
+                                        if ($result['error']) {
+                                            Notification::make()
+                                                ->title('Cannot generate')
+                                                ->body($result['error'])
+                                                ->danger()
+                                                ->send();
+                                            return;
+                                        }
+
+                                        $body = $result['created'] > 0
+                                            ? "{$result['created']} new variant(s) created."
+                                            : 'All combinations already exist.';
+
+                                        if ($result['skipped'] > 0) {
+                                            $body .= " {$result['skipped']} skipped (already existed).";
+                                        }
+
+                                        Notification::make()
+                                            ->title('Variants generated')
+                                            ->body($body)
+                                            ->success()
+                                            ->send();
+
+                                        // Redirect to the edit page so the form reloads with new variants
+                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
+                                    }),
+                            ]),
+
+                            // ── Step 2: Edit generated variants ───────────────
+                            Section::make('Step 2 — Manage Variants')
+                                ->description('Fill in SKU, price and stock for each generated combination. Stock = 0 → "OutOfStock" on Google.')
+                                ->icon('heroicon-o-rectangle-stack')
+                                ->schema([
+                                    Forms\Components\Repeater::make('variants')
+                                        ->relationship(
+                                            modifyQueryUsing: fn ($query) => $query
+                                                ->with(['optionValues.optionType'])
+                                                ->orderBy('sort_order'),
+                                        )
+                                        ->label('')
+                                        ->schema([
+                                            // ── Combination badge ──────────────
+                                            Placeholder::make('combination_label')
+                                                ->label('Combination')
+                                                ->content(function ($record): HtmlString {
+                                                    if (! $record?->exists) {
+                                                        return new HtmlString(
+                                                            '<em class="text-sm text-gray-400">New variant — combination assigned after generate</em>'
+                                                        );
+                                                    }
+
+                                                    $record->loadMissing('optionValues.optionType');
+
+                                                    $label = $record->optionValues
+                                                        ->sortBy(fn ($v) => $v->optionType?->sort_order ?? 0)
+                                                        ->pluck('value')
+                                                        ->join(' / ');
+
+                                                    $badges = $record->optionValues
+                                                        ->sortBy(fn ($v) => $v->optionType?->sort_order ?? 0)
+                                                        ->map(function ($v): string {
+                                                            $typeName = e($v->optionType?->name ?? '');
+                                                            $val      = e($v->value);
+                                                            return "<span style='display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:9999px;font-size:0.75rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;'>
+                                                                        <span style='color:#93c5fd;font-size:0.65rem;'>{$typeName}</span>
+                                                                        <strong>{$val}</strong>
+                                                                    </span>";
+                                                        })
+                                                        ->join(' ');
+
+                                                    return new HtmlString(
+                                                        filled($badges)
+                                                            ? $badges
+                                                            : '<em class="text-sm text-gray-400">No combination assigned</em>'
+                                                    );
+                                                })
+                                                ->columnSpanFull(),
+
+                                            // ── SKU ───────────────────────────
+                                            Forms\Components\TextInput::make('sku')
+                                                ->label('SKU')
+                                                ->required()
+                                                ->unique(table: 'product_variants', column: 'sku', ignoreRecord: true)
+                                                ->columnSpan(1),
+
+                                            // ── Image ─────────────────────────
+                                            Forms\Components\Select::make('image_id')
+                                                ->label('Variant Image')
+                                                ->options(function (Get $get) {
+                                                    $productId = $get('../../id') ?? $get('product_id');
+                                                    if (! $productId) {
+                                                        return [];
+                                                    }
+                                                    return \App\Models\ProductImage::where('product_id', $productId)
+                                                        ->orderBy('sort_order')
+                                                        ->get()
+                                                        ->mapWithKeys(fn ($img) => [
+                                                            $img->id => $img->alt_text
+                                                                ? "#{$img->id} — {$img->alt_text}"
+                                                                : "Image #{$img->id}",
+                                                        ]);
+                                                })
+                                                ->nullable()
+                                                ->native(false)
+                                                ->placeholder('— same as product —')
+                                                ->columnSpan(1),
+
+                                            // ── Pricing ───────────────────────
+                                            Forms\Components\TextInput::make('price')
+                                                ->label('Price')
+                                                ->numeric()
+                                                ->prefix('₫')
+                                                ->required()
+                                                ->columnSpan(1),
+
+                                            Forms\Components\TextInput::make('sale_price')
+                                                ->label('Sale Price')
+                                                ->numeric()
+                                                ->prefix('₫')
+                                                ->nullable()
+                                                ->columnSpan(1),
+
+                                            // ── Stock & Status ─────────────────
+                                            Forms\Components\TextInput::make('stock_quantity')
+                                                ->label('Stock')
+                                                ->numeric()
+                                                ->default(0)
+                                                ->required()
+                                                ->suffix(fn ($state) => (int) $state === 0
+                                                    ? '⚠ OutOfStock on Google'
+                                                    : 'in stock')
+                                                ->columnSpan(1),
+
+                                            Forms\Components\Toggle::make('is_active')
+                                                ->label('Active')
+                                                ->default(true)
+                                                ->inline(false)
+                                                ->columnSpan(1),
+                                        ])
+                                        ->hint('Each variant = one Offer in Product JSON-LD. Stock = 0 → OutOfStock on Google.')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('info')
+                                        ->itemLabel(function (array $state): ?string {
+                                            // Fallback label for collapsed items without loaded relation
+                                            return filled($state['sku'] ?? '') ? $state['sku'] : null;
                                         })
-                                        ->nullable()
-                                        ->native(false)
-                                        ->placeholder('— same as product —')
-                                        ->columnSpan(1),
-
-                                    Forms\Components\TextInput::make('price')
-                                        ->label('Price')
-                                        ->numeric()
-                                        ->prefix('₫')
-                                        ->required()
-                                        ->columnSpan(1),
-
-                                    Forms\Components\TextInput::make('sale_price')
-                                        ->label('Sale Price')
-                                        ->numeric()
-                                        ->prefix('₫')
-                                        ->nullable()
-                                        ->columnSpan(1),
-
-                                    Forms\Components\TextInput::make('stock_quantity')
-                                        ->label('Stock')
-                                        ->numeric()
-                                        ->default(0)
-                                        ->required()
-                                        ->columnSpan(1),
-
-                                    Forms\Components\Toggle::make('is_active')
-                                        ->label('Active')
-                                        ->default(true)
-                                        ->inline(false)
-                                        ->columnSpan(1),
-                                ])
-                                ->hint('Each variant maps to an Offer in Product JSON-LD schema. Stock = 0 → "OutOfStock" on Google.')
-                                ->hintIcon('heroicon-o-magnifying-glass')
-                                ->hintColor('info')
-                                ->orderColumn('sort_order')
-                                ->reorderable()
-                                ->reorderableWithDragAndDrop()
-                                ->addActionLabel('Add variant')
-                                ->defaultItems(0)
-                                ->columns(2)
-                                ->columnSpanFull(),
+                                        ->collapsed()
+                                        ->orderColumn('sort_order')
+                                        ->reorderable()
+                                        ->reorderableWithDragAndDrop()
+                                        ->addActionLabel('+ Add variant manually')
+                                        ->defaultItems(0)
+                                        ->columns(2)
+                                        ->columnSpanFull(),
+                                ]),
                         ]),
 
                     // ── Tab 8: SEO ────────────────────────────────────────────
@@ -440,12 +586,11 @@ class ProductResource extends Resource
                                         ->schema([
                                             Forms\Components\TextInput::make('meta_title')
                                                 ->label('Meta Title')
-                                                ->maxLength(70)
+                                                ->live(debounce: 400)
                                                 ->placeholder('Auto-filled from product name')
-                                                ->hint('Auto-filled from product name')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->helperText('Optimal: 50–70 characters.')
+                                                ->hint(fn (?string $state): string => self::charCounter($state, 50, 70))
+                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 50, 70))
+                                                ->helperText('Optimal: 50–70 chars. Longer titles are truncated in search results.')
                                                 ->afterStateHydrated(function ($state, $set, $livewire): void {
                                                     if (empty($state) && $livewire->record?->name) {
                                                         $set('meta_title', $livewire->record->name);
@@ -456,8 +601,10 @@ class ProductResource extends Resource
                                             Forms\Components\Textarea::make('meta_description')
                                                 ->label('Meta Description')
                                                 ->rows(3)
-                                                ->maxLength(160)
-                                                ->helperText('Optimal: 120–160 characters')
+                                                ->live(debounce: 400)
+                                                ->hint(fn (?string $state): string => self::charCounter($state, 120, 160))
+                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 120, 160))
+                                                ->helperText('Optimal: 120–160 chars. Google truncates at ~160.')
                                                 ->columnSpanFull(),
 
                                             Forms\Components\TextInput::make('meta_keywords')
@@ -1041,5 +1188,43 @@ class ProductResource extends Resource
             'create' => Pages\CreateProduct::route('/create'),
             'edit'   => Pages\EditProduct::route('/{record}/edit'),
         ];
+    }
+
+    // ── SEO char counter helpers ──────────────────────────────────────────────
+
+    /**
+     * Live hint text: "76 / 70 chars — 6 over" or "52 / 70 chars ✓"
+     */
+    private static function charCounter(?string $state, int $min, int $max): string
+    {
+        $len = mb_strlen($state ?? '');
+
+        if ($len === 0) {
+            return "0 / {$max} chars";
+        }
+
+        if ($len < $min) {
+            return "{$len} / {$max} chars — " . ($min - $len) . ' short';
+        }
+
+        if ($len > $max) {
+            return "{$len} / {$max} chars — " . ($len - $max) . ' over';
+        }
+
+        return "{$len} / {$max} chars ✓";
+    }
+
+    /**
+     * Hint color: success (in range) · warning (slightly short) · danger (over limit)
+     */
+    private static function charCounterColor(?string $state, int $min, int $max): string
+    {
+        $len = mb_strlen($state ?? '');
+
+        if ($len === 0)        return 'gray';
+        if ($len > $max)       return 'danger';
+        if ($len < $min)       return 'warning';
+
+        return 'success';
     }
 }
