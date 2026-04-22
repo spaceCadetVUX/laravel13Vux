@@ -155,6 +155,10 @@ class SitemapService
         );
 
         $this->syncEntryCount($index);
+
+        // Regenerate the XML file on disk so the controller always serves fresh content.
+        // This runs inside the SyncSitemapEntry queue job — no performance impact on web requests.
+        $this->generateChild($index);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
