@@ -70,7 +70,9 @@ class BrandResource extends Resource
 
                     Forms\Components\TextInput::make('sort_order')
                         ->numeric()
-                        ->default(0),
+                        ->default(0)
+                        ->helperText('Lower = appears first. Drag to reorder in the list view.')
+                        ->minValue(0),
 
                     Forms\Components\Toggle::make('is_active')
                         ->default(true),
@@ -151,7 +153,8 @@ class BrandResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('sort_order')
+            ->reorderable('sort_order')
+            ->modifyQueryUsing(fn ($query) => $query->orderBy('sort_order')->orderBy('name'))
             ->columns([
                 Tables\Columns\ImageColumn::make('logo')
                     ->disk('public')
@@ -182,7 +185,10 @@ class BrandResource extends Resource
                     ->falseColor('danger'),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->sortable(),
+                    ->label('Order')
+                    ->sortable()
+                    ->alignCenter()
+                    ->width('80px'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')

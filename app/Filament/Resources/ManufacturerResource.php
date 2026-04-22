@@ -57,7 +57,11 @@ class ManufacturerResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('country')
-                        ->placeholder('e.g. Vietnam, Japan, Germany'),
+                        ->placeholder('VN, JP, DE, US...')
+                        ->hint('ISO 3166-1 alpha-2 code — used in JSON-LD addressCountry')
+                        ->hintIcon('heroicon-o-code-bracket')
+                        ->hintColor('info')
+                        ->helperText('e.g. VN = Vietnam, JP = Japan, DE = Germany, US = United States'),
 
                     Forms\Components\FileUpload::make('logo')
                         ->label('Logo')
@@ -72,7 +76,9 @@ class ManufacturerResource extends Resource
 
                     Forms\Components\TextInput::make('sort_order')
                         ->numeric()
-                        ->default(0),
+                        ->default(0)
+                        ->helperText('Lower = appears first. Drag to reorder in the list view.')
+                        ->minValue(0),
 
                     Forms\Components\Toggle::make('is_active')
                         ->default(true),
@@ -153,7 +159,8 @@ class ManufacturerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('sort_order')
+            ->reorderable('sort_order')
+            ->modifyQueryUsing(fn ($query) => $query->orderBy('sort_order')->orderBy('name'))
             ->columns([
                 Tables\Columns\ImageColumn::make('logo')
                     ->disk('public')
@@ -185,7 +192,10 @@ class ManufacturerResource extends Resource
                     ->falseColor('danger'),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->sortable(),
+                    ->label('Order')
+                    ->sortable()
+                    ->alignCenter()
+                    ->width('80px'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
