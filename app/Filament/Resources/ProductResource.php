@@ -609,63 +609,86 @@ class ProductResource extends Resource
                                             Forms\Components\Textarea::make('ai_summary')
                                                 ->label('AI Summary')
                                                 ->rows(4)
-                                                ->helperText('2–4 sentences describing this product for AI engines.')
+                                                ->helperText('2–4 sentences describing this product for AI engines. Shown first in llms.txt.')
                                                 ->columnSpanFull(),
 
                                             Forms\Components\Textarea::make('use_cases')
                                                 ->label('Use Cases')
                                                 ->rows(3)
-                                                ->helperText('When/where should this product be used?')
-                                                ->columnSpanFull(),
+                                                ->placeholder('e.g. Indoor accent lighting, museum displays, retail shelving')
+                                                ->helperText('When / where should this product be used?'),
 
                                             Forms\Components\TextInput::make('target_audience')
                                                 ->label('Target Audience')
-                                                ->helperText('e.g. "Lighting designers, electrical contractors"')
-                                                ->columnSpanFull(),
+                                                ->maxLength(255)
+                                                ->placeholder('e.g. Lighting designers, electrical contractors')
+                                                ->helperText('Who is this product for? (max 255 chars)'),
 
                                             Forms\Components\Textarea::make('llm_context_hint')
                                                 ->label('LLM Context Hint')
                                                 ->rows(2)
-                                                ->helperText('Additional context hint for LLM — e.g. competitor comparisons, certifications.')
+                                                ->placeholder('e.g. Competes with Philips Hue, CE/RoHS certified, not waterproof')
+                                                ->helperText('Extra context for AI: certifications, competitor comparisons, caveats.')
                                                 ->columnSpanFull(),
-                                        ]),
+                                        ])
+                                        ->columns(2),
 
                                     Section::make('Key Facts')
-                                        ->description('Structured facts about this product (e.g. wattage, protocol, warranty).')
+                                        ->description('Structured facts for AI engines — certifications, compliance, key selling points.')
                                         ->schema([
                                             Placeholder::make('key_facts_hint')
                                                 ->label('')
-                                                ->content('💡 Do not re-enter technical specs already in the Attributes tab — Google reads those directly via JSON-LD. Key Facts are for AI context only: use cases, certifications, competitor comparisons, warnings, or anything that helps ChatGPT / Gemini / Perplexity answer questions about this product.')
+                                                ->content(new HtmlString('
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                        💡 <strong>Do not duplicate</strong> technical specs already in the <strong>Attributes</strong> tab — Google reads those via JSON-LD automatically.<br>
+                                                        Use Key Facts for AI-only context: certifications (CE, RoHS, IP67), warranty terms, compliance standards, competitor comparisons, or important caveats.
+                                                    </p>
+                                                '))
                                                 ->columnSpanFull(),
 
                                             Forms\Components\KeyValue::make('key_facts')
                                                 ->label('')
                                                 ->keyLabel('Fact')
                                                 ->valueLabel('Value')
-                                                ->addActionLabel('Add fact')
+                                                ->keyPlaceholder('e.g. Certification')
+                                                ->valuePlaceholder('e.g. CE / RoHS')
+                                                ->addActionLabel('+ Add fact')
                                                 ->columnSpanFull(),
                                         ])
                                         ->collapsed(),
 
                                     Section::make('FAQ')
-                                        ->description('Frequently asked questions — used in JSON-LD FAQPage schema and AI answers.')
+                                        ->description('Frequently asked questions — injected into JSON-LD FAQPage schema and llms.txt.')
                                         ->schema([
+                                            Placeholder::make('faq_hint')
+                                                ->label('')
+                                                ->content(new HtmlString('
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                        ⚠️ <strong>Google recommends ≤ 10 FAQ items</strong> for rich results eligibility.
+                                                        Each Q&A will appear in the FAQPage JSON-LD schema and in the AI document file.
+                                                    </p>
+                                                '))
+                                                ->columnSpanFull(),
+
                                             Forms\Components\Repeater::make('faq')
                                                 ->label('')
                                                 ->schema([
                                                     Forms\Components\TextInput::make('question')
                                                         ->label('Question')
+                                                        ->placeholder('e.g. Is this product waterproof?')
                                                         ->required()
                                                         ->columnSpanFull(),
 
                                                     Forms\Components\Textarea::make('answer')
                                                         ->label('Answer')
                                                         ->rows(2)
+                                                        ->placeholder('e.g. No, it is rated IP40 — suitable for dry indoor use only.')
                                                         ->required()
                                                         ->columnSpanFull(),
                                                 ])
+                                                ->maxItems(10)
                                                 ->defaultItems(0)
-                                                ->addActionLabel('Add Q&A')
+                                                ->addActionLabel('+ Add Q&A')
                                                 ->columnSpanFull(),
                                         ])
                                         ->collapsed(),
