@@ -204,9 +204,9 @@ class ProductResource extends Resource
 
                                             return $filename;
                                         })
-                                        ->hint('The file name will automatically be converted to Latin without accents. If the name is duplicated, the system will automatically add a numeric suffix (e.g., den-led-1.jpg)).')
+                                        ->hint('Filenames are auto-converted to accent-free Latin; duplicates get a numeric suffix (e.g., quan-tay-1.jpg).')
                                         ->hintIcon('heroicon-o-information-circle')
-                                        ->hintColor('warning')
+                                        ->hintColor('success')
                                         ->image()
                                         ->imagePreviewHeight('120')
                                         ->imageEditor()
@@ -396,8 +396,8 @@ class ProductResource extends Resource
                             // ── Generate button ───────────────────────────────
                             \Filament\Schemas\Components\Actions::make([
                                 \Filament\Actions\Action::make('generate_variants')
-                                    ->label('⚡ Generate Combinations')
-                                    ->icon('heroicon-o-bolt')
+                                    ->label('Generate Combinations')
+                                    // ->icon('heroicon-o-bolt')
                                     ->color('primary')
                                     ->requiresConfirmation()
                                     ->modalHeading('Generate Variant Combinations')
