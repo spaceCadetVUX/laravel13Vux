@@ -90,7 +90,9 @@ class ProductResource extends Resource
 
                             Forms\Components\TextInput::make('slug')
                                 ->required()
-                                ->unique(table: Product::class, column: 'slug', ignoreRecord: true),
+                                ->unique(table: Product::class, column: 'slug', ignoreRecord: true)
+                                ->rules(['regex:/^[a-z0-9]+(-[a-z0-9]+)*$/'])
+                                ->helperText('Chỉ dùng chữ thường, số và dấu gạch ngang. VD: ao-vest-nu-2026'),
 
                             Forms\Components\TextInput::make('sku')
                                 ->label('SKU')
@@ -211,31 +213,17 @@ class ProductResource extends Resource
                                         ->imagePreviewHeight('120')
                                         ->imageEditor()
                                         ->required()
-                                        ->columnSpan(2),
+                                        ->columnSpan(1),
 
                                     Forms\Components\TextInput::make('alt_text')
-                                        ->label('Alt Text'),
+                                        ->label('Alt Text')
+                                        ->columnSpan(1),
 
-                                    Forms\Components\Select::make('categories')
-                                        ->label('Attributes')
-                                        ->relationship('categories', 'name')
-                                        ->options(function (Get $get) {
-                                            $ids = $get('../../categories');
-                                            if (empty($ids)) {
-                                                return [];
-                                            }
-                                            return Category::whereIn('id', $ids)
-                                                ->pluck('name', 'id');
-                                        })
-                                        ->multiple()
-                                        ->native(false)
-                                        ->placeholder('— chọn sau khi chọn categories —')
-                                        ->columnSpan(2),
                                 ])
                                 ->orderColumn('sort_order')
                                 ->reorderable()
                                 ->reorderableWithDragAndDrop()
-                                ->columns(3)
+                                ->columns(2)
                                 ->columnSpanFull(),
                         ]),
 

@@ -340,13 +340,86 @@ class JsonldService
             $payload['@id'] = $payload['url'];
         }
 
-        // ── Cast price fields to float (Schema.org requires number, not string) ─
-        // Template placeholder substitution always produces strings — fix here.
-        if (isset($payload['offers']['price'])) {
-            $payload['offers']['price'] = (float) $payload['offers']['price'];
-        }
+        // ── Offers — single Offer vs AggregateOffer + variant array ──────────
+        // Google supports both. When variants exist, AggregateOffer with lowPrice/
+        // highPrice + individual Offer per active variant is more informative and
+        // allows Google to show price ranges in Shopping and rich results.
+        $payload['offers'] = $this->buildOffersPayload($model, $payload);
 
         return $payload;
+    }
+
+    /**
+     * Build the offers payload for a Product schema.
+     *
+     * Logic:
+     *   - No active variants → single Offer from product.price (simple product).
+     *   - Has active variants → AggregateOffer (lowPrice/highPrice) wrapping
+     *     an array of individual Offer objects, one per active variant.
+     *
+     * Google spec:
+     *   https://schema.org/AggregateOffer
+     *   https://developers.google.com/search/docs/appearance/structured-data/product
+     */
+    private function buildOffersPayload(Model $model, array $payload): array
+    {
+        $currency   = (string) ($payload['offers']['priceCurrency'] ?? config('seo.currency', 'VND'));
+        $productUrl = (string) ($payload['url'] ?? '');
+
+        // ── Try to load active variants ───────────────────────────────────────
+        if (method_exists($model, 'activeVariants')) {
+            $model->loadMissing('activeVariants.optionValues.optionType');
+            $variants = $model->getRelationValue('activeVariants');
+
+            if ($variants && $variants->isNotEmpty()) {
+
+                // Effective selling price per variant (sale_price takes precedence).
+                $prices = $variants
+                    ->map(fn ($v): float => (float) ($v->sale_price ?? $v->price))
+                    ->filter(fn (float $p): bool => $p > 0);
+
+                if ($prices->isNotEmpty()) {
+                    $offerList = $variants->map(function ($variant) use ($currency, $productUrl): array {
+                        $offer = [
+                            '@type'         => 'Offer',
+                            'sku'           => $variant->sku,
+                            'price'         => (float) ($variant->sale_price ?? $variant->price),
+                            'priceCurrency' => $currency,
+                            'availability'  => ((int) $variant->stock_quantity) > 0
+                                ? 'https://schema.org/InStock'
+                                : 'https://schema.org/OutOfStock',
+                            'url'           => $productUrl,
+                        ];
+
+                        // Combination label e.g. "Red / M" — requires loaded relation.
+                        $label = $variant->combination_label;
+                        if (filled($label)) {
+                            $offer['name'] = $label;
+                        }
+
+                        return $offer;
+                    })->values()->all();
+
+                    return [
+                        '@type'         => 'AggregateOffer',
+                        'lowPrice'      => $prices->min(),
+                        'highPrice'     => $prices->max(),
+                        'offerCount'    => $variants->count(),
+                        'priceCurrency' => $currency,
+                        'offers'        => $offerList,
+                    ];
+                }
+            }
+        }
+
+        // ── Fallback: simple product — single Offer ───────────────────────────
+        // Cast price to float (template substitution always produces strings).
+        $singleOffer = $payload['offers'] ?? [];
+        if (isset($singleOffer['price'])) {
+            $singleOffer['price'] = (float) $singleOffer['price'];
+        }
+
+        return $singleOffer;
     }
 
     /**

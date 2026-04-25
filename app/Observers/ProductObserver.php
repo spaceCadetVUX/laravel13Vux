@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\RedirectType;
 use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
@@ -9,11 +10,40 @@ use App\Models\Product;
 use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
+use App\Models\Seo\Redirect;
 use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
 
 class ProductObserver
 {
+    /**
+     * Fires BEFORE the UPDATE SQL — slug is still the old value here.
+     * Creates a 301 redirect from old slug → new slug so indexed URLs never 404.
+     */
+    public function updating(Product $product): void
+    {
+        if (! $product->isDirty('slug')) {
+            return;
+        }
+
+        $oldSlug = $product->getOriginal('slug');
+        $newSlug = $product->slug;
+
+        // Guard: both must be non-empty strings and actually different
+        if (! $oldSlug || ! $newSlug || $oldSlug === $newSlug) {
+            return;
+        }
+
+        Redirect::updateOrCreate(
+            ['from_path' => '/products/' . $oldSlug],
+            [
+                'to_path'   => '/products/' . $newSlug,
+                'type'      => RedirectType::Permanent,
+                'is_active' => true,
+            ]
+        );
+    }
+
     /**
      * Dispatch SEO sync jobs on every create or update.
      * Fires after both created() and updated() — covers all writes.
