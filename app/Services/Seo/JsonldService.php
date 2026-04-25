@@ -8,6 +8,7 @@ use App\Models\Seo\JsonldTemplate;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use App\Services\Seo\BusinessJsonldService;
 
 class JsonldService
 {
@@ -714,27 +715,11 @@ class JsonldService
             }
         }
 
-        // ── Publisher — site Organization with logo ───────────────────────────
-        // Required by Google for Article rich results in older validators;
-        // strongly recommended for E-E-A-T signals in all Article schemas.
+        // ── Publisher — Organization block from BusinessProfile ──────────────
+        // Required by Google for Article rich results; uses live business data
+        // (name, logo) instead of hardcoded config values.
         if (! isset($payload['publisher'])) {
-            $siteName = (string) config('app.name', 'KNX Store');
-            $logoUrl  = (string) config('seo.logo_url', '');
-
-            $publisher = [
-                '@type' => 'Organization',
-                'name'  => $siteName,
-                'url'   => $baseUrl,
-            ];
-
-            if (filled($logoUrl)) {
-                $publisher['logo'] = [
-                    '@type' => 'ImageObject',
-                    'url'   => $logoUrl,
-                ];
-            }
-
-            $payload['publisher'] = $publisher;
+            $payload['publisher'] = app(BusinessJsonldService::class)->publisherBlock();
         }
 
         return $payload;

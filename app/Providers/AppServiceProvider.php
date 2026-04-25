@@ -8,6 +8,7 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogTag;
 use App\Models\Brand;
+use App\Models\BusinessProfile;
 use App\Models\Category;
 use App\Models\Manufacturer;
 use App\Models\Product;
@@ -17,6 +18,7 @@ use App\Models\User;
 use App\Observers\BlogCategoryObserver;
 use App\Observers\BlogPostObserver;
 use App\Observers\BrandObserver;
+use App\Observers\BusinessProfileObserver;
 use App\Observers\ManufacturerObserver;
 use App\Observers\RedirectObserver;
 use App\Observers\ReviewObserver;
@@ -76,6 +78,7 @@ class AppServiceProvider extends ServiceProvider
         BlogPost::observe(BlogPostObserver::class);
         BlogCategory::observe(BlogCategoryObserver::class);
         Redirect::observe(RedirectObserver::class);
+        BusinessProfile::observe(BusinessProfileObserver::class);
     }
 
     private function registerMorphMap(): void

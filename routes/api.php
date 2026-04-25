@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Address\AddressController;
 use App\Http\Controllers\Api\V1\Order\OrderController;
 use App\Http\Controllers\Api\V1\Product\ProductController;
 use App\Http\Controllers\Api\V1\Product\ProductSearchController;
+use App\Http\Controllers\Api\V1\Site\SiteConfigController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +27,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function () {
+
+    // ── Site config (public) ─────────────────────────────────────────────
+    Route::get('site/config', SiteConfigController::class);
 
     // ── Health check (public) ─────────────────────────────────────────────
     Route::get('ping', fn () => response()->json(['status' => 'ok']));

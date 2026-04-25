@@ -3,6 +3,7 @@
 namespace App\Services\Seo;
 
 use App\Enums\LlmsScope;
+use App\Models\BusinessProfile;
 use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\LlmsDocument;
 use App\Models\Seo\LlmsEntry;
@@ -43,6 +44,12 @@ class LlmsGeneratorService
      */
     public function generateDocument(LlmsDocument $document): void
     {
+        // Business document has no llms_entries — generated directly from BusinessProfile.
+        if ($document->slug === 'business') {
+            $this->generateBusinessDocument($document);
+            return;
+        }
+
         $entries = LlmsEntry::where('llms_document_id', $document->id)
             ->where('is_active', true)
             ->orderBy('title')
@@ -289,6 +296,100 @@ class LlmsGeneratorService
             'entry_count'       => LlmsEntry::where('llms_document_id', $document->id)
                 ->where('is_active', true)
                 ->count(),
+            'last_generated_at' => now(),
+        ]);
+    }
+
+    /**
+     * Generate business.txt from BusinessProfile — no llms_entries involved.
+     * Called when slug === 'business'.
+     */
+    private function generateBusinessDocument(LlmsDocument $document): void
+    {
+        $profile = BusinessProfile::instance();
+        $lines   = [];
+
+        $lines[] = '# ' . $profile->name;
+
+        $intro = $profile->description ?? $profile->tagline ?? '';
+        if (filled($intro)) {
+            $lines[] = '';
+            $lines[] = $intro;
+        }
+
+        $lines[] = '';
+
+        // Contact
+        $contactLines = [];
+        if (filled($profile->email)) {
+            $contactLines[] = '- Email: ' . $profile->email;
+        }
+        if (filled($profile->phone)) {
+            $contactLines[] = '- Phone: ' . $profile->phone;
+        }
+
+        $addressParts = array_filter([
+            $profile->address_line,
+            $profile->city,
+            $profile->state,
+            $profile->country,
+        ]);
+        if (! empty($addressParts)) {
+            $contactLines[] = '- Address: ' . implode(', ', $addressParts);
+        }
+
+        if (! empty($contactLines)) {
+            $lines[] = '## Contact';
+            array_push($lines, ...$contactLines);
+            $lines[] = '';
+        }
+
+        // Business Hours
+        if (! empty($profile->business_hours)) {
+            $lines[] = '## Business Hours';
+            foreach ((array) $profile->business_hours as $day => $hours) {
+                $lines[] = "- {$day}: {$hours}";
+            }
+            $lines[] = '';
+        }
+
+        // Social Links
+        if (! empty($profile->social_links)) {
+            $lines[] = '## Online';
+            foreach ((array) $profile->social_links as $platform => $url) {
+                $lines[] = "- {$platform}: {$url}";
+            }
+            $lines[] = '';
+        }
+
+        // Business Details
+        $detailLines = [];
+        if (filled($profile->founded_year)) {
+            $detailLines[] = '- Founded: ' . $profile->founded_year;
+        }
+        if (filled($profile->currency)) {
+            $detailLines[] = '- Currency: ' . $profile->currency;
+        }
+        if (filled($profile->vat_number)) {
+            $detailLines[] = '- VAT Number: ' . $profile->vat_number;
+        }
+        foreach ((array) ($profile->extra ?? []) as $key => $value) {
+            $detailLines[] = "- {$key}: {$value}";
+        }
+
+        if (! empty($detailLines)) {
+            $lines[] = '## Business Details';
+            array_push($lines, ...$detailLines);
+            $lines[] = '';
+        }
+
+        $content = implode("\n", $lines);
+
+        Storage::disk('public')->makeDirectory('llms');
+        Storage::disk('public')->put('llms/' . $document->slug . '.txt', $content);
+
+        $document->update([
+            'entry_count'       => 1,
             'last_generated_at' => now(),
         ]);
     }

@@ -66,6 +66,20 @@ class LlmsDocumentSeeder extends Seeder
             ],
         ];
 
+        $documents[] = [
+            'name'              => 'business',
+            'slug'              => 'business',
+            'title'             => 'Business Profile',
+            'description'       => 'Who we are, contact details, hours, and key business facts for AI consumption.',
+            'scope'             => 'full',
+            'model_type'        => null,
+            'entry_count'       => 0,
+            'last_generated_at' => null,
+            'is_active'         => true,
+            'created_at'        => $now,
+            'updated_at'        => $now,
+        ];
+
         foreach ($documents as $document) {
             DB::table('llms_documents')->updateOrInsert(
                 ['name' => $document['name']],
@@ -73,6 +87,6 @@ class LlmsDocumentSeeder extends Seeder
             );
         }
 
-        $this->command->info('LLMs documents seeded: root, products, blog, categories');
+        $this->command->info('LLMs documents seeded: root, products, blog, categories, business');
     }
 }
