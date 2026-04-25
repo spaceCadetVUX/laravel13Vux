@@ -28,12 +28,17 @@ class CreateBlogPost extends CreateRecord
             || filled($state['seo_canonical_url'] ?? null);
 
         if ($hasAnySeo) {
+            $ogImage = $state['seo_og_image'] ?? null;
+            if (is_array($ogImage)) {
+                $ogImage = $ogImage[0] ?? null;
+            }
+
             SeoMeta::create([
                 'model_type'       => $morphClass,
                 'model_id'         => $modelId,
                 'meta_title'       => $state['seo_meta_title']       ?? null,
                 'meta_description' => $state['seo_meta_description'] ?? null,
-                'og_image'         => $state['seo_og_image']         ?? null,
+                'og_image'         => $ogImage,
                 'canonical_url'    => $state['seo_canonical_url']    ?? null,
                 'robots'           => $state['seo_robots']           ?? 'index,follow',
             ]);

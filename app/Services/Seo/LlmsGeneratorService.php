@@ -126,14 +126,19 @@ class LlmsGeneratorService
         $url     = $baseUrl . (self::URL_PREFIXES[$morphAlias] ?? '/') . $slug;
 
         // ── Summary block ─────────────────────────────────────────────────────
-        // Priority: ai_summary → short_description → empty
+        // Priority: ai_summary → short_description (products) / excerpt (blog posts) → empty
         // Appended: use_cases, target_audience, llm_context_hint (if filled)
         $summaryParts = [];
 
         $aiSummary        = trim((string) ($geoProfile?->ai_summary ?? ''));
         $shortDescription = trim((string) ($model->getAttribute('short_description') ?? ''));
+        $excerpt          = trim((string) ($model->getAttribute('excerpt') ?? ''));
 
-        $summaryParts[] = filled($aiSummary) ? $aiSummary : $shortDescription;
+        // Blog posts use `excerpt`, not `short_description` — fall through both.
+        $baseSummary = filled($aiSummary) ? $aiSummary
+            : (filled($shortDescription) ? $shortDescription : $excerpt);
+
+        $summaryParts[] = $baseSummary;
 
         if (filled($geoProfile?->use_cases)) {
             $summaryParts[] = 'Use Cases: ' . trim($geoProfile->use_cases);
@@ -192,6 +197,52 @@ class LlmsGeneratorService
             }
         }
 
+        // Blog post: author, category, tags (contextual info for AI consumers)
+        if ($morphAlias === 'blog_post') {
+            $blogContextLines = [];
+
+            // Author
+            if (method_exists($model, 'author')) {
+                $model->loadMissing('author');
+                $author = $model->getRelationValue('author');
+                if ($author) {
+                    $authorName  = trim((string) ($author->name ?? ''));
+                    $authorTitle = trim((string) ($author->title ?? ''));
+                    $authorLine  = "  - Author: {$authorName}";
+                    if (filled($authorTitle)) {
+                        $authorLine .= " ({$authorTitle})";
+                    }
+                    if (filled($authorName)) {
+                        $blogContextLines[] = $authorLine;
+                    }
+                }
+            }
+
+            // Category
+            if (method_exists($model, 'blogCategory')) {
+                $model->loadMissing('blogCategory');
+                $category     = $model->getRelationValue('blogCategory');
+                $categoryName = trim((string) ($category?->name ?? ''));
+                if (filled($categoryName)) {
+                    $blogContextLines[] = "  - Category: {$categoryName}";
+                }
+            }
+
+            // Tags
+            if (method_exists($model, 'blogTags')) {
+                $model->loadMissing('blogTags');
+                $tags     = $model->getRelationValue('blogTags');
+                $tagNames = $tags?->pluck('name')->filter()->implode(', ');
+                if (filled($tagNames)) {
+                    $blogContextLines[] = "  - Tags: {$tagNames}";
+                }
+            }
+
+            if (! empty($blogContextLines)) {
+                $keyFactsSections[] = implode("\n", $blogContextLines);
+            }
+        }
+
         // GEO key_facts jsonb → indented plain text
         // Stored as {"Label": "Value", ...} by the Filament KeyValue component.
         $keyFacts = (array) ($geoProfile?->key_facts ?? []);
@@ -230,7 +281,7 @@ class LlmsGeneratorService
                 'summary'        => $summary,
                 'key_facts_text' => $keyFactsText,
                 'faq_text'       => $faqText,
-                'is_active'      => (bool) ($model->getAttribute('is_active') ?? true),
+                'is_active'      => $this->resolveIsActive($model, $morphAlias),
             ]
         );
 
@@ -295,5 +346,30 @@ class LlmsGeneratorService
         }
 
         return $line;
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Determine whether the LlmsEntry should be active.
+     *
+     * - blog_post  → active only when status === 'published'
+     *               (blog_posts has no is_active column — uses a status enum)
+     * - all others → reads is_active column, defaults true when absent
+     */
+    private function resolveIsActive(Model $model, string $morphAlias): bool
+    {
+        if ($morphAlias === 'blog_post') {
+            $status = $model->getAttribute('status');
+
+            // Support both backed enum and raw string value.
+            if ($status instanceof \BackedEnum) {
+                $status = $status->value;
+            }
+
+            return $status === 'published';
+        }
+
+        return (bool) ($model->getAttribute('is_active') ?? true);
     }
 }

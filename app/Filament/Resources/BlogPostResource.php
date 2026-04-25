@@ -9,7 +9,10 @@ use App\Models\BlogPost;
 use App\Models\Seo\SeoMeta;
 use BackedEnum;
 use Filament\Forms;
+use Filament\Forms\Components\Placeholder;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Set;
@@ -220,107 +223,242 @@ class BlogPostResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                    // ── Tab 4: JSON-LD Preview ────────────────────────────────
+                    // ── Tab 5: JSON-LD ────────────────────────────────────────
                     Tab::make('JSON-LD')
                         ->icon('heroicon-o-code-bracket')
                         ->schema([
-                            Forms\Components\Placeholder::make('jsonld_preview')
-                                ->label('')
-                                ->content(function ($record): HtmlString {
-                                    if (! $record) {
-                                        return new HtmlString(
-                                            '<p class="text-sm text-gray-400 italic">Lưu bài viết trước để xem JSON-LD.</p>'
-                                        );
-                                    }
 
-                                    $record->loadMissing('activeSchemas');
-                                    $schemas = $record->activeSchemas;
+                            Section::make('How JSON-LD schemas work')
+                                ->schema([
+                                    Placeholder::make('jsonld_info')
+                                        ->label('')
+                                        ->content(new HtmlString('
+                                            <ul class="list-disc pl-5 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                                <li>Schemas marked <strong>Auto</strong> are regenerated every time this post is saved — do not manually edit their payload here.</li>
+                                                <li>To customize a payload, go to <strong>SEO &amp; GEO → JSON-LD Schemas</strong> and set <em>Auto Generated = off</em> first.</li>
+                                                <li>Toggle <strong>Active</strong> to include / exclude a schema from the page <code>&lt;head&gt;</code>.</li>
+                                                <li>Schemas are only generated for <strong>Published</strong> posts.</li>
+                                            </ul>
+                                        '))
+                                        ->columnSpanFull(),
+                                ])
+                                ->collapsed()
+                                ->collapsible(),
 
-                                    if ($schemas->isEmpty()) {
-                                        return new HtmlString(
-                                            '<p class="text-sm text-gray-400 italic">Chưa có schema nào. Hãy publish bài viết rồi nhấn "Tạo lại JSON-LD".</p>'
-                                        );
-                                    }
+                            Forms\Components\Repeater::make('jsonldSchemas')
+                                ->relationship()
+                                ->label('Schemas')
+                                ->schema([
 
-                                    $html = '';
-                                    foreach ($schemas as $schema) {
-                                        $label = e($schema->label ?? $schema->schema_type);
-                                        $badge = match ($schema->schema_type) {
-                                            'Article'        => 'bg-blue-100 text-blue-700',
-                                            'BreadcrumbList' => 'bg-green-100 text-green-700',
-                                            default          => 'bg-gray-100 text-gray-600',
-                                        };
-                                        $auto = $schema->is_auto_generated
-                                            ? '<span class="ml-2 text-xs text-gray-400">auto</span>'
-                                            : '<span class="ml-2 text-xs text-amber-500">manual</span>';
-                                        $json = e(json_encode(
-                                            $schema->payload,
-                                            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                                        ));
-                                        $html .= <<<HTML
-                                            <div class="mb-6">
-                                                <div class="flex items-center gap-2 mb-2">
-                                                    <span class="text-xs font-semibold px-2 py-0.5 rounded {$badge}">{$label}</span>
+                                    Placeholder::make('schema_header')
+                                        ->label('')
+                                        ->content(function ($record): HtmlString {
+                                            if (! $record) {
+                                                return new HtmlString('');
+                                            }
+
+                                            $type  = is_object($record->schema_type)
+                                                ? $record->schema_type->value
+                                                : (string) ($record->schema_type ?? '—');
+                                            $label = e($record->label ?? '');
+                                            $auto  = $record->is_auto_generated
+                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
+                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+
+                                            return new HtmlString("
+                                                <div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>
+                                                    <span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>
+                                                    " . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "
                                                     {$auto}
                                                 </div>
-                                                <pre class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs leading-relaxed overflow-auto max-h-96 font-mono whitespace-pre-wrap">{$json}</pre>
-                                            </div>
-                                        HTML;
-                                    }
+                                            ");
+                                        })
+                                        ->columnSpanFull(),
 
-                                    return new HtmlString($html);
-                                })
+                                    Placeholder::make('payload_preview')
+                                        ->label('Payload (what Google reads)')
+                                        ->content(function ($record): HtmlString {
+                                            if (! $record || empty($record->payload)) {
+                                                return new HtmlString('<em class="text-gray-400">No payload yet — publish the post to generate.</em>');
+                                            }
+
+                                            $json = json_encode(
+                                                $record->payload,
+                                                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                                            );
+
+                                            return new HtmlString(
+                                                '<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">'
+                                                . e($json)
+                                                . '</pre>'
+                                            );
+                                        })
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\Toggle::make('is_active')
+                                        ->label('Active (inject into page <head>)')
+                                        ->inline(false),
+
+                                    Placeholder::make('schema_updated_at')
+                                        ->label('Last generated')
+                                        ->content(fn ($record) => $record?->updated_at
+                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                            : '—'
+                                        ),
+                                ])
+                                ->itemLabel(fn (array $state): ?string =>
+                                    filled($state['schema_type'] ?? '')
+                                        ? (is_object($state['schema_type'])
+                                            ? $state['schema_type']->value
+                                            : (string) $state['schema_type'])
+                                        : null
+                                )
+                                ->collapsed()
+                                ->addable(false)
+                                ->deletable(false)
+                                ->reorderable(false)
+                                ->defaultItems(0)
                                 ->columnSpanFull(),
+
+                            \Filament\Schemas\Components\Actions::make([
+                                \Filament\Actions\Action::make('regenerate_jsonld')
+                                    ->label('Regenerate all schemas')
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('gray')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Regenerate JSON-LD Schemas')
+                                    ->modalDescription('This will re-generate all Auto schemas from the current post data. Manual schemas will not be affected.')
+                                    ->action(function ($livewire): void {
+                                        $post = $livewire->record;
+
+                                        if (! $post?->exists) {
+                                            return;
+                                        }
+
+                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($post);
+
+                                        Notification::make()
+                                            ->title('JSON-LD schemas regenerated')
+                                            ->body('All auto schemas have been updated.')
+                                            ->success()
+                                            ->send();
+
+                                        redirect(BlogPostResource::getUrl('edit', ['record' => $post]));
+                                    }),
+                            ]),
                         ])
                         ->hidden(fn ($record) => $record === null),
 
-                    // ── Tab 4: LLMs Preview ───────────────────────────────────
+                    // ── Tab 6: LLMs ───────────────────────────────────────────
                     Tab::make('LLMs')
-                        ->icon('heroicon-o-sparkles')
+                        ->icon('heroicon-o-document-text')
                         ->schema([
-                            Forms\Components\Placeholder::make('llms_preview')
-                                ->label('')
-                                ->content(function ($record): HtmlString {
-                                    if (! $record) {
-                                        return new HtmlString(
-                                            '<p class="text-sm text-gray-400 italic">Lưu bài viết trước để xem LLMs entry.</p>'
-                                        );
-                                    }
 
-                                    $record->loadMissing('llmsEntries');
-                                    $entries = $record->llmsEntries;
+                            Section::make('How LLMs entries work')
+                                ->schema([
+                                    Placeholder::make('llms_source_hint')
+                                        ->label('')
+                                        ->content(new HtmlString('
+                                            <ul class="list-disc pl-5 space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                                <li>Content is <strong>auto-assembled</strong> from the <strong>FAQ</strong> tab and GEO profile when this post is saved.</li>
+                                                <li>To change the output — edit the <strong>FAQ</strong> tab or add a GEO profile, not here.</li>
+                                                <li>Use <strong>Regenerate</strong> below to force a re-sync without re-saving the post.</li>
+                                                <li>Toggle <strong>Published</strong> to include / exclude from the AI document file.</li>
+                                                <li>Entries are only generated for <strong>Published</strong> posts.</li>
+                                            </ul>
+                                        '))
+                                        ->columnSpanFull(),
+                                ])
+                                ->collapsed()
+                                ->collapsible(),
 
-                                    if ($entries->isEmpty()) {
-                                        return new HtmlString(
-                                            '<p class="text-sm text-gray-400 italic">Chưa có LLMs entry. Hãy publish bài viết rồi nhấn "Tạo lại LLMs".</p>'
-                                        );
-                                    }
+                            Forms\Components\Repeater::make('llmsEntries')
+                                ->relationship()
+                                ->label('Published Entries')
+                                ->schema([
 
-                                    $row = fn (string $lbl, ?string $val): string => filled($val)
-                                        ? '<div class="mb-4"><p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">'
-                                          . e($lbl) . '</p><p class="text-sm text-gray-800 whitespace-pre-wrap">'
-                                          . e($val) . '</p></div>'
-                                        : '';
+                                    Placeholder::make('llms_preview')
+                                        ->label('Preview (llms.txt output)')
+                                        ->content(function ($record): HtmlString {
+                                            if (! $record) {
+                                                return new HtmlString('<em class="text-gray-400">Not generated yet — publish the post to trigger sync.</em>');
+                                            }
 
-                                    $html = '';
-                                    foreach ($entries as $entry) {
-                                        $statusBadge = $entry->is_active
-                                            ? '<span class="text-xs font-semibold px-2 py-0.5 rounded bg-green-100 text-green-700">Active</span>'
-                                            : '<span class="text-xs font-semibold px-2 py-0.5 rounded bg-gray-200 text-gray-500">Inactive</span>';
+                                            $lines   = [];
+                                            $lines[] = '## ' . e($record->title);
+                                            $lines[] = 'URL: ' . e($record->url);
 
-                                        $html .= '<div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">';
-                                        $html .= '<div class="mb-4">' . $statusBadge . '</div>';
-                                        $html .= $row('Tiêu đề', $entry->title);
-                                        $html .= $row('URL', $entry->url);
-                                        $html .= $row('Tóm tắt', $entry->summary);
-                                        $html .= $row('Key Facts', $entry->key_facts_text);
-                                        $html .= $row('FAQ', $entry->faq_text);
-                                        $html .= '</div>';
-                                    }
+                                            if (filled($record->summary)) {
+                                                $lines[] = '';
+                                                $lines[] = 'Summary: ' . e($record->summary);
+                                            }
 
-                                    return new HtmlString($html);
-                                })
+                                            if (filled($record->key_facts_text)) {
+                                                $lines[] = '';
+                                                $lines[] = 'Key Facts:';
+                                                $lines[] = e($record->key_facts_text);
+                                            }
+
+                                            if (filled($record->faq_text)) {
+                                                $lines[] = '';
+                                                $lines[] = 'FAQ:';
+                                                $lines[] = e($record->faq_text);
+                                            }
+
+                                            $content = implode("\n", $lines);
+
+                                            return new HtmlString(
+                                                '<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;color:#334155;">'
+                                                . $content
+                                                . '</pre>'
+                                            );
+                                        })
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\Toggle::make('is_active')
+                                        ->label('Published to llms.txt')
+                                        ->helperText('Toggle off to exclude this entry from the AI document.')
+                                        ->inline(false),
+
+                                    Placeholder::make('updated_at')
+                                        ->label('Last synced')
+                                        ->content(fn ($record) => $record?->updated_at
+                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                            : '—'
+                                        ),
+                                ])
+                                ->addable(false)
+                                ->deletable(false)
+                                ->reorderable(false)
+                                ->defaultItems(0)
                                 ->columnSpanFull(),
+
+                            \Filament\Schemas\Components\Actions::make([
+                                \Filament\Actions\Action::make('regenerate_llms')
+                                    ->label('Regenerate')
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('gray')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Regenerate LLMs Entry')
+                                    ->modalDescription('This will re-pull data from the FAQ tab and GEO profile and overwrite the current entry. Proceed?')
+                                    ->action(function ($livewire): void {
+                                        $post = $livewire->record;
+
+                                        if (! $post?->exists) {
+                                            return;
+                                        }
+
+                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($post);
+
+                                        Notification::make()
+                                            ->title('LLMs entry regenerated')
+                                            ->body('The entry has been updated successfully.')
+                                            ->success()
+                                            ->send();
+
+                                        redirect(BlogPostResource::getUrl('edit', ['record' => $post]));
+                                    }),
+                            ]),
                         ])
                         ->hidden(fn ($record) => $record === null),
 

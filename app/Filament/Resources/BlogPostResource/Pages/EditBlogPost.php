@@ -5,10 +5,7 @@ namespace App\Filament\Resources\BlogPostResource\Pages;
 use App\Filament\Resources\BlogPostResource;
 use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\SeoMeta;
-use App\Services\Seo\JsonldService;
-use App\Services\Seo\LlmsGeneratorService;
 use Filament\Actions;
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditBlogPost extends EditRecord
@@ -46,12 +43,19 @@ class EditBlogPost extends EditRecord
         $modelId    = $this->record->getKey();
 
         // ── SEO meta ──────────────────────────────────────────────────────────
+        // FileUpload returns an array internally even for single files —
+        // flatten to a string path before persisting.
+        $ogImage = $state['seo_og_image'] ?? null;
+        if (is_array($ogImage)) {
+            $ogImage = $ogImage[0] ?? null;
+        }
+
         SeoMeta::updateOrCreate(
             ['model_type' => $morphClass, 'model_id' => $modelId],
             [
                 'meta_title'       => $state['seo_meta_title']       ?? null,
                 'meta_description' => $state['seo_meta_description'] ?? null,
-                'og_image'         => $state['seo_og_image']         ?? null,
+                'og_image'         => $ogImage,
                 'canonical_url'    => $state['seo_canonical_url']    ?? null,
                 'robots'           => $state['seo_robots']           ?? 'index,follow',
             ]
@@ -77,38 +81,6 @@ class EditBlogPost extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // ── Tạo lại JSON-LD ───────────────────────────────────────────────
-            Actions\Action::make('regenerate_jsonld')
-                ->label('Tạo lại JSON-LD')
-                ->icon('heroicon-o-code-bracket')
-                ->color('info')
-                ->action(function (): void {
-                    app(JsonldService::class)->syncForModel($this->record);
-
-                    Notification::make()
-                        ->title('JSON-LD đã được tạo lại')
-                        ->success()
-                        ->send();
-
-                    $this->redirect(BlogPostResource::getUrl('edit', ['record' => $this->record]));
-                }),
-
-            // ── Tạo lại LLMs ─────────────────────────────────────────────────
-            Actions\Action::make('regenerate_llms')
-                ->label('Tạo lại LLMs')
-                ->icon('heroicon-o-sparkles')
-                ->color('warning')
-                ->action(function (): void {
-                    app(LlmsGeneratorService::class)->upsertEntry($this->record);
-
-                    Notification::make()
-                        ->title('LLMs entry đã được tạo lại')
-                        ->success()
-                        ->send();
-
-                    $this->redirect(BlogPostResource::getUrl('edit', ['record' => $this->record]));
-                }),
-
             Actions\DeleteAction::make(),
         ];
     }
