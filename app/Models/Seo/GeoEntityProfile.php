@@ -3,6 +3,7 @@
 namespace App\Models\Seo;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class GeoEntityProfile extends Model
 {
@@ -16,6 +17,11 @@ class GeoEntityProfile extends Model
         'target_audience',
         'llm_context_hint',
     ];
+
+    public function model(): MorphTo
+    {
+        return $this->morphTo('model', 'model_type', 'model_id');
+    }
 
     protected function casts(): array
     {

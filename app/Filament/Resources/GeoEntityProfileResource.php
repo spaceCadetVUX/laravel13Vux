@@ -17,6 +17,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class GeoEntityProfileResource extends Resource
 {
@@ -27,6 +28,11 @@ class GeoEntityProfileResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'SEO & GEO';
 
     protected static ?string $navigationLabel = 'GEO Profiles';
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with('model');
+    }
 
     // ── Form ──────────────────────────────────────────────────────────────────
 
@@ -44,10 +50,17 @@ class GeoEntityProfileResource extends Resource
                                 ->disabled()
                                 ->dehydrated(false),
 
-                            Forms\Components\TextInput::make('model_id')
-                                ->label('Model ID')
+                            Forms\Components\TextInput::make('model_display_name')
+                                ->label('Name')
                                 ->disabled()
-                                ->dehydrated(false),
+                                ->dehydrated(false)
+                                ->afterStateHydrated(function ($component, GeoEntityProfile $record) {
+                                    $component->state(
+                                        $record->model?->getAttribute('name')
+                                        ?? $record->model?->getAttribute('title')
+                                        ?? $record->model_id
+                                    );
+                                }),
 
                             Forms\Components\Textarea::make('ai_summary')
                                 ->label('AI Summary')
@@ -125,13 +138,15 @@ class GeoEntityProfileResource extends Resource
                     ->color('primary')
                     ->searchable(),
 
-                TextColumn::make('model_id')
-                    ->label('Model ID')
-                    ->formatStateUsing(fn ($state) => is_string($state) && strlen($state) > 12
-                        ? strtoupper(substr($state, 0, 8)) . '…'
-                        : $state
+                TextColumn::make('model_name')
+                    ->label('Name')
+                    ->state(fn (GeoEntityProfile $record): string =>
+                        (string) ($record->model?->getAttribute('name')
+                            ?? $record->model?->getAttribute('title')
+                            ?? '—')
                     )
-                    ->copyable(),
+                    ->searchable(false)
+                    ->limit(50),
 
                 IconColumn::make('has_summary')
                     ->label('Summary')

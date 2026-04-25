@@ -27,6 +27,8 @@ class JsonldSchemaResource extends Resource
 
     protected static ?string $navigationLabel = 'JSON-LD Schemas';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     // ── Form ──────────────────────────────────────────────────────────────────
 
     public static function form(Schema $schema): Schema
