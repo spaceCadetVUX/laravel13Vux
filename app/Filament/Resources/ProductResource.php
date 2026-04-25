@@ -927,17 +927,22 @@ class ProductResource extends Resource
                                     ->modalHeading('Regenerate LLMs Entry')
                                     ->modalDescription('This will re-pull data from GEO/AI tab and overwrite the current entry. Proceed?')
                                     ->action(function ($livewire): void {
-                                        if (! $livewire->record) {
+                                        $product = $livewire->record;
+
+                                        if (! $product?->exists) {
                                             return;
                                         }
-                                        dispatch(new \App\Jobs\Seo\SyncLlmsEntry($livewire->record))
-                                            ->onQueue('seo');
+
+                                        // Run synchronously — no queue worker needed, result visible immediately.
+                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product);
 
                                         Notification::make()
-                                            ->title('LLMs entry queued for regeneration')
-                                            ->body('The entry will be updated shortly.')
+                                            ->title('LLMs entry regenerated')
+                                            ->body('The entry has been updated successfully.')
                                             ->success()
                                             ->send();
+
+                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
                                     }),
                             ]),
                         ]),
@@ -1051,17 +1056,22 @@ class ProductResource extends Resource
                                     ->modalHeading('Regenerate JSON-LD Schemas')
                                     ->modalDescription('This will re-generate all Auto schemas from the current product data. Manual schemas will not be affected.')
                                     ->action(function ($livewire): void {
-                                        if (! $livewire->record) {
+                                        $product = $livewire->record;
+
+                                        if (! $product?->exists) {
                                             return;
                                         }
-                                        dispatch(new \App\Jobs\Seo\SyncJsonldSchema($livewire->record))
-                                            ->onQueue('seo');
+
+                                        // Run synchronously — no queue worker needed, result visible immediately.
+                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($product);
 
                                         Notification::make()
-                                            ->title('JSON-LD schemas queued for regeneration')
-                                            ->body('Schemas will be updated shortly.')
+                                            ->title('JSON-LD schemas regenerated')
+                                            ->body('All auto schemas have been updated.')
                                             ->success()
                                             ->send();
+
+                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
                                     }),
                             ]),
                         ]),

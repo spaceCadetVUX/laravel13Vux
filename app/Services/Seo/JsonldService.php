@@ -379,6 +379,9 @@ class JsonldService
                     ->filter(fn (float $p): bool => $p > 0);
 
                 if ($prices->isNotEmpty()) {
+                    $lowPrice  = $prices->min();
+                    $highPrice = $prices->max();
+
                     $offerList = $variants->map(function ($variant) use ($currency, $productUrl): array {
                         $offer = [
                             '@type'         => 'Offer',
@@ -400,12 +403,41 @@ class JsonldService
                         return $offer;
                     })->values()->all();
 
+                    // ── Edge case: all variants same price ────────────────────
+                    // AggregateOffer with lowPrice = highPrice looks wrong in
+                    // search results ("500.000 ₫ – 500.000 ₫"). Use single Offer.
+                    if ($lowPrice === $highPrice) {
+                        $anyInStock = $variants->contains(
+                            fn ($v): bool => ((int) $v->stock_quantity) > 0
+                        );
+
+                        return [
+                            '@type'         => 'Offer',
+                            'price'         => $lowPrice,
+                            'priceCurrency' => $currency,
+                            'availability'  => $anyInStock
+                                ? 'https://schema.org/InStock'
+                                : 'https://schema.org/OutOfStock',
+                            'offerCount'    => $variants->count(),
+                            'url'           => $productUrl,
+                        ];
+                    }
+
+                    // ── Multiple prices → AggregateOffer ─────────────────────
+                    // Top-level availability = InStock if ANY variant has stock.
+                    $anyInStock = $variants->contains(
+                        fn ($v): bool => ((int) $v->stock_quantity) > 0
+                    );
+
                     return [
                         '@type'         => 'AggregateOffer',
-                        'lowPrice'      => $prices->min(),
-                        'highPrice'     => $prices->max(),
+                        'lowPrice'      => $lowPrice,
+                        'highPrice'     => $highPrice,
                         'offerCount'    => $variants->count(),
                         'priceCurrency' => $currency,
+                        'availability'  => $anyInStock
+                            ? 'https://schema.org/InStock'
+                            : 'https://schema.org/OutOfStock',
                         'offers'        => $offerList,
                     ];
                 }

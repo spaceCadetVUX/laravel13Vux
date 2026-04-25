@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\Seo\SyncJsonldSchema;
+use App\Services\Seo\JsonldService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -12,7 +13,8 @@ class JsonldSyncCommand extends Command
     protected $signature = 'jsonld:sync
                             {model : Model morph alias or short class name (e.g. product, blog_post, Product)}
                             {id?   : Primary key of a single record to sync}
-                            {--all : Sync every record for the given model}';
+                            {--all : Sync every record for the given model}
+                            {--now : Run synchronously (skip queue) — useful in local dev}';
 
     protected $description = 'Dispatch SyncJsonldSchema jobs for one or all records of a model';
 
@@ -45,17 +47,24 @@ class JsonldSyncCommand extends Command
 
     private function syncAll(string $modelClass): int
     {
-        $count = 0;
+        $count   = 0;
+        $useNow  = $this->option('now');
+        $service = $useNow ? app(JsonldService::class) : null;
 
         /** @var Model $modelClass */
-        $modelClass::query()->chunkById(100, function ($records) use (&$count): void {
+        $modelClass::query()->chunkById(100, function ($records) use (&$count, $useNow, $service): void {
             foreach ($records as $record) {
-                dispatch(new SyncJsonldSchema($record));
+                if ($useNow) {
+                    $service->syncForModel($record);
+                } else {
+                    dispatch(new SyncJsonldSchema($record))->onQueue('seo');
+                }
                 $count++;
             }
         });
 
-        $this->info("Synced {$count} record(s).");
+        $mode = $useNow ? 'synchronously' : 'via queue';
+        $this->info("Synced {$count} record(s) {$mode}.");
 
         return self::SUCCESS;
     }
@@ -71,8 +80,13 @@ class JsonldSyncCommand extends Command
             return self::FAILURE;
         }
 
-        dispatch(new SyncJsonldSchema($record));
-        $this->info("Synced 1 record (id={$id}).");
+        if ($this->option('now')) {
+            app(JsonldService::class)->syncForModel($record);
+            $this->info("Synced 1 record (id={$id}) synchronously.");
+        } else {
+            dispatch(new SyncJsonldSchema($record))->onQueue('seo');
+            $this->info("Synced 1 record (id={$id}) via queue.");
+        }
 
         return self::SUCCESS;
     }

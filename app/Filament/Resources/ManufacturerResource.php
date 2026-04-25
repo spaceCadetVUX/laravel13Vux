@@ -57,11 +57,20 @@ class ManufacturerResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('country')
-                        ->placeholder('VN, JP, DE, US...')
-                        ->hint('ISO 3166-1 alpha-2 code — used in JSON-LD addressCountry')
+                        ->placeholder('VN')
+                        ->hint('ISO 3166-1 alpha-2 — 2 ký tự viết hoa')
                         ->hintIcon('heroicon-o-code-bracket')
                         ->hintColor('info')
-                        ->helperText('e.g. VN = Vietnam, JP = Japan, DE = Germany, US = United States'),
+                        ->helperText('VN = Vietnam · JP = Japan · DE = Germany · US = United States · CN = China · KR = Korea')
+                        ->maxLength(2)
+                        ->minLength(2)
+                        ->rules(['regex:/^[A-Za-z]{2}$/'])
+                        ->dehydrateStateUsing(fn (?string $state): ?string => $state ? strtoupper(trim($state)) : null)
+                        ->validationMessages([
+                            'regex'     => 'Country code phải đúng 2 chữ cái. VD: VN, JP, US.',
+                            'min'       => 'Country code phải đúng 2 ký tự.',
+                            'max'       => 'Country code phải đúng 2 ký tự.',
+                        ]),
 
                     Forms\Components\FileUpload::make('logo')
                         ->label('Logo')
