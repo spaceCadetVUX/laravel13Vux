@@ -3,16 +3,45 @@
 namespace App\Observers;
 
 use App\Enums\BlogPostStatus;
+use App\Enums\RedirectType;
 use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\BlogPost;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
+use App\Models\Seo\Redirect;
 use App\Models\Seo\SitemapEntry;
 
 class BlogPostObserver
 {
+    /**
+     * Fire BEFORE the UPDATE SQL — getOriginal() still holds the old slug.
+     * Creates a 301 redirect when the slug changes on a published post.
+     */
+    public function updating(BlogPost $blogPost): void
+    {
+        if (! $blogPost->isDirty('slug')) {
+            return;
+        }
+
+        $oldSlug = $blogPost->getOriginal('slug');
+        $newSlug = $blogPost->slug;
+
+        if (! $oldSlug || ! $newSlug || $oldSlug === $newSlug) {
+            return;
+        }
+
+        Redirect::updateOrCreate(
+            ['from_path' => '/blog/' . $oldSlug],
+            [
+                'to_path'   => '/blog/' . $newSlug,
+                'type'      => RedirectType::Permanent,
+                'is_active' => true,
+            ]
+        );
+    }
+
     /**
      * Dispatch SEO sync jobs only when the post is published.
      * Draft and archived posts must not appear in sitemaps or LLMs docs.

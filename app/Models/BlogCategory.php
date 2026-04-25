@@ -2,7 +2,11 @@
 
 namespace App\Models;
 
+use App\Traits\HasGeoProfile;
+use App\Traits\HasJsonldSchemas;
+use App\Traits\HasLlmsEntry;
 use App\Traits\HasSeoMeta;
+use App\Traits\HasSitemapEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +17,10 @@ class BlogCategory extends Model
 {
     use HasFactory;
     use HasSeoMeta;
+    use HasGeoProfile;
+    use HasJsonldSchemas;
+    use HasSitemapEntry;
+    use HasLlmsEntry;
 
     // ── PK config (bigint auto-increment) ─────────────────────────────────────
 

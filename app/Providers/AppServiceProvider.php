@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Auth\EncryptedUserProvider;
+use App\Models\Author;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogTag;
@@ -12,6 +13,8 @@ use App\Models\Manufacturer;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
+use App\Observers\BlogCategoryObserver;
+use App\Observers\BlogPostObserver;
 use App\Observers\BrandObserver;
 use App\Observers\ManufacturerObserver;
 use App\Observers\ReviewObserver;
@@ -68,18 +71,21 @@ class AppServiceProvider extends ServiceProvider
         Brand::observe(BrandObserver::class);
         Manufacturer::observe(ManufacturerObserver::class);
         Review::observe(ReviewObserver::class);
+        BlogPost::observe(BlogPostObserver::class);
+        BlogCategory::observe(BlogCategoryObserver::class);
     }
 
     private function registerMorphMap(): void
     {
         Relation::morphMap([
-            'product'      => Product::class,
-            'blog_post'    => BlogPost::class,
-            'category'     => Category::class,
+            'product'       => Product::class,
+            'blog_post'     => BlogPost::class,
+            'category'      => Category::class,
             'blog_category' => BlogCategory::class,
-            'blog_tag'     => BlogTag::class,
-            'brand'        => Brand::class,
-            'manufacturer' => Manufacturer::class,
+            'blog_tag'      => BlogTag::class,
+            'brand'         => Brand::class,
+            'manufacturer'  => Manufacturer::class,
+            'author'        => Author::class,
         ]);
     }
 }

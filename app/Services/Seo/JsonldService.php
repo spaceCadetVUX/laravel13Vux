@@ -17,18 +17,20 @@ class JsonldService
      * FAQPage for products is generated conditionally — only when geoProfile.faq has data.
      */
     private const MODEL_SCHEMA_TYPES = [
-        'product'   => [JsonldSchemaType::Product, JsonldSchemaType::BreadcrumbList],
-        'blog_post' => [JsonldSchemaType::Article,  JsonldSchemaType::BreadcrumbList],
-        'category'  => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
+        'product'       => [JsonldSchemaType::Product,        JsonldSchemaType::BreadcrumbList],
+        'blog_post'     => [JsonldSchemaType::Article,        JsonldSchemaType::BreadcrumbList],
+        'category'      => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
+        'blog_category' => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
     ];
 
     /**
      * Front-end URL prefix per morph alias.
      */
     private const URL_PREFIXES = [
-        'product'   => '/products/',
-        'blog_post' => '/blog/',
-        'category'  => '/categories/',
+        'product'       => '/products/',
+        'blog_post'     => '/blog/',
+        'category'      => '/categories/',
+        'blog_category' => '/blog/category/',
     ];
 
     /**
@@ -109,6 +111,12 @@ class JsonldService
                 }
             }
 
+            if ($morphAlias === 'blog_category') {
+                if ($schemaType === JsonldSchemaType::BreadcrumbList) {
+                    $resolved = $this->buildBlogCategoryBreadcrumb($model);
+                }
+            }
+
             JsonldSchema::updateOrCreate(
                 [
                     'model_type'  => $morphAlias,
@@ -127,8 +135,12 @@ class JsonldService
 
         // ── Product-only conditional schemas ──────────────────────────────────
         if ($morphAlias === 'product') {
-            $this->syncFaqPageForProduct($model);
             $this->syncVideoObjectsForProduct($model);
+        }
+
+        // ── FAQPage — any model with geoProfile.faq data ──────────────────────
+        if (in_array($morphAlias, ['product', 'blog_post'], true)) {
+            $this->syncFaqPage($model);
         }
     }
 
@@ -538,13 +550,51 @@ class JsonldService
     }
 
     /**
-     * Generate a FAQPage schema for a product IF geoProfile.faq has content.
-     * Skips if: no FAQ data, manual override exists, or geoProfile is missing.
+     * Build a BreadcrumbList payload for a blog category page.
+     * Structure: Home → Blog → [{Parent category} →] {Category}
+     *
+     * The parent level is included only when a parent_id is assigned.
+     * Falls back to Home → Blog → Category.
      */
-    private function syncFaqPageForProduct(Model $model): void
+    private function buildBlogCategoryBreadcrumb(Model $model): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $name    = (string) ($model->getAttribute('name') ?? '');
+        $slug    = (string) ($model->getAttribute('slug') ?? '');
+
+        $items = [
+            ['name' => 'Home', 'url' => $baseUrl],
+            ['name' => 'Blog', 'url' => $baseUrl . '/blog'],
+        ];
+
+        // Include parent category as a middle level when assigned.
+        if (method_exists($model, 'parent')) {
+            $model->loadMissing('parent');
+            $parent = $model->getRelationValue('parent');
+
+            if ($parent && filled($parent->name)) {
+                $items[] = [
+                    'name' => (string) $parent->name,
+                    'url'  => $baseUrl . '/blog/category/' . ($parent->slug ?? ''),
+                ];
+            }
+        }
+
+        $items[] = ['name' => $name, 'url' => $baseUrl . '/blog/category/' . $slug];
+
+        return $this->buildBreadcrumbSchema($items);
+    }
+
+    /**
+     * Generate a FAQPage schema for any model that has geoProfile.faq data.
+     * Supports products and blog posts. Skips if: no FAQ data, manual override
+     * exists, or geoProfile is missing.
+     */
+    private function syncFaqPage(Model $model): void
     {
         $morphAlias = $model->getMorphClass();
-        $geoProfile = method_exists($model, 'geoProfile') ? $model->geoProfile : null;
+        $model->loadMissing('geoProfile');
+        $geoProfile = $model->getRelationValue('geoProfile');
         $faq        = (array) ($geoProfile?->faq ?? []);
 
         if (empty($faq)) {
