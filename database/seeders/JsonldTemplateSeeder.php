@@ -55,26 +55,36 @@ class JsonldTemplateSeeder extends Seeder
                 'label'            => 'Article Schema',
                 'is_auto_generated' => true,
                 'template'         => json_encode([
-                    '@context'      => 'https://schema.org',
-                    '@type'         => 'Article',
-                    'headline'      => '{{blog_post.title}}',
-                    'description'   => '{{blog_post.excerpt}}',
-                    'image'         => '{{blog_post.featured_image}}',
-                    'datePublished' => '{{blog_post.published_at}}',
-                    'author'        => [
+                    '@context'         => 'https://schema.org',
+                    '@type'            => 'Article',
+                    'headline'         => '{{blog_post.title}}',
+                    'description'      => '{{blog_post.excerpt}}',
+                    // featured_image_url is a computed full URL — never the raw storage path.
+                    'image'            => '{{blog_post.featured_image_url}}',
+                    'datePublished'    => '{{blog_post.published_at}}',
+                    'dateModified'     => '{{blog_post.updated_at}}',
+                    // mainEntityOfPage and publisher are injected by enrichArticleSchema().
+                    // The placeholders below are replaced; the objects are then overwritten
+                    // with properly typed values during enrichment.
+                    'mainEntityOfPage' => [
+                        '@type' => 'WebPage',
+                        '@id'   => '{{blog_post.canonical_url}}',
+                    ],
+                    'author'           => [
                         '@type' => 'Person',
                         'name'  => '{{blog_post.author_name}}',
                     ],
-                    'url'           => '{{blog_post.canonical_url}}',
+                    'url'              => '{{blog_post.canonical_url}}',
                 ]),
                 'placeholders'     => json_encode([
-                    '{{blog_post.title}}'          => 'title',
-                    '{{blog_post.slug}}'           => 'slug',
-                    '{{blog_post.excerpt}}'        => 'excerpt',
-                    '{{blog_post.featured_image}}' => 'featured_image_url',
-                    '{{blog_post.published_at}}'   => 'published_at',
-                    '{{blog_post.author_name}}'    => 'author.name',
-                    '{{blog_post.canonical_url}}'  => 'canonical_url',
+                    '{{blog_post.title}}'              => 'title',
+                    '{{blog_post.slug}}'               => 'slug',
+                    '{{blog_post.excerpt}}'            => 'excerpt',
+                    '{{blog_post.featured_image_url}}' => 'featured_image_url',
+                    '{{blog_post.published_at}}'       => 'published_at',
+                    '{{blog_post.updated_at}}'         => 'updated_at',
+                    '{{blog_post.author_name}}'        => 'author.name',
+                    '{{blog_post.canonical_url}}'      => 'canonical_url',
                 ]),
                 'created_at' => $now,
                 'updated_at' => $now,

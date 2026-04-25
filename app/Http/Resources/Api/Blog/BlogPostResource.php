@@ -15,10 +15,13 @@ class BlogPostResource extends JsonResource
             'slug'           => $this->slug,
             'excerpt'        => $this->excerpt,
             'featured_image' => $this->featured_image,
-            'author'         => $this->whenLoaded('author', fn () => [
-                'id'   => $this->author?->id,
-                'name' => $this->author?->name,
-            ]),
+            'author'         => $this->whenLoaded('author', fn () => $this->author ? [
+                'id'     => $this->author->id,
+                'name'   => $this->author->name,
+                'slug'   => $this->author->slug,
+                'title'  => $this->author->title,
+                'avatar' => $this->author->avatar_url,   // computed full URL
+            ] : null),
             'category'     => new BlogCategoryResource($this->whenLoaded('blogCategory')),
             'tags'         => BlogTagResource::collection($this->whenLoaded('tags')),
             'published_at' => $this->published_at?->toIso8601String(),

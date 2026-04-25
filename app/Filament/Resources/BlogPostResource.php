@@ -4,8 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Enums\BlogPostStatus;
 use App\Filament\Resources\BlogPostResource\Pages;
+use App\Models\Author;
 use App\Models\BlogPost;
-use App\Models\User;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -112,11 +112,24 @@ class BlogPostResource extends Resource
 
                             Forms\Components\Select::make('author_id')
                                 ->label('Author')
-                                ->options(
-                                    User::role('admin')->pluck('name', 'id')
-                                )
+                                ->relationship('author', 'name')
                                 ->searchable()
-                                ->nullable(),
+                                ->preload()
+                                ->nullable()
+                                ->native(false)
+                                ->createOptionForm([
+                                    Forms\Components\TextInput::make('name')
+                                        ->required()
+                                        ->live(debounce: 500)
+                                        ->afterStateUpdated(fn (Set $set, ?string $state) =>
+                                            $set('slug', \Illuminate\Support\Str::slug($state ?? ''))
+                                        ),
+                                    Forms\Components\TextInput::make('slug')
+                                        ->required(),
+                                    Forms\Components\TextInput::make('title')
+                                        ->label('Job Title'),
+                                ])
+                                ->placeholder('— Select or create author —'),
                         ])
                         ->columns(2),
 

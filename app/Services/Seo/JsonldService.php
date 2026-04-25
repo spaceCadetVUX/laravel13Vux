@@ -88,7 +88,7 @@ class JsonldService
 
             $resolved = $this->resolvePlaceholders($template->template ?? [], $model);
 
-            // Product-specific enrichments applied after placeholder resolution.
+            // Model-specific enrichments applied after placeholder resolution.
             if ($morphAlias === 'product') {
                 if ($schemaType === JsonldSchemaType::Product) {
                     $resolved = $this->enrichProductSchema($resolved, $model);
@@ -96,6 +96,16 @@ class JsonldService
 
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
                     $resolved = $this->buildProductBreadcrumb($model);
+                }
+            }
+
+            if ($morphAlias === 'blog_post') {
+                if ($schemaType === JsonldSchemaType::Article) {
+                    $resolved = $this->enrichArticleSchema($resolved, $model);
+                }
+
+                if ($schemaType === JsonldSchemaType::BreadcrumbList) {
+                    $resolved = $this->buildBlogPostBreadcrumb($model);
                 }
             }
 
@@ -492,6 +502,42 @@ class JsonldService
     }
 
     /**
+     * Build a BreadcrumbList payload for a blog post.
+     * Structure: Home → Blog → [{Category} →] {Post}
+     *
+     * The category level is included only when a blogCategory is assigned.
+     * Falls back to Home → Blog → Post.
+     */
+    private function buildBlogPostBreadcrumb(Model $model): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $title   = (string) ($model->getAttribute('title') ?? '');
+        $slug    = (string) ($model->getAttribute('slug') ?? '');
+
+        $items = [
+            ['name' => 'Home', 'url' => $baseUrl],
+            ['name' => 'Blog', 'url' => $baseUrl . '/blog'],
+        ];
+
+        // Include category as a middle level when assigned.
+        if (method_exists($model, 'blogCategory')) {
+            $model->loadMissing('blogCategory');
+            $category = $model->getRelationValue('blogCategory');
+
+            if ($category && filled($category->name)) {
+                $items[] = [
+                    'name' => (string) $category->name,
+                    'url'  => $baseUrl . '/blog/category/' . ($category->slug ?? ''),
+                ];
+            }
+        }
+
+        $items[] = ['name' => $title, 'url' => $baseUrl . '/blog/' . $slug];
+
+        return $this->buildBreadcrumbSchema($items);
+    }
+
+    /**
      * Generate a FAQPage schema for a product IF geoProfile.faq has content.
      * Skips if: no FAQ data, manual override exists, or geoProfile is missing.
      */
@@ -551,6 +597,97 @@ class JsonldService
                 'sort_order'        => self::SORT_ORDER[JsonldSchemaType::FaqPage->value] ?? 50,
             ]
         );
+    }
+
+    /**
+     * Enrich the resolved Article schema payload with author Person data.
+     *
+     * Replaces the flat author.name placeholder with a full Person object:
+     *   - name, jobTitle, url (author page)
+     *   - image (avatar)
+     *   - sameAs array (website, LinkedIn, Twitter, Facebook)
+     *
+     * Falls back to the simple { @type: Person, name: "..." } when no author
+     * profile is assigned.
+     */
+    private function enrichArticleSchema(array $payload, Model $model): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+
+        // ── @id — canonical entity identifier ────────────────────────────────
+        if (isset($payload['url']) && ! isset($payload['@id'])) {
+            $payload['@id'] = $payload['url'];
+        }
+
+        // ── mainEntityOfPage — ties the Article to its canonical WebPage ─────
+        // Google uses this to associate the structured data block with the page URL.
+        if (isset($payload['url']) && ! isset($payload['mainEntityOfPage'])) {
+            $payload['mainEntityOfPage'] = [
+                '@type' => 'WebPage',
+                '@id'   => $payload['url'],
+            ];
+        }
+
+        // ── Author — full Person schema ───────────────────────────────────────
+        if (method_exists($model, 'author')) {
+            $model->loadMissing('author');
+            $author = $model->getRelationValue('author');
+
+            if ($author) {
+                $person = [
+                    '@type' => 'Person',
+                    'name'  => (string) $author->name,
+                ];
+
+                if (filled($author->title)) {
+                    $person['jobTitle'] = $author->title;
+                }
+
+                if (filled($author->slug)) {
+                    $person['url'] = $baseUrl . '/authors/' . $author->slug;
+                }
+
+                if ($avatarUrl = $author->avatar_url) {
+                    $person['image'] = $avatarUrl;
+                }
+
+                if (filled($author->bio)) {
+                    $person['description'] = $author->bio;
+                }
+
+                $sameAs = $author->same_as;
+                if (! empty($sameAs)) {
+                    $person['sameAs'] = count($sameAs) === 1 ? $sameAs[0] : $sameAs;
+                }
+
+                $payload['author'] = $person;
+            }
+        }
+
+        // ── Publisher — site Organization with logo ───────────────────────────
+        // Required by Google for Article rich results in older validators;
+        // strongly recommended for E-E-A-T signals in all Article schemas.
+        if (! isset($payload['publisher'])) {
+            $siteName = (string) config('app.name', 'KNX Store');
+            $logoUrl  = (string) config('seo.logo_url', '');
+
+            $publisher = [
+                '@type' => 'Organization',
+                'name'  => $siteName,
+                'url'   => $baseUrl,
+            ];
+
+            if (filled($logoUrl)) {
+                $publisher['logo'] = [
+                    '@type' => 'ImageObject',
+                    'url'   => $logoUrl,
+                ];
+            }
+
+            $payload['publisher'] = $publisher;
+        }
+
+        return $payload;
     }
 
     /**
@@ -656,10 +793,21 @@ class JsonldService
             ? ((string) ($model->images()->first()?->url ?? ''))
             : '';
 
-        // BlogPost: author display name via author() relation
+        // BlogPost: author display name via author() → Author model
+        // enrichArticleSchema() replaces this with a full Person object at sync time.
         $map['author_name'] = method_exists($model, 'author')
             ? ((string) ($model->author?->name ?? ''))
             : '';
+
+        // BlogPost: full URL for featured image.
+        // The raw DB column stores a relative storage path (e.g. "blog/2024/01/x.jpg").
+        // Google requires an absolute URL in Article image — never a bare path.
+        if ($morphAlias === 'blog_post') {
+            $featuredImage          = (string) ($model->getAttribute('featured_image') ?? '');
+            $map['featured_image_url'] = filled($featuredImage)
+                ? ($baseUrl . '/storage/' . ltrim($featuredImage, '/'))
+                : '';
+        }
 
         // Product: Schema.org availability string
         $stockQty            = (int) ($model->getAttribute('stock_quantity') ?? 0);

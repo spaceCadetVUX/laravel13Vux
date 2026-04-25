@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+// User import removed — author() now points to Author model
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 
@@ -108,10 +109,10 @@ class BlogPost extends Model
 
     // ── Relationships ─────────────────────────────────────────────────────────
 
-    /** Author (User) — nullable, preserved via SET NULL if user deleted. */
+    /** Author profile — nullable, preserved via SET NULL if author deleted. */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'author_id')->withTrashed();
+        return $this->belongsTo(Author::class, 'author_id');
     }
 
     public function blogCategory(): BelongsTo
