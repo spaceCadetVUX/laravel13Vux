@@ -23,7 +23,7 @@ class JsonldSchemaResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-code-bracket';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'SEO & GEO';
+    protected static \UnitEnum|string|null $navigationGroup = 'Setting';
 
     protected static ?string $navigationLabel = 'JSON-LD Schemas';
 

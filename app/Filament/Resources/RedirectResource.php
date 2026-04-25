@@ -25,7 +25,7 @@ class RedirectResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'SEO & GEO';
+    protected static \UnitEnum|string|null $navigationGroup = 'Setting';
 
     protected static ?string $navigationLabel = 'Redirects';
 
@@ -40,6 +40,8 @@ class RedirectResource extends Resource
                 ->required()
                 ->placeholder('/old-slug')
                 ->unique(table: Redirect::class, column: 'from_path', ignoreRecord: true)
+                ->rules(['regex:/^\//'])
+                ->validationMessages(['regex' => 'The from path must start with /.'])
                 ->helperText('Must start with /. This is the path being redirected away from.'),
 
             Forms\Components\TextInput::make('to_path')

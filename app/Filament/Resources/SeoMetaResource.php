@@ -24,9 +24,11 @@ class SeoMetaResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-magnifying-glass';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'SEO & GEO';
+    protected static \UnitEnum|string|null $navigationGroup = 'Setting';
 
     protected static ?string $navigationLabel = 'SEO Meta';
+
+    protected static bool $shouldRegisterNavigation = false;
 
     // ── Form ──────────────────────────────────────────────────────────────────
 

@@ -54,6 +54,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Commerce'),
                 NavigationGroup::make('Blog'),
                 NavigationGroup::make('SEO & GEO'),
+                NavigationGroup::make('Setting'),
                 NavigationGroup::make('System'),
             ])
             ->middleware([

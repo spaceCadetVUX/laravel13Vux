@@ -12,11 +12,13 @@ use App\Models\Category;
 use App\Models\Manufacturer;
 use App\Models\Product;
 use App\Models\Review;
+use App\Models\Seo\Redirect;
 use App\Models\User;
 use App\Observers\BlogCategoryObserver;
 use App\Observers\BlogPostObserver;
 use App\Observers\BrandObserver;
 use App\Observers\ManufacturerObserver;
+use App\Observers\RedirectObserver;
 use App\Observers\ReviewObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -73,6 +75,7 @@ class AppServiceProvider extends ServiceProvider
         Review::observe(ReviewObserver::class);
         BlogPost::observe(BlogPostObserver::class);
         BlogCategory::observe(BlogCategoryObserver::class);
+        Redirect::observe(RedirectObserver::class);
     }
 
     private function registerMorphMap(): void

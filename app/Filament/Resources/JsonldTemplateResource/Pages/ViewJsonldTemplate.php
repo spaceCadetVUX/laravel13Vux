@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\JsonldTemplateResource\Pages;
 
 use App\Filament\Resources\JsonldTemplateResource;
-use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\ViewRecord;
 
-class CreateJsonldTemplate extends CreateRecord
+class ViewJsonldTemplate extends ViewRecord
 {
     protected static string $resource = JsonldTemplateResource::class;
 }

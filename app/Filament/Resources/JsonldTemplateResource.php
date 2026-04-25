@@ -6,9 +6,7 @@ use App\Enums\JsonldSchemaType;
 use App\Filament\Resources\JsonldTemplateResource\Pages;
 use App\Models\Seo\JsonldTemplate;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -23,9 +21,11 @@ class JsonldTemplateResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-code-bracket';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'SEO & GEO';
+    protected static \UnitEnum|string|null $navigationGroup = 'Setting';
 
     protected static ?string $navigationLabel = 'JSON-LD Templates';
+
+    protected static bool $shouldRegisterNavigation = false;
 
     // ── Form ──────────────────────────────────────────────────────────────────
 
@@ -38,17 +38,16 @@ class JsonldTemplateResource extends Resource
                 ->options(collect(JsonldSchemaType::cases())->mapWithKeys(
                     fn (JsonldSchemaType $case) => [$case->value => $case->value]
                 ))
-                ->required()
-                ->unique(table: JsonldTemplate::class, column: 'schema_type', ignoreRecord: true),
+                ->disabled(),
 
             Forms\Components\TextInput::make('label')
                 ->label('Label')
-                ->required(),
+                ->disabled(),
 
             Forms\Components\Toggle::make('is_auto_generated')
                 ->label('Auto Generated')
-                ->helperText('When ON, the Observer fills payload from this template. When OFF, the admin manually manages the payload.')
-                ->default(true)
+                ->helperText('Managed via code. When ON, the Observer fills payload from this template automatically.')
+                ->disabled()
                 ->columnSpanFull(),
 
             Forms\Components\Textarea::make('template')
@@ -58,18 +57,14 @@ class JsonldTemplateResource extends Resource
                     ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
                     : $state
                 )
-                ->dehydrateStateUsing(fn ($state) => is_string($state) && filled($state)
-                    ? json_decode($state, true) ?? $state
-                    : $state
-                )
-                ->helperText('Use {{placeholder}} syntax for dynamic values.')
+                ->disabled()
                 ->columnSpanFull(),
 
             Forms\Components\KeyValue::make('placeholders')
                 ->label('Placeholders')
                 ->keyLabel('Placeholder Key')
                 ->valueLabel('Description / Example')
-                ->reorderable()
+                ->disabled()
                 ->helperText('Document each {{placeholder}} used in the template above.')
                 ->columnSpanFull(),
 
@@ -104,21 +99,16 @@ class JsonldTemplateResource extends Resource
             ])
             ->filters([])
             ->actions([
-                EditAction::make(),
+                ViewAction::make(),
             ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->bulkActions([]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListJsonldTemplates::route('/'),
-            'create' => Pages\CreateJsonldTemplate::route('/create'),
-            'edit'   => Pages\EditJsonldTemplate::route('/{record}/edit'),
+            'index' => Pages\ListJsonldTemplates::route('/'),
+            'view'  => Pages\ViewJsonldTemplate::route('/{record}'),
         ];
     }
 }
