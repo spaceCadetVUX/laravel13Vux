@@ -3,7 +3,7 @@
 > **Stack:** Laravel 13 + Blade (no Nuxt)
 > **Locales:** `vi` (default) + `en` (extensible to any locale)
 > **Frontend:** Blade only — SSR natively, zero hydration cost
-> **Last Updated:** April 2026
+> **Last Updated:** April 2026 (rev 2 — confirmed decisions applied)
 
 ---
 
@@ -95,8 +95,23 @@
 /en/contact
 ```
 
-### Hreflang — bắt buộc trên mọi trang
+### Canonical — mỗi trang chỉ có 1, tự trỏ về chính nó
 ```html
+<!-- /vi/products/ao-thun-uniqlo -->
+<link rel="canonical" href="https://site.com/vi/products/ao-thun-uniqlo" />
+
+<!-- /en/products/uniqlo-t-shirt -->
+<link rel="canonical" href="https://site.com/en/products/uniqlo-t-shirt" />
+```
+
+> **Quan trọng:** Canonical KHÔNG phải "chọn 1 locale làm canonical cho cả site".
+> Mỗi URL tự trỏ canonical về chính mình → Google biết đây là 2 trang riêng biệt, hợp lệ, không duplicate.
+> Hreflang mới là thứ nói cho Google biết "2 trang này là alternate của nhau theo ngôn ngữ".
+> `x-default` (hreflang) trỏ về `vi` — chỉ ảnh hưởng khi Google không match được locale user.
+
+### Hreflang — bắt buộc trên mọi trang, xuất hiện trên CẢ HAI phiên bản
+```html
+<!-- Xuất hiện trên /vi/products/ao-thun-uniqlo VÀ /en/products/uniqlo-t-shirt -->
 <link rel="alternate" hreflang="vi" href="https://site.com/vi/products/ao-thun-uniqlo" />
 <link rel="alternate" hreflang="en" href="https://site.com/en/products/uniqlo-t-shirt" />
 <link rel="alternate" hreflang="x-default" href="https://site.com/vi/products/ao-thun-uniqlo" />
@@ -110,6 +125,22 @@
 - Table gốc (`products`, `categories`, v.v.) giữ nguyên — chứa dữ liệu **không phụ thuộc ngôn ngữ** (price, stock, SKU, sort_order)
 - Mỗi model có 1 `_translations` table riêng — chứa `name`, `slug`, `description`, v.v. theo `locale`
 - **Không** dùng JSON column cho translations — khó query, khó index, khó validate từng locale
+
+### Image & Video — dùng chung across locales
+- `product_images` và `product_videos` **không có** `locale` column — file path là universal
+- `alt_text` trong `product_images` cần dịch per locale vì ảnh hưởng SEO image search
+- **Giải pháp:** Thêm `product_image_alt_translations` hoặc đơn giản hơn: derive alt_text từ `product_translations.name` trong Blade view (không lưu DB riêng)
+- **Quyết định chọn:** Derive trong view — `alt="{{ $product->translation($locale)->name }}"` — đủ SEO, không thêm bảng
+
+```
+product_images
+├── id
+├── product_id
+├── path          ← dùng chung (vi lẫn en hiển thị cùng ảnh)
+├── alt_text      ← giữ làm fallback (vi), Blade sẽ override bằng translation
+├── sort_order
+└── timestamps
+```
 
 ### `product_translations`
 | Column | Type | Constraints | Notes |
@@ -316,21 +347,31 @@ public function seoMeta(string $locale = null): ?SeoMeta
 }
 ```
 
-### Blade: useSeo() equivalent
+### Blade SeoHead component — render đầy đủ
 ```php
 // app/View/Components/SeoHead.php
-// Render <title>, <meta name="description">, canonical, hreflang tự động
-// Nhận $model + tất cả locale variants để build hreflang
+// Nhận: $model, $locale, $alternateUrls (array locale→url)
+// Render:
+//   <title>
+//   <meta name="description">
+//   <link rel="canonical" href="{current url}">          ← tự trỏ về chính nó
+//   <link rel="alternate" hreflang="vi" href="...">
+//   <link rel="alternate" hreflang="en" href="...">
+//   <link rel="alternate" hreflang="x-default" href="{vi url}">
 ```
 
-### Hreflang generation
+### Hreflang generation — SeoService
 ```php
-// Service: SeoService::hreflangTags($model)
-// Return: array of [locale => url] cho mọi supported locale
-// Blade: @foreach($hreflang as $locale => $url)
-//   <link rel="alternate" hreflang="{{ $locale }}" href="{{ $url }}" />
-// @endforeach
-// Thêm: <link rel="alternate" hreflang="x-default" href="{{ $hreflang['vi'] }}" />
+// Service: SeoService::hreflangTags(Model $model): array
+// Return: ['vi' => 'https://...', 'en' => 'https://...']
+// Controller truyền vào view: compact('alternateUrls')
+
+// Blade:
+@foreach($alternateUrls as $lang => $url)
+    <link rel="alternate" hreflang="{{ $lang }}" href="{{ $url }}" />
+@endforeach
+<link rel="alternate" hreflang="x-default" href="{{ $alternateUrls['vi'] }}" />
+<link rel="canonical" href="{{ $alternateUrls[app()->getLocale()] }}" />
 ```
 
 ---
@@ -372,11 +413,14 @@ GEO profile mô tả thực thể theo ngôn ngữ — tên địa phương, mô
   "name": "Uniqlo Premium Cotton T-Shirt",
   "url": "https://site.com/en/products/uniqlo-t-shirt",
   "description": "...",
-  "offers": { "priceCurrency": "USD", "price": "12.99" }
+  "offers": { "priceCurrency": "VND", "price": "299000" }
 }
 ```
 
-> Tiền tệ theo locale: `vi` → VND, `en` → USD (config `app.locale_currency`)
+> **Tiền tệ (đã xác nhận):** Admin đã có hệ thống currency conversion riêng.
+> JSON-LD sẽ lấy giá + đơn vị tiền từ hệ thống currency hiện có của admin — không hardcode theo locale.
+> `priceCurrency` sẽ lấy từ `CurrencyService::activeCurrency()` hoặc tương đương.
+> Nếu site chỉ bán VND → `priceCurrency: "VND"` cho cả `vi` lẫn `en`.
 
 ### BreadcrumbList — multilingual
 ```json
@@ -438,29 +482,59 @@ Route::get('{locale}/llms.txt', [LlmsController::class, 'index'])
 ## 9. Sitemap — Multilingual
 
 ### Cấu trúc sitemap
+Hiện tại có **4 child sitemaps** → multilingual thành **8 child sitemaps** (4 × 2 locale):
+
 ```xml
 <!-- /sitemap.xml (sitemap index) -->
-<sitemapindex>
-  <sitemap><loc>https://site.com/sitemap-vi-products.xml</loc></sitemap>
-  <sitemap><loc>https://site.com/sitemap-vi-categories.xml</loc></sitemap>
-  <sitemap><loc>https://site.com/sitemap-vi-blog.xml</loc></sitemap>
-  <sitemap><loc>https://site.com/sitemap-en-products.xml</loc></sitemap>
-  <sitemap><loc>https://site.com/sitemap-en-categories.xml</loc></sitemap>
-  <sitemap><loc>https://site.com/sitemap-en-blog.xml</loc></sitemap>
-</sitemapindex>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-<!-- Mỗi child sitemap có hreflang xlinks -->
-<url>
-  <loc>https://site.com/vi/products/ao-thun-uniqlo</loc>
-  <xhtml:link rel="alternate" hreflang="vi" href="https://site.com/vi/products/ao-thun-uniqlo"/>
-  <xhtml:link rel="alternate" hreflang="en" href="https://site.com/en/products/uniqlo-t-shirt"/>
-</url>
+  <!-- Tiếng Việt -->
+  <sitemap><loc>https://site.com/sitemap-vi-products.xml</loc></sitemap>
+  <sitemap><loc>https://site.com/sitemap-vi-product-categories.xml</loc></sitemap>
+  <sitemap><loc>https://site.com/sitemap-vi-blog.xml</loc></sitemap>
+  <sitemap><loc>https://site.com/sitemap-vi-blog-categories.xml</loc></sitemap>
+
+  <!-- English -->
+  <sitemap><loc>https://site.com/sitemap-en-products.xml</loc></sitemap>
+  <sitemap><loc>https://site.com/sitemap-en-product-categories.xml</loc></sitemap>
+  <sitemap><loc>https://site.com/sitemap-en-blog.xml</loc></sitemap>
+  <sitemap><loc>https://site.com/sitemap-en-blog-categories.xml</loc></sitemap>
+
+</sitemapindex>
+```
+
+```xml
+<!-- sitemap-vi-products.xml — mỗi URL có hreflang xlinks -->
+<urlset xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://site.com/vi/products/ao-thun-uniqlo</loc>
+    <xhtml:link rel="alternate" hreflang="vi" href="https://site.com/vi/products/ao-thun-uniqlo"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://site.com/en/products/uniqlo-t-shirt"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://site.com/vi/products/ao-thun-uniqlo"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
+```
+
+> **Naming convention child sitemaps:** `sitemap-{locale}-{type}.xml`
+> Types: `products`, `product-categories`, `blog`, `blog-categories`
+
+### `sitemap_indexes` seeder — 8 rows (2 locale × 4 type)
+```php
+// Mỗi locale × type = 1 row trong sitemap_indexes
+['slug' => 'vi-products',           'path' => '/sitemap-vi-products.xml']
+['slug' => 'vi-product-categories', 'path' => '/sitemap-vi-product-categories.xml']
+['slug' => 'vi-blog',               'path' => '/sitemap-vi-blog.xml']
+['slug' => 'vi-blog-categories',    'path' => '/sitemap-vi-blog-categories.xml']
+// ... tương tự cho en
 ```
 
 ### `sitemap_entries` — thêm `locale`
 ```sql
 ALTER TABLE sitemap_entries ADD COLUMN locale varchar(10) NOT NULL DEFAULT 'vi';
 -- Mỗi URL = 1 row: UNIQUE(url) đã cover vì URL chứa locale prefix
+-- Index: (sitemap_index_id, locale)
 ```
 
 ---
@@ -643,37 +717,43 @@ composer require cocur/slugify    # Slug từ tiếng Việt có dấu → khôn
 ## 15. Checklist trước khi build
 
 ```
-□ Xác nhận locale default: vi (có prefix /vi/ trong URL)
-□ Xác nhận tiền tệ: VND cho vi, USD cho en (hoặc chỉ VND cho cả hai?)
-□ Xác nhận fallback: nếu translation en chưa có → hiện vi hay 404?
-□ Xác nhận slug vi có dấu hay không dấu? (/vi/áo-thun vs /vi/ao-thun)
-□ Xác nhận canonical: /vi/ là canonical hay /en/ là canonical?
-□ Xác nhận domain: có dùng subdomain (en.site.com) không? → Không (đã quyết định path prefix)
-□ Xác nhận Google Search Console: submit sitemap cả vi + en
+✅ Locale default: vi (có prefix /vi/ trong URL)
+✅ Image path: dùng chung, alt_text derive từ translation trong Blade
+✅ Sitemap: 8 child sitemaps (4 type × 2 locale)
+✅ Tiền tệ: dùng hệ thống currency admin hiện có — không hardcode
+✅ Fallback translation: hiện vi nếu en chưa dịch (không 404)
+✅ Slug: không dấu — /vi/ao-thun, /en/t-shirt
+✅ Canonical: mỗi trang tự trỏ canonical về chính nó
+✅ x-default hreflang → /vi/ (không phải "vi là canonical của toàn site")
+□ Domain: path prefix /{locale}/ — không dùng subdomain
+□ Google Search Console: submit cả 8 child sitemaps sau khi deploy
+□ Robots.txt: cho phép Googlebot crawl /vi/ và /en/
+□ Tích hợp CurrencyService vào JsonldService khi build ML-09
 ```
 
 ---
 
-## Quyết định cần xác nhận ngay
+## Quyết định đã xác nhận
 
-**1. Tiền tệ theo locale?**
-- Option A: VND cho cả vi lẫn en — đơn giản nhất
-- Option B: VND cho vi, USD cho en — cần exchange rate hoặc admin nhập giá riêng
+| # | Vấn đề | Quyết định |
+|---|---|---|
+| 1 | **Image path** | Dùng chung — cùng file cho vi + en. `alt_text` derive từ `product_translations.name` trong Blade |
+| 2 | **Sitemap** | 8 child sitemaps: 4 type × 2 locale (`products`, `product-categories`, `blog`, `blog-categories`) |
+| 3 | **Tiền tệ** | Lấy từ hệ thống currency admin hiện có — không hardcode theo locale |
+| 4 | **Fallback translation** | Hiện bản `vi` nếu `en` chưa được dịch — không bao giờ trả 404 vì thiếu translation |
+| 5 | **Slug** | Không dấu — `/vi/ao-thun`, `/en/t-shirt` |
+| 6 | **Canonical** | Mỗi trang tự trỏ canonical về chính nó. `vi` là `x-default` trong hreflang (không phải canonical của toàn site) |
 
-**2. Fallback khi chưa có translation?**
-- Option A: Hiện bản vi (safe, không bao giờ 404)
-- Option B: 404 nếu translation chưa tồn tại (strict)
-- **Đề xuất:** Option A — luôn có bản vi trước, en thêm sau
-
-**3. Slug vi — có dấu hay không dấu?**
-- `/vi/ao-thun` (không dấu) — URL-safe, dễ share
-- `/vi/áo-thun` (có dấu) — đẹp hơn nhưng cần encode
-- **Đề xuất:** Không dấu — `cocur/slugify` lo chuyện này
-
-**4. Canonical locale?**
-- `vi` là canonical (x-default trỏ về vi) — vì market chính là Việt Nam
-- **Đề xuất:** `vi` canonical
+### Giải thích canonical (quan trọng)
+```
+Sai: "vi là canonical, en không canonical"
+Đúng:
+  /vi/products/ao-thun  → canonical: /vi/products/ao-thun  (tự trỏ)
+  /en/products/t-shirt  → canonical: /en/products/t-shirt  (tự trỏ)
+  Cả 2 trang đều có hreflang trỏ qua lại nhau
+  x-default trong hreflang → /vi/... (Google fallback khi không match locale)
+```
 
 ---
 
-*Sau khi xác nhận 4 điểm trên → bắt đầu sprint ML-01.*
+*Tất cả quyết định đã xác nhận — sẵn sàng bắt đầu sprint ML-01.*
