@@ -19,6 +19,7 @@ use App\Observers\BlogCategoryObserver;
 use App\Observers\BlogPostObserver;
 use App\Observers\BrandObserver;
 use App\Observers\BusinessProfileObserver;
+use App\Observers\CategoryObserver;
 use App\Observers\ManufacturerObserver;
 use App\Observers\RedirectObserver;
 use App\Observers\ReviewObserver;
@@ -72,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function registerObservers(): void
     {
+        Category::observe(CategoryObserver::class);
         Brand::observe(BrandObserver::class);
         Manufacturer::observe(ManufacturerObserver::class);
         Review::observe(ReviewObserver::class);

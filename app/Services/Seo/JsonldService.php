@@ -112,6 +112,12 @@ class JsonldService
                 }
             }
 
+            if ($morphAlias === 'category') {
+                if ($schemaType === JsonldSchemaType::BreadcrumbList) {
+                    $resolved = $this->buildCategoryBreadcrumb($model);
+                }
+            }
+
             if ($morphAlias === 'blog_category') {
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
                     $resolved = $this->buildBlogCategoryBreadcrumb($model);
@@ -546,6 +552,41 @@ class JsonldService
         }
 
         $items[] = ['name' => $title, 'url' => $baseUrl . '/blog/' . $slug];
+
+        return $this->buildBreadcrumbSchema($items);
+    }
+
+    /**
+     * Build a BreadcrumbList payload for a catalog category page.
+     * Structure: Home → [{Parent} →] {Category}
+     *
+     * The parent level is included only when parent_id is set.
+     * Falls back to Home → Category for top-level categories.
+     * Prevents duplicate breadcrumb structure across tree levels.
+     */
+    private function buildCategoryBreadcrumb(Model $model): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $name    = (string) ($model->getAttribute('name') ?? '');
+        $slug    = (string) ($model->getAttribute('slug') ?? '');
+
+        $items = [
+            ['name' => 'Home', 'url' => $baseUrl],
+        ];
+
+        if (method_exists($model, 'parent')) {
+            $model->loadMissing('parent');
+            $parent = $model->getRelationValue('parent');
+
+            if ($parent && filled($parent->name)) {
+                $items[] = [
+                    'name' => (string) $parent->name,
+                    'url'  => $baseUrl . '/categories/' . ($parent->slug ?? ''),
+                ];
+            }
+        }
+
+        $items[] = ['name' => $name, 'url' => $baseUrl . '/categories/' . $slug];
 
         return $this->buildBreadcrumbSchema($items);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Category;
@@ -11,12 +12,9 @@ use App\Services\Category\CategoryService;
 
 class CategoryObserver
 {
-    /**
-     * Dispatch sitemap + llms sync on every create or update.
-     * Note: No JSON-LD for categories at launch — only sitemap + llms.
-     */
     public function saved(Category $category): void
     {
+        dispatch(new SyncJsonldSchema($category))->onQueue('seo');
         dispatch(new SyncSitemapEntry($category))->onQueue('seo');
         dispatch(new SyncLlmsEntry($category))->onQueue('seo');
 
@@ -47,6 +45,7 @@ class CategoryObserver
      */
     public function restored(Category $category): void
     {
+        dispatch(new SyncJsonldSchema($category))->onQueue('seo');
         dispatch(new SyncSitemapEntry($category))->onQueue('seo');
         dispatch(new SyncLlmsEntry($category))->onQueue('seo');
 
