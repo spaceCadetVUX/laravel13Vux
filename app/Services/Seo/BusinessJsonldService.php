@@ -93,7 +93,8 @@ class BusinessJsonldService
         ];
 
         if (filled($p->legal_name))   $schema['legalName']    = $p->legal_name;
-        if (filled($p->tagline))      $schema['description']  = $p->tagline;
+        $desc = $p->description ?? $p->tagline ?? null;
+        if (filled($desc))            $schema['description']  = $desc;
         if (filled($p->email))        $schema['email']        = $p->email;
         if (filled($p->phone))        $schema['telephone']    = $p->phone;
         if (filled($p->founded_year)) $schema['foundingDate'] = (string) $p->founded_year;
@@ -179,7 +180,7 @@ class BusinessJsonldService
         ];
 
         $hours = collect((array) ($p->business_hours ?? []))
-            ->map(fn (string $h, string $d): string => ($dayMap[$d] ?? $d) . ' ' . trim($h))
+            ->map(fn ($h, string $d): string => ($dayMap[$d] ?? $d) . ' ' . trim((string) ($h ?? '')))
             ->values()
             ->all();
 

@@ -4,7 +4,6 @@ namespace App\Services\Seo;
 
 use App\Enums\LlmsScope;
 use App\Models\BusinessProfile;
-use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\LlmsDocument;
 use App\Models\Seo\LlmsEntry;
 use Illuminate\Database\Eloquent\Model;
