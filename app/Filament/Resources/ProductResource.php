@@ -568,7 +568,7 @@ class ProductResource extends Resource
                         ->icon('heroicon-o-magnifying-glass')
                         ->schema([
                             Group::make()
-                                ->relationship('seoMeta')
+                                ->relationship('seoMetaVi')
                                 ->schema([
                                     Section::make('Meta Tags')
                                         ->schema([
@@ -736,7 +736,7 @@ class ProductResource extends Resource
                         ->icon('heroicon-o-cpu-chip')
                         ->schema([
                             Group::make()
-                                ->relationship('geoProfile')
+                                ->relationship('geoProfileVi')
                                 ->schema([
                                     Section::make('AI Context')
                                         ->description('Used by ChatGPT, Gemini, Perplexity when answering questions about this product.')

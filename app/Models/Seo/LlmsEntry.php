@@ -2,6 +2,7 @@
 
 namespace App\Models\Seo;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,6 +15,7 @@ class LlmsEntry extends Model
         'llms_document_id',
         'model_type',
         'model_id',
+        'locale',
         'title',
         'url',
         'summary',
@@ -32,5 +34,10 @@ class LlmsEntry extends Model
     public function document(): BelongsTo
     {
         return $this->belongsTo(LlmsDocument::class, 'llms_document_id');
+    }
+
+    public function scopeForLocale(Builder $q, string $locale): Builder
+    {
+        return $q->where('locale', $locale);
     }
 }

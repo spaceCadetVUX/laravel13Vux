@@ -10,12 +10,15 @@ class BlogPostDetailResource extends BlogPostResource
     {
         return array_merge(parent::toArray($request), [
             'content'        => $this->content,
-            'seo'            => $this->whenLoaded('seoMeta', fn () => [
-                'meta_title'       => $this->seoMeta?->meta_title,
-                'meta_description' => $this->seoMeta?->meta_description,
-                'og_image'         => $this->seoMeta?->og_image,
-                'canonical_url'    => $this->seoMeta?->canonical_url,
-            ]),
+            'seo'            => $this->whenLoaded('seoMetas', function () {
+                $seo = $this->resource->seoMeta();
+                return [
+                    'meta_title'       => $seo?->meta_title,
+                    'meta_description' => $seo?->meta_description,
+                    'og_image'         => $seo?->og_image,
+                    'canonical_url'    => $seo?->canonical_url,
+                ];
+            }),
             'jsonld_schemas' => $this->whenLoaded('activeSchemas', fn () =>
                 $this->activeSchemas->pluck('payload')->values()->all()
             ),

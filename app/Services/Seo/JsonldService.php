@@ -635,8 +635,8 @@ class JsonldService
     private function syncFaqPage(Model $model): void
     {
         $morphAlias = $model->getMorphClass();
-        $model->loadMissing('geoProfile');
-        $geoProfile = $model->getRelationValue('geoProfile');
+        $model->loadMissing('geoProfiles');
+        $geoProfile = $model->geoProfile();
         $faq        = (array) ($geoProfile?->faq ?? []);
 
         if (empty($faq)) {

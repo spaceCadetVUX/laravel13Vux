@@ -11,4 +11,11 @@ trait HasLlmsEntry
     {
         return $this->morphMany(LlmsEntry::class, 'model', 'model_type', 'model_id');
     }
+
+    public function llmsEntry(string $locale = null): ?LlmsEntry
+    {
+        $locale ??= app()->getLocale();
+        return $this->llmsEntries->firstWhere('locale', $locale)
+            ?? $this->llmsEntries->firstWhere('locale', config('app.fallback_locale', 'vi'));
+    }
 }

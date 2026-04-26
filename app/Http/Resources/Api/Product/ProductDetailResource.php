@@ -38,21 +38,24 @@ class ProductDetailResource extends ProductResource
 
             // ── SEO meta ───────────────────────────────────────────────────────
             'seo' => $this->whenLoaded(
-                'seoMeta',
-                fn () => $this->seoMeta ? [
-                    'meta_title'          => $this->seoMeta->meta_title,
-                    'meta_description'    => $this->seoMeta->meta_description,
-                    'meta_keywords'       => $this->seoMeta->meta_keywords,
-                    'og_title'            => $this->seoMeta->og_title,
-                    'og_description'      => $this->seoMeta->og_description,
-                    'og_image'            => $this->seoMeta->og_image,
-                    'og_type'             => $this->seoMeta->og_type?->value,
-                    'twitter_card'        => $this->seoMeta->twitter_card,
-                    'twitter_title'       => $this->seoMeta->twitter_title,
-                    'twitter_description' => $this->seoMeta->twitter_description,
-                    'canonical_url'       => $this->seoMeta->canonical_url,
-                    'robots'              => $this->seoMeta->robots,
-                ] : null,
+                'seoMetas',
+                function () {
+                    $seo = $this->resource->seoMeta();
+                    return $seo ? [
+                        'meta_title'          => $seo->meta_title,
+                        'meta_description'    => $seo->meta_description,
+                        'meta_keywords'       => $seo->meta_keywords,
+                        'og_title'            => $seo->og_title,
+                        'og_description'      => $seo->og_description,
+                        'og_image'            => $seo->og_image,
+                        'og_type'             => $seo->og_type?->value,
+                        'twitter_card'        => $seo->twitter_card,
+                        'twitter_title'       => $seo->twitter_title,
+                        'twitter_description' => $seo->twitter_description,
+                        'canonical_url'       => $seo->canonical_url,
+                        'robots'              => $seo->robots,
+                    ] : null;
+                },
             ),
 
             // ── JSON-LD schemas ────────────────────────────────────────────────

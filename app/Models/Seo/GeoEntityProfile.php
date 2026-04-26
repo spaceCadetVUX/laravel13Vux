@@ -2,6 +2,7 @@
 
 namespace App\Models\Seo;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -10,6 +11,7 @@ class GeoEntityProfile extends Model
     protected $fillable = [
         'model_type',
         'model_id',
+        'locale',
         'ai_summary',
         'key_facts',
         'faq',
@@ -26,9 +28,13 @@ class GeoEntityProfile extends Model
     protected function casts(): array
     {
         return [
-            // jsonb columns — decoded to PHP arrays automatically
             'key_facts' => 'array',
             'faq'       => 'array',
         ];
+    }
+
+    public function scopeForLocale(Builder $q, string $locale): Builder
+    {
+        return $q->where('locale', $locale);
     }
 }

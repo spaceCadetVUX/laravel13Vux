@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias for Sanctum token guard used in route definitions
         $middleware->alias([
             'auth.sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'set.locale'   => \App\Http\Middleware\SetLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -123,7 +123,7 @@ class LlmsGeneratorService
 
         // ── GEO profile ───────────────────────────────────────────────────────
         $geoProfile = method_exists($model, 'geoProfile')
-            ? $model->geoProfile
+            ? $model->geoProfile()
             : null;
 
         // ── Core fields ───────────────────────────────────────────────────────

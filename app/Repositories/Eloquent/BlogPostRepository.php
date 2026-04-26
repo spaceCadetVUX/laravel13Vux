@@ -50,7 +50,7 @@ class BlogPostRepository extends BaseRepository
         /** @var BlogPost|null */
         return $this->query()
             ->published()
-            ->with(['author', 'blogCategory', 'tags', 'seoMeta', 'activeSchemas'])
+            ->with(['author', 'blogCategory', 'tags', 'seoMetas', 'activeSchemas'])
             ->where('slug', $slug)
             ->first();
     }

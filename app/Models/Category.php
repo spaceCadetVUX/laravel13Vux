@@ -81,4 +81,24 @@ class Category extends Model
     {
         return $this->belongsToMany(Product::class);
     }
+
+    // ── Multilingual ──────────────────────────────────────────────────────────
+
+    public function translations(): HasMany
+    {
+        return $this->hasMany(CategoryTranslation::class);
+    }
+
+    public function translation(string $locale = null): ?CategoryTranslation
+    {
+        $locale ??= app()->getLocale();
+
+        if ($this->relationLoaded('translations')) {
+            return $this->translations->firstWhere('locale', $locale)
+                ?? $this->translations->firstWhere('locale', config('app.fallback_locale'));
+        }
+
+        return $this->translations()->where('locale', $locale)->first()
+            ?? $this->translations()->where('locale', config('app.fallback_locale'))->first();
+    }
 }

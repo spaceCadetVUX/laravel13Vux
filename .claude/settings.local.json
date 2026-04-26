@@ -22,7 +22,9 @@
       "Bash(powershell -Command \"Remove-Item -Force -Path 'public/storage'\")",
       "Bash(powershell -Command \"New-Item -ItemType Junction -Path 'public/storage' -Target \\(Resolve-Path 'storage/app/public'\\)\")",
       "Bash(php -r \"echo file_exists\\('public/storage/products/2026/04/01KP8VS1K7RVGP9F3J5CQYADKW.jpg'\\) ? 'OK - FILE ACCESSIBLE' : 'NOT FOUND';\")",
-      "Bash(composer require:*)"
+      "Bash(composer require:*)",
+      "Bash(composer dump-autoload *)",
+      "Bash(grep -v \"#\\\\|//\")"
     ]
   }
 }

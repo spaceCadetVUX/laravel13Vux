@@ -21,8 +21,8 @@ class ProductAuditService
             'images',
             'attributes',
             'variants',
-            'seoMeta',
-            'geoProfile',
+            'seoMetas',
+            'geoProfiles',
             'llmsEntries',
             'jsonldSchemas',
         ]);
@@ -56,8 +56,8 @@ class ProductAuditService
 
     private function runChecks(Product $product): array
     {
-        $seo     = $product->seoMeta;
-        $geo     = $product->geoProfile;
+        $seo     = $product->seoMeta();
+        $geo     = $product->geoProfile();
         $llms    = $product->llmsEntries->first();
         $schemas = $product->jsonldSchemas;
 
@@ -339,8 +339,8 @@ class ProductAuditService
             default      => '🔴 Poor',
         };
 
-        $seo     = $product->seoMeta;
-        $geo     = $product->geoProfile;
+        $seo     = $product->seoMeta();
+        $geo     = $product->geoProfile();
         $llms    = $product->llmsEntries->first();
         $schemas = $product->jsonldSchemas;
 

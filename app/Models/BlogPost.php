@@ -134,4 +134,24 @@ class BlogPost extends Model
     {
         return $this->hasMany(BlogComment::class);
     }
+
+    // ── Multilingual ──────────────────────────────────────────────────────────
+
+    public function translations(): HasMany
+    {
+        return $this->hasMany(BlogPostTranslation::class);
+    }
+
+    public function translation(string $locale = null): ?BlogPostTranslation
+    {
+        $locale ??= app()->getLocale();
+
+        if ($this->relationLoaded('translations')) {
+            return $this->translations->firstWhere('locale', $locale)
+                ?? $this->translations->firstWhere('locale', config('app.fallback_locale'));
+        }
+
+        return $this->translations()->where('locale', $locale)->first()
+            ?? $this->translations()->where('locale', config('app.fallback_locale'))->first();
+    }
 }

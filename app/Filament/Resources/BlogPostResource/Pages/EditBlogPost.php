@@ -16,10 +16,10 @@ class EditBlogPost extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $this->record->loadMissing('seoMeta', 'geoProfile');
+        $this->record->loadMissing('seoMetas', 'geoProfiles');
 
         // ── SEO meta ──────────────────────────────────────────────────────────
-        $seo = $this->record->seoMeta;
+        $seo = $this->record->seoMeta('vi');
 
         $data['seo_meta_title']       = $seo?->meta_title;
         $data['seo_meta_description'] = $seo?->meta_description;
@@ -29,7 +29,7 @@ class EditBlogPost extends EditRecord
         $data['seo_robots']           = $seo?->robots ?? 'index,follow';
 
         // ── FAQ from geo_entity_profiles ──────────────────────────────────────
-        $data['faq_items'] = $this->record->geoProfile?->faq ?? [];
+        $data['faq_items'] = $this->record->geoProfile('vi')?->faq ?? [];
 
         return $data;
     }
@@ -51,7 +51,7 @@ class EditBlogPost extends EditRecord
         }
 
         SeoMeta::updateOrCreate(
-            ['model_type' => $morphClass, 'model_id' => $modelId],
+            ['model_type' => $morphClass, 'model_id' => $modelId, 'locale' => 'vi'],
             [
                 'meta_title'       => $state['seo_meta_title']       ?? null,
                 'meta_description' => $state['seo_meta_description'] ?? null,
@@ -73,7 +73,7 @@ class EditBlogPost extends EditRecord
             ->toArray();
 
         GeoEntityProfile::updateOrCreate(
-            ['model_type' => $morphClass, 'model_id' => $modelId],
+            ['model_type' => $morphClass, 'model_id' => $modelId, 'locale' => 'vi'],
             ['faq' => $faqItems]
         );
     }

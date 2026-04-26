@@ -74,7 +74,7 @@ class CategoryResource extends Resource
 
             // ── SEO ───────────────────────────────────────────────────────────
             Group::make()
-                ->relationship('seoMeta')
+                ->relationship('seoMetaVi')
                 ->schema([
                     Section::make('SEO')
                         ->icon('heroicon-o-magnifying-glass')

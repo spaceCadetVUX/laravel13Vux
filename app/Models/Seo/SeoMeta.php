@@ -3,6 +3,7 @@
 namespace App\Models\Seo;
 
 use App\Enums\OgType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class SeoMeta extends Model
@@ -12,6 +13,7 @@ class SeoMeta extends Model
     protected $fillable = [
         'model_type',
         'model_id',
+        'locale',
         'meta_title',
         'meta_description',
         'meta_keywords',
@@ -31,5 +33,10 @@ class SeoMeta extends Model
         return [
             'og_type' => OgType::class,
         ];
+    }
+
+    public function scopeForLocale(Builder $q, string $locale): Builder
+    {
+        return $q->where('locale', $locale);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models\Seo;
 
 use App\Enums\SitemapChangefreq;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,7 @@ class SitemapEntry extends Model
         'sitemap_index_id',
         'model_type',
         'model_id',
+        'locale',
         'url',
         'changefreq',
         'priority',
@@ -34,5 +36,10 @@ class SitemapEntry extends Model
     public function sitemapIndex(): BelongsTo
     {
         return $this->belongsTo(SitemapIndex::class);
+    }
+
+    public function scopeForLocale(Builder $q, string $locale): Builder
+    {
+        return $q->where('locale', $locale);
     }
 }
