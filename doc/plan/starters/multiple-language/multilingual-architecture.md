@@ -152,12 +152,18 @@ product_images
 | `slug` | varchar(600) | NOT NULL | Index: unique(locale, slug) |
 | `short_description` | text | nullable | |
 | `description` | longtext | nullable | TinyMCE rich text |
+| `price` | decimal(12,2) | nullable | Admin nhập riêng per locale. Null → fallback về `products.price` |
+| `currency` | varchar(10) | nullable | `VND`, `USD`, v.v. Null → fallback về currency mặc định |
 | `meta_title` | varchar(255) | nullable | Override SEO title per locale |
 | `meta_description` | varchar(500) | nullable | Override SEO desc per locale |
 | `created_at` | timestamp | NOT NULL | |
 | `updated_at` | timestamp | NOT NULL | |
 
 > **Index:** `UNIQUE(locale, slug)`, `INDEX(product_id, locale)`
+>
+> **Price fallback logic:** `$translation->price ?? $product->price` — nếu admin không nhập giá cho locale en thì lấy giá gốc từ `products.price`. Currency tương tự: `$translation->currency ?? config('app.default_currency')`.
+>
+> **JSON-LD:** `priceCurrency` lấy từ `$translation->currency`, không qua CurrencyService auto-convert.
 
 ---
 
@@ -417,10 +423,10 @@ GEO profile mô tả thực thể theo ngôn ngữ — tên địa phương, mô
 }
 ```
 
-> **Tiền tệ (đã xác nhận):** Admin đã có hệ thống currency conversion riêng.
-> JSON-LD sẽ lấy giá + đơn vị tiền từ hệ thống currency hiện có của admin — không hardcode theo locale.
-> `priceCurrency` sẽ lấy từ `CurrencyService::activeCurrency()` hoặc tương đương.
-> Nếu site chỉ bán VND → `priceCurrency: "VND"` cho cả `vi` lẫn `en`.
+> **Tiền tệ (đã xác nhận):** Admin nhập giá trực tiếp — không auto-convert.
+> `price` lấy từ DB (admin đã nhập đúng giá trị + đơn vị).
+> `priceCurrency` lấy từ `CurrencyService::activeCurrency()->code` — tích hợp vào `JsonldService`.
+> Cả `/vi/` lẫn `/en/` hiển thị cùng giá, cùng đơn vị tiền — vì đây là 1 shop, 1 giá.
 
 ### BreadcrumbList — multilingual
 ```json
@@ -453,33 +459,152 @@ class ProductObserver {
 
 ## 8. LLMs / AI Discoverability
 
-### `/vi/llms.txt` và `/en/llms.txt`
-Mỗi locale có file `llms.txt` riêng — AI agents crawl theo ngôn ngữ.
+### LLMs có cần phiên bản khác nhau theo ngôn ngữ không?
+**Có — và đây KHÔNG phải duplicate content.** Lý do:
+
+| Tiêu chí | LLMs per locale |
+|---|---|
+| Nội dung | Thực sự khác nhau — tiếng Việt vs tiếng Anh |
+| Mục đích | AI agent đọc đúng ngôn ngữ của user query |
+| Crawlers | GPT, Gemini, Perplexity crawl theo Accept-Language hoặc URL pattern |
+| Google | Không index `llms.txt` (không phải HTML) → không có duplicate content risk |
+
+### Cấu trúc file
+```
+/vi/llms.txt   ← AI agents query tiếng Việt
+/en/llms.txt   ← AI agents query tiếng Anh
+/llms.txt      ← (optional) redirect về /vi/llms.txt — entry point chung
+```
 
 ```
-# vi → /vi/llms.txt
+# /vi/llms.txt
 > Cửa hàng thời trang online — áo thun, quần jeans, phụ kiện
 > Sản phẩm mới cập nhật hàng tuần
 
-# en → /en/llms.txt
+# Danh mục: Áo thun | Quần jeans | Phụ kiện
+# URL: https://site.com/vi/
+
+# /en/llms.txt
 > Online fashion store — t-shirts, jeans, accessories
 > New products updated weekly
+
+# Categories: T-shirts | Jeans | Accessories
+# URL: https://site.com/en/
 ```
 
 ### `llms_documents` — thêm `locale`
 ```sql
 ALTER TABLE llms_documents ADD COLUMN locale varchar(10) NOT NULL DEFAULT 'vi';
+-- UNIQUE(slug, locale)
+```
+
+### `llms_entries` — thêm `locale`
+```sql
+ALTER TABLE llms_entries ADD COLUMN locale varchar(10) NOT NULL DEFAULT 'vi';
+-- Mỗi entity × locale = 1 entry riêng
 ```
 
 ### Route
 ```php
+// Ngoài /{locale}/ group vì llms.txt không có locale trong path
 Route::get('{locale}/llms.txt', [LlmsController::class, 'index'])
     ->where('locale', 'vi|en');
+
+Route::get('llms.txt', fn() => redirect('/vi/llms.txt', 302));
 ```
 
 ---
 
-## 9. Sitemap — Multilingual
+## 9. Duplicate Content — Prevention Strategy
+
+### Tại sao đa ngôn ngữ KHÔNG phải duplicate content (nếu làm đúng)
+Google phân biệt duplicate content vs multilingual content qua 3 tín hiệu:
+
+| Tín hiệu | Đúng | Sai → duplicate risk |
+|---|---|---|
+| `hreflang` | Có, đúng cú pháp, 2 chiều | Thiếu hoặc 1 chiều |
+| `canonical` | Mỗi URL tự trỏ về chính nó | `/en/` canonical → `/vi/` |
+| Nội dung | Thực sự khác ngôn ngữ | Cùng nội dung 2 URL |
+
+### Nguồn gốc duplicate content thực sự — và cách xử lý
+
+**Vấn đề 1 — Fallback hiển thị nội dung vi tại URL /en/**
+```
+SAI:  /en/products/ao-thun → render nội dung tiếng Việt → canonical: /en/... → DUPLICATE
+ĐÚNG: /en/products/ao-thun (chưa dịch) → 302 redirect → /vi/products/ao-thun
+```
+> **Quyết định thay đổi:** Fallback KHÔNG hiển thị vi tại en URL.
+> Thay vào đó: 302 redirect về /vi/ nếu translation en chưa tồn tại.
+> Sau khi admin dịch xong → URL /en/ tự hoạt động, không cần làm gì thêm.
+
+**Vấn đề 2 — URL không có locale prefix bị index**
+```
+SAI:  site.com/products/ao-thun (no locale) → bị crawl → duplicate với /vi/...
+ĐÚNG: Robots.txt disallow / (no prefix) + 301 redirect tất cả về /vi/
+```
+
+**Vấn đề 3 — Pagination và filter params**
+```
+SAI:  /vi/products?page=2&sort=price → bị index → near-duplicate
+ĐÚNG: <link rel="canonical" href="/vi/products"> trên tất cả paginated URLs
+      Robots.txt: Disallow: *?sort=  (tùy chọn)
+```
+
+**Vấn đề 4 — Session/token URLs bị crawl**
+```
+ĐÚNG: Robots.txt disallow /api/, /admin/, /horizon/
+```
+
+### Fallback controller logic (thay đổi so với plan ban đầu)
+```php
+// ProductController::show()
+public function show(string $locale, string $slug): Response
+{
+    $translation = ProductTranslation::where('locale', $locale)
+                                     ->where('slug', $slug)
+                                     ->first();
+
+    if (!$translation) {
+        // Không có translation cho locale này → tìm vi version
+        $viTranslation = ProductTranslation::where('locale', 'vi')
+                                           ->where('slug', $slug)
+                                           ->first();
+
+        if ($viTranslation) {
+            // Redirect 302 (tạm thời — khi admin dịch xong sẽ resolve)
+            return redirect("/{config('app.fallback_locale')}/products/{$viTranslation->slug}", 302);
+        }
+
+        abort(404);
+    }
+
+    // Có translation → render bình thường
+    $product = $translation->product;
+    $alternateUrls = $this->seoService->alternateUrls($product, 'product.show');
+
+    return view('pages.product.show', compact('product', 'translation', 'alternateUrls'));
+}
+```
+
+### Sitemap — chỉ include URL đã có translation
+```php
+// SyncSitemapEntry job — chỉ chạy khi translation tồn tại
+dispatch(new SyncSitemapEntry($product, $locale))->onQueue('seo');
+// Bên trong job: kiểm tra translation tồn tại mới upsert, ngược lại xóa entry
+```
+
+### Summary: 5 điều bắt buộc để không bị duplicate
+```
+1. hreflang đúng và 2 chiều trên MỌI trang
+2. Canonical tự trỏ về chính mình (không trỏ sang locale khác)
+3. Fallback = 302 redirect về /vi/ (không hiển thị vi content tại /en/ URL)
+4. Sitemap chỉ chứa URL đã có translation thực
+5. Robots.txt block /api/, /admin/, crawl param URLs
+```
+
+---
+
+## 10. Sitemap — Multilingual
 
 ### Cấu trúc sitemap
 Hiện tại có **4 child sitemaps** → multilingual thành **8 child sitemaps** (4 × 2 locale):
@@ -536,6 +661,41 @@ ALTER TABLE sitemap_entries ADD COLUMN locale varchar(10) NOT NULL DEFAULT 'vi';
 -- Mỗi URL = 1 row: UNIQUE(url) đã cover vì URL chứa locale prefix
 -- Index: (sitemap_index_id, locale)
 ```
+
+### Robots.txt — chuẩn cho path prefix multilingual
+```
+User-agent: *
+
+# Cho phép crawl public locale paths
+Allow: /vi/
+Allow: /en/
+
+# Block admin + internal
+Disallow: /admin/
+Disallow: /horizon/
+Disallow: /api/
+Disallow: /telescope/
+
+# Block URLs không có locale prefix (đều redirect về /vi/ dù sao)
+Disallow: /products/
+Disallow: /categories/
+Disallow: /blog/
+
+# Block filter/sort params (near-duplicate risk)
+Disallow: /*?sort=
+Disallow: /*?filter=
+
+# Sitemap
+Sitemap: https://site.com/sitemap.xml
+```
+
+> **Lưu ý:** Không cần `Allow: /` vì Googlebot mặc định được phép. Chỉ cần block những gì không muốn index.
+> `Disallow: /products/` block `/products/abc` (no locale) — những URL này đã có 301 redirect về `/vi/` rồi, nhưng block thêm để Googlebot không tốn crawl budget.
+
+### Google Search Console — submit
+- Submit `/sitemap.xml` (index) — GSC tự discover 8 child sitemaps
+- Verify cả property `vi` lẫn `en` nếu dùng Search Console per locale (optional)
+- Không cần submit từng child sitemap riêng
 
 ---
 
@@ -714,44 +874,65 @@ composer require cocur/slugify    # Slug từ tiếng Việt có dấu → khôn
 
 ---
 
-## 15. Checklist trước khi build
+## 16. Checklist trước khi build
 
 ```
 ✅ Locale default: vi (có prefix /vi/ trong URL)
+✅ Domain: path prefix /{locale}/ — không dùng subdomain
 ✅ Image path: dùng chung, alt_text derive từ translation trong Blade
-✅ Sitemap: 8 child sitemaps (4 type × 2 locale)
-✅ Tiền tệ: dùng hệ thống currency admin hiện có — không hardcode
-✅ Fallback translation: hiện vi nếu en chưa dịch (không 404)
+✅ Sitemap: 8 child sitemaps (4 type × 2 locale) — chỉ URL đã có translation
+✅ Tiền tệ: admin nhập giá, CurrencyService::activeCurrency() → priceCurrency
+✅ Fallback translation: 302 redirect về /vi/ nếu en chưa dịch (không hiển thị vi tại en URL)
 ✅ Slug: không dấu — /vi/ao-thun, /en/t-shirt
-✅ Canonical: mỗi trang tự trỏ canonical về chính nó
-✅ x-default hreflang → /vi/ (không phải "vi là canonical của toàn site")
-□ Domain: path prefix /{locale}/ — không dùng subdomain
-□ Google Search Console: submit cả 8 child sitemaps sau khi deploy
-□ Robots.txt: cho phép Googlebot crawl /vi/ và /en/
-□ Tích hợp CurrencyService vào JsonldService khi build ML-09
+✅ Canonical: mỗi trang tự trỏ canonical về chính nó (self-referencing)
+✅ x-default hreflang → /vi/ (Google fallback, không phải "vi là canonical của toàn site")
+✅ LLMs: /vi/llms.txt + /en/llms.txt riêng biệt — không phải duplicate content
+✅ Robots.txt: Allow /vi/ + /en/, Disallow /admin/ /api/ filter params
+✅ Duplicate content: 5 biện pháp phòng (hreflang 2 chiều, canonical, 302 fallback, sitemap sạch, robots.txt)
+✅ Google Search Console: submit /sitemap.xml (discover 8 child tự động)
+   → Horizon phải đang chạy — SyncSitemapEntry/SyncJsonldSchema/SyncLlmsEntry đều là queued jobs trên queue `seo`
+   → Nếu Horizon không chạy, jobs tồn đọng, sitemap/jsonld/llms không cập nhật
+✅ Giá sản phẩm: admin tự nhập giá cho cả vi lẫn en — KHÔNG auto-convert
+   → Thêm `price` + `currency` vào `product_translations` để admin nhập riêng per locale
+   → JSON-LD lấy price + currency từ translation của locale hiện tại, không qua CurrencyService
+✅ Test hreflang với Google Search Console → URL Inspection sau khi deploy
 ```
 
 ---
 
-## Quyết định đã xác nhận
+## Quyết định đã xác nhận (rev 3)
 
 | # | Vấn đề | Quyết định |
 |---|---|---|
 | 1 | **Image path** | Dùng chung — cùng file cho vi + en. `alt_text` derive từ `product_translations.name` trong Blade |
-| 2 | **Sitemap** | 8 child sitemaps: 4 type × 2 locale (`products`, `product-categories`, `blog`, `blog-categories`) |
-| 3 | **Tiền tệ** | Lấy từ hệ thống currency admin hiện có — không hardcode theo locale |
-| 4 | **Fallback translation** | Hiện bản `vi` nếu `en` chưa được dịch — không bao giờ trả 404 vì thiếu translation |
+| 2 | **Sitemap** | 8 child sitemaps: 4 type × 2 locale. Chỉ include URL đã có translation thực |
+| 3 | **Tiền tệ** | Admin nhập `price` + `currency` riêng per locale trong `product_translations`. Không auto-convert. Fallback về `products.price` nếu chưa nhập |
+| 4 | **Fallback translation** | **302 redirect về /vi/** nếu en chưa dịch — KHÔNG hiển thị vi tại en URL (duplicate content) |
 | 5 | **Slug** | Không dấu — `/vi/ao-thun`, `/en/t-shirt` |
-| 6 | **Canonical** | Mỗi trang tự trỏ canonical về chính nó. `vi` là `x-default` trong hreflang (không phải canonical của toàn site) |
+| 6 | **Canonical** | Mỗi trang tự trỏ canonical về chính nó (self-referencing). `vi` là `x-default` trong hreflang |
+| 7 | **Domain** | Path prefix `/{locale}/` — không dùng subdomain |
+| 8 | **LLMs** | 2 file riêng: `/vi/llms.txt` + `/en/llms.txt`. Không phải duplicate (nội dung khác ngôn ngữ) |
+| 9 | **Robots.txt** | Allow `/vi/` + `/en/`. Disallow `/admin/`, `/api/`, filter params |
 
-### Giải thích canonical (quan trọng)
+### Giải thích canonical — chỉ 1 canonical per page
 ```
-Sai: "vi là canonical, en không canonical"
+Sai: "vi là canonical của toàn site, en không có canonical"
 Đúng:
-  /vi/products/ao-thun  → canonical: /vi/products/ao-thun  (tự trỏ)
-  /en/products/t-shirt  → canonical: /en/products/t-shirt  (tự trỏ)
+  /vi/products/ao-thun  → <link rel="canonical" href="/vi/products/ao-thun">  (tự trỏ)
+  /en/products/t-shirt  → <link rel="canonical" href="/en/products/t-shirt">  (tự trỏ)
   Cả 2 trang đều có hreflang trỏ qua lại nhau
-  x-default trong hreflang → /vi/... (Google fallback khi không match locale)
+  hreflang x-default → /vi/... (Google fallback khi không match locale user)
+```
+
+### Giải thích fallback — tại sao phải redirect thay vì hiển thị
+```
+Sai (duplicate content):
+  /en/products/ao-thun → render nội dung TIẾNG VIỆT → canonical: /en/... → Google thấy 2 URL cùng content
+
+Đúng (không duplicate):
+  /en/products/ao-thun (chưa có translation) → 302 redirect → /vi/products/ao-thun
+  → Google biết /en/ chưa sẵn sàng, theo dõi /vi/ version
+  → Khi admin dịch xong → /en/ URL hoạt động bình thường, hết redirect
 ```
 
 ---
