@@ -70,6 +70,10 @@ class ProductObserver
         LlmsEntry::where('model_type', $morphClass)
             ->where('model_id', $product->getKey())
             ->update(['is_active' => false]);
+
+        JsonldSchema::where('model_type', $morphClass)
+            ->where('model_id', $product->getKey())
+            ->update(['is_active' => false]);
     }
 
     /**

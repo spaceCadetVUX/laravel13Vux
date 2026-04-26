@@ -15,9 +15,10 @@ class LlmsGeneratorService
      * URL prefix per morph alias — used when building entry URLs.
      */
     private const URL_PREFIXES = [
-        'product'   => '/products/',
-        'blog_post' => '/blog/',
-        'category'  => '/categories/',
+        'product'       => '/products/',
+        'blog_post'     => '/blog/',
+        'category'      => '/categories/',
+        'blog_category' => '/blog/category/',
     ];
 
     // ── Public API ────────────────────────────────────────────────────────────

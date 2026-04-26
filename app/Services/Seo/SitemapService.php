@@ -28,10 +28,16 @@ class SitemapService
             'priority'    => 0.6,
         ],
         'category'  => [
-            'index_name'  => 'categories',
+            'index_name'  => 'product_categories',
             'path_prefix' => '/categories/',
             'changefreq'  => SitemapChangefreq::Weekly,
             'priority'    => 0.7,
+        ],
+        'blog_category' => [
+            'index_name'  => 'blog_categories',
+            'path_prefix' => '/blog/category/',
+            'changefreq'  => SitemapChangefreq::Weekly,
+            'priority'    => 0.5,
         ],
     ];
 

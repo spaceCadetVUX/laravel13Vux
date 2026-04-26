@@ -21,6 +21,7 @@ use App\Observers\BrandObserver;
 use App\Observers\BusinessProfileObserver;
 use App\Observers\CategoryObserver;
 use App\Observers\ManufacturerObserver;
+use App\Observers\ProductObserver;
 use App\Observers\RedirectObserver;
 use App\Observers\ReviewObserver;
 use Illuminate\Database\Eloquent\Model;
@@ -74,6 +75,7 @@ class AppServiceProvider extends ServiceProvider
     private function registerObservers(): void
     {
         Category::observe(CategoryObserver::class);
+        Product::observe(ProductObserver::class);
         Brand::observe(BrandObserver::class);
         Manufacturer::observe(ManufacturerObserver::class);
         Review::observe(ReviewObserver::class);

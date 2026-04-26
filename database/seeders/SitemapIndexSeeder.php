@@ -34,9 +34,19 @@ class SitemapIndexSeeder extends Seeder
                 'updated_at'       => $now,
             ],
             [
-                'name'             => 'categories',
-                'filename'         => 'sitemap-categories.xml',
-                'url'              => "{$appUrl}/sitemap-categories.xml",
+                'name'             => 'product_categories',
+                'filename'         => 'sitemap-product-categories.xml',
+                'url'              => "{$appUrl}/sitemap-product-categories.xml",
+                'entry_count'      => 0,
+                'last_generated_at' => null,
+                'is_active'        => true,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ],
+            [
+                'name'             => 'blog_categories',
+                'filename'         => 'sitemap-blog-categories.xml',
+                'url'              => "{$appUrl}/sitemap-blog-categories.xml",
                 'entry_count'      => 0,
                 'last_generated_at' => null,
                 'is_active'        => true,
@@ -52,6 +62,6 @@ class SitemapIndexSeeder extends Seeder
             );
         }
 
-        $this->command->info('Sitemap indexes seeded: products, blog, categories');
+        $this->command->info('Sitemap indexes seeded: products, blog, product_categories, blog_categories');
     }
 }

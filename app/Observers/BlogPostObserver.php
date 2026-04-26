@@ -8,9 +8,11 @@ use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\BlogPost;
+use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
 use App\Models\Seo\Redirect;
+use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
 
 class BlogPostObserver
@@ -95,5 +97,35 @@ class BlogPostObserver
         JsonldSchema::where('model_type', $morphClass)
             ->where('model_id', $blogPost->getKey())
             ->update(['is_active' => false]);
+    }
+
+    /**
+     * Restore: re-sync SEO only when the post is still published.
+     * A restored draft stays invisible in sitemap/llms until published.
+     */
+    public function restored(BlogPost $blogPost): void
+    {
+        if ($blogPost->status !== BlogPostStatus::Published) {
+            return;
+        }
+
+        dispatch(new SyncJsonldSchema($blogPost))->onQueue('seo');
+        dispatch(new SyncSitemapEntry($blogPost))->onQueue('seo');
+        dispatch(new SyncLlmsEntry($blogPost))->onQueue('seo');
+    }
+
+    /**
+     * Force delete: remove all polymorphic SEO records from DB.
+     * Runs BEFORE the SQL DELETE so model_id is still resolvable.
+     */
+    public function forceDeleting(BlogPost $blogPost): void
+    {
+        $morphClass = $blogPost->getMorphClass();
+
+        SeoMeta::where('model_type', $morphClass)->where('model_id', $blogPost->getKey())->delete();
+        GeoEntityProfile::where('model_type', $morphClass)->where('model_id', $blogPost->getKey())->delete();
+        JsonldSchema::where('model_type', $morphClass)->where('model_id', $blogPost->getKey())->delete();
+        SitemapEntry::where('model_type', $morphClass)->where('model_id', $blogPost->getKey())->delete();
+        LlmsEntry::where('model_type', $morphClass)->where('model_id', $blogPost->getKey())->delete();
     }
 }

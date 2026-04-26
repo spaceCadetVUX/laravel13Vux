@@ -67,6 +67,20 @@ class LlmsDocumentSeeder extends Seeder
         ];
 
         $documents[] = [
+            'name'              => 'blog_categories',
+            'slug'              => 'blog-categories',
+            'title'             => 'Blog Categories',
+            'description'       => 'Blog categories with descriptions for LLM consumption.',
+            'scope'             => 'full',
+            'model_type'        => 'App\\Models\\BlogCategory',
+            'entry_count'       => 0,
+            'last_generated_at' => null,
+            'is_active'         => true,
+            'created_at'        => $now,
+            'updated_at'        => $now,
+        ];
+
+        $documents[] = [
             'name'              => 'business',
             'slug'              => 'business',
             'title'             => 'Business Profile',
