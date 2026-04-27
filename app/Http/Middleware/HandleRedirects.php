@@ -41,16 +41,34 @@ class HandleRedirects
         // 4. Build the canonical path including the leading slash.
         $path = '/' . ltrim($request->path(), '/');
 
-        // 5. Resolve against the Redis-cached redirect table.
-        //    resolve() internally dispatches IncrementRedirectHits as a background job.
-        $redirect = $this->redirectCache->resolve($path);
+        // 5. Detect locale from the URL prefix — route params are not yet bound
+        //    at middleware time, so we parse the path directly.
+        $detectedLocale = $this->parseLocale($path);
 
-        // 6. If a matching active redirect is found, issue the HTTP redirect.
+        // 6. Resolve against the Redis-cached redirect table.
+        //    Locale is passed so we skip entries that belong to a different locale.
+        //    resolve() internally dispatches IncrementRedirectHits as a background job.
+        $redirect = $this->redirectCache->resolve($path, $detectedLocale);
+
+        // 7. If a matching active redirect is found, issue the HTTP redirect.
         if ($redirect !== null && $redirect->is_active) {
             return redirect($redirect->to_path, $redirect->type->value);
         }
 
-        // 7. No match — continue normal request lifecycle.
+        // 8. No match — continue normal request lifecycle.
         return $next($request);
+    }
+
+    /**
+     * Extract the locale segment from a path like /vi/products/foo → "vi".
+     * Returns null when no supported locale prefix is found.
+     */
+    private function parseLocale(string $path): ?string
+    {
+        $segment = explode('/', ltrim($path, '/'))[0] ?? '';
+
+        $supported = config('app.supported_locales', []);
+
+        return in_array($segment, $supported, true) ? $segment : null;
     }
 }

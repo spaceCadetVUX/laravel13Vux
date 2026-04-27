@@ -73,15 +73,22 @@ class RedirectCacheService
 
     /**
      * Resolve a from_path to its Redirect model.
+     * When $locale is provided, only matches rows where locale is null or equals $locale.
      * Increments the hits counter asynchronously so resolution has no
      * write-latency overhead on the redirect response.
      *
      * Returns null when no active redirect matches the path.
      */
-    public function resolve(string $fromPath): ?Redirect
+    public function resolve(string $fromPath, ?string $locale = null): ?Redirect
     {
         /** @var Redirect|null $redirect */
-        $redirect = $this->getAll()->firstWhere('from_path', $fromPath);
+        $redirect = $this->getAll()->first(function (Redirect $r) use ($fromPath, $locale): bool {
+            if ($r->from_path !== $fromPath) {
+                return false;
+            }
+
+            return $locale === null || $r->locale === null || $r->locale === $locale;
+        });
 
         if ($redirect !== null) {
             dispatch(new IncrementRedirectHits($redirect->id));

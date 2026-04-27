@@ -1076,6 +1076,103 @@ class ProductResource extends Resource
                             ]),
                         ]),
 
+                    // ── Tab: Translations ─────────────────────────────────────
+                    Tab::make('Translations')
+                        ->icon('heroicon-o-language')
+                        ->schema([
+                            Tabs::make('LocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt (vi)')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('translations.vi.name')
+                                                ->label('Tên sản phẩm (vi)')
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) =>
+                                                    $set('translations.vi.slug', Str::slug($state ?? '')))
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.vi.slug')
+                                                ->label('Slug (vi)')
+                                                ->helperText('Auto-generated from name. Must be unique per locale.')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.vi.short_description')
+                                                ->label('Mô tả ngắn (vi)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\RichEditor::make('translations.vi.description')
+                                                ->label('Mô tả đầy đủ (vi)')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.vi.price')
+                                                ->label('Giá (vi)')
+                                                ->numeric()
+                                                ->nullable(),
+
+                                            Forms\Components\TextInput::make('translations.vi.currency')
+                                                ->label('Tiền tệ (vi)')
+                                                ->placeholder('VND')
+                                                ->nullable(),
+
+                                            Forms\Components\TextInput::make('translations.vi.meta_title')
+                                                ->label('Meta title (vi)')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.vi.meta_description')
+                                                ->label('Meta description (vi)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columns(2),
+
+                                    Tab::make('🇬🇧 English (en)')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('translations.en.name')
+                                                ->label('Product name (en)')
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) =>
+                                                    $set('translations.en.slug', Str::slug($state ?? '')))
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.en.slug')
+                                                ->label('Slug (en)')
+                                                ->helperText('Auto-generated from name. Must be unique per locale.')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.en.short_description')
+                                                ->label('Short description (en)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\RichEditor::make('translations.en.description')
+                                                ->label('Description (en)')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.en.price')
+                                                ->label('Price (en)')
+                                                ->numeric()
+                                                ->nullable(),
+
+                                            Forms\Components\TextInput::make('translations.en.currency')
+                                                ->label('Currency (en)')
+                                                ->placeholder('USD')
+                                                ->nullable(),
+
+                                            Forms\Components\TextInput::make('translations.en.meta_title')
+                                                ->label('Meta title (en)')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.en.meta_description')
+                                                ->label('Meta description (en)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columns(2),
+                                ])
+                                ->columnSpanFull(),
+                        ]),
+
                 ])
                 ->columnSpanFull(),
         ]);
