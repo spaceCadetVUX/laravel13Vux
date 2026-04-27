@@ -14,6 +14,8 @@ class SitemapIndex extends Model
         'name',
         'filename',
         'url',
+        'locale',
+        'model_type',
         'entry_count',
         'last_generated_at',
         'is_active',

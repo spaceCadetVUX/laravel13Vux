@@ -18,6 +18,7 @@ class SitemapEntry extends Model
         'model_id',
         'locale',
         'url',
+        'alternate_urls',
         'changefreq',
         'priority',
         'last_modified',
@@ -27,9 +28,10 @@ class SitemapEntry extends Model
     protected function casts(): array
     {
         return [
-            'changefreq'    => SitemapChangefreq::class,
-            'last_modified' => 'datetime',
-            'is_active'     => 'boolean',
+            'alternate_urls' => 'array',
+            'changefreq'     => SitemapChangefreq::class,
+            'last_modified'  => 'datetime',
+            'is_active'      => 'boolean',
         ];
     }
 

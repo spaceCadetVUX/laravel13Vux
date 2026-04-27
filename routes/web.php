@@ -23,9 +23,9 @@ Route::get('/', function (Request $request) {
 Route::get('health', HealthController::class);
 
 // ── SEO: Sitemap XML ─────────────────────────────────────────────────────────
-// sitemap-{name}.xml — name is now e.g. 'vi-products', 'en-blog'
 Route::get('sitemap.xml', [SitemapController::class, 'index']);
-Route::get('sitemap-{name}.xml', [SitemapController::class, 'child']);
+Route::get('sitemap-{locale}-{type}.xml', [SitemapController::class, 'child'])
+    ->where(['locale' => 'vi|en', 'type' => 'products|product-categories|blog|blog-categories']);
 
 // ── SEO: LLMs TXT ────────────────────────────────────────────────────────────
 // Locale-aware routes BEFORE locale group to take priority
