@@ -62,7 +62,7 @@ class JsonldService
      * FAQPage and VideoObject schemas for products are handled separately
      * after the main loop since they depend on conditional data.
      */
-    public function syncForModel(Model $model): void
+    public function syncForModel(Model $model, string $locale = 'vi'): void
     {
         $morphAlias  = $model->getMorphClass();
         $schemaTypes = self::MODEL_SCHEMA_TYPES[$morphAlias] ?? [];
@@ -130,9 +130,11 @@ class JsonldService
                     'model_type'  => $morphAlias,
                     'model_id'    => $model->getKey(),
                     'schema_type' => $schemaType->value,
+                    'locale'      => $locale,
                 ],
                 [
                     'label'             => $template->label,
+                    'locale'            => $locale,
                     'payload'           => $resolved,
                     'is_active'         => true,
                     'is_auto_generated' => true,
@@ -143,12 +145,12 @@ class JsonldService
 
         // ── Product-only conditional schemas ──────────────────────────────────
         if ($morphAlias === 'product') {
-            $this->syncVideoObjectsForProduct($model);
+            $this->syncVideoObjectsForProduct($model, $locale);
         }
 
         // ── FAQPage — any model with geoProfile.faq data ──────────────────────
         if (in_array($morphAlias, ['product', 'blog_post'], true)) {
-            $this->syncFaqPage($model);
+            $this->syncFaqPage($model, $locale);
         }
     }
 
@@ -679,7 +681,7 @@ class JsonldService
      * Supports products and blog posts. Skips if: no FAQ data, manual override
      * exists, or geoProfile is missing.
      */
-    private function syncFaqPage(Model $model): void
+    private function syncFaqPage(Model $model, string $locale = 'vi'): void
     {
         $morphAlias = $model->getMorphClass();
         $model->loadMissing('geoProfiles');
@@ -723,9 +725,11 @@ class JsonldService
                 'model_type'  => $morphAlias,
                 'model_id'    => $model->getKey(),
                 'schema_type' => JsonldSchemaType::FaqPage->value,
+                'locale'      => $locale,
             ],
             [
                 'label'             => 'FAQ Schema',
+                'locale'            => $locale,
                 'payload'           => [
                     '@context'   => 'https://schema.org',
                     '@type'      => 'FAQPage',
@@ -818,7 +822,7 @@ class JsonldService
      * title + description (minimum required by Google for VideoObject rich results).
      * Skips videos that are missing required SEO fields.
      */
-    private function syncVideoObjectsForProduct(Model $model): void
+    private function syncVideoObjectsForProduct(Model $model, string $locale = 'vi'): void
     {
         if (! method_exists($model, 'videos')) {
             return;
@@ -878,9 +882,11 @@ class JsonldService
                     'model_type'  => $morphAlias,
                     'model_id'    => $model->getKey(),
                     'schema_type' => $schemaKey,
+                    'locale'      => $locale,
                     'label'       => 'Video: ' . $video->title,
                 ],
                 [
+                    'locale'            => $locale,
                     'payload'           => $payload,
                     'is_active'         => true,
                     'is_auto_generated' => true,

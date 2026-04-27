@@ -45,14 +45,18 @@ class ProductObserver
     }
 
     /**
-     * Dispatch SEO sync jobs on every create or update.
-     * Fires after both created() and updated() — covers all writes.
+     * Dispatch SEO sync jobs per locale on every create or update.
+     * Only dispatches for locales that have an existing translation.
      */
     public function saved(Product $product): void
     {
-        dispatch(new SyncJsonldSchema($product))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($product))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($product))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($product->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($product, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($product, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($product, $locale))->onQueue('seo');
+            }
+        }
     }
 
     /**
@@ -76,14 +80,15 @@ class ProductObserver
             ->update(['is_active' => false]);
     }
 
-    /**
-     * Restore: reactivate SEO entries so the product reappears in sitemap/llms.
-     */
     public function restored(Product $product): void
     {
-        dispatch(new SyncJsonldSchema($product))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($product))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($product))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($product->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($product, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($product, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($product, $locale))->onQueue('seo');
+            }
+        }
     }
 
     /**

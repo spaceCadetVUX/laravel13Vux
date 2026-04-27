@@ -15,13 +15,21 @@ use App\Models\Product;
 use App\Models\Review;
 use App\Models\Seo\Redirect;
 use App\Models\User;
+use App\Models\BlogCategoryTranslation;
+use App\Models\BlogPostTranslation;
+use App\Models\CategoryTranslation;
+use App\Models\ProductTranslation;
 use App\Observers\BlogCategoryObserver;
+use App\Observers\BlogCategoryTranslationObserver;
 use App\Observers\BlogPostObserver;
+use App\Observers\BlogPostTranslationObserver;
 use App\Observers\BrandObserver;
 use App\Observers\BusinessProfileObserver;
 use App\Observers\CategoryObserver;
+use App\Observers\CategoryTranslationObserver;
 use App\Observers\ManufacturerObserver;
 use App\Observers\ProductObserver;
+use App\Observers\ProductTranslationObserver;
 use App\Observers\RedirectObserver;
 use App\Observers\ReviewObserver;
 use Illuminate\Database\Eloquent\Model;
@@ -83,6 +91,11 @@ class AppServiceProvider extends ServiceProvider
         BlogCategory::observe(BlogCategoryObserver::class);
         Redirect::observe(RedirectObserver::class);
         BusinessProfile::observe(BusinessProfileObserver::class);
+
+        ProductTranslation::observe(ProductTranslationObserver::class);
+        CategoryTranslation::observe(CategoryTranslationObserver::class);
+        BlogPostTranslation::observe(BlogPostTranslationObserver::class);
+        BlogCategoryTranslation::observe(BlogCategoryTranslationObserver::class);
     }
 
     private function registerMorphMap(): void

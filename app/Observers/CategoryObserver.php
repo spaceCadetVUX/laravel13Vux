@@ -14,11 +14,14 @@ class CategoryObserver
 {
     public function saved(Category $category): void
     {
-        dispatch(new SyncJsonldSchema($category))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($category))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($category))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($category->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($category, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($category, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($category, $locale))->onQueue('seo');
+            }
+        }
 
-        // Bust the cached category tree so the API reflects the change immediately.
         app(CategoryService::class)->bustTreeCache();
     }
 
@@ -40,14 +43,15 @@ class CategoryObserver
         app(CategoryService::class)->bustTreeCache();
     }
 
-    /**
-     * Restore: reactivate SEO entries and re-sync sitemap/llms.
-     */
     public function restored(Category $category): void
     {
-        dispatch(new SyncJsonldSchema($category))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($category))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($category))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($category->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($category, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($category, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($category, $locale))->onQueue('seo');
+            }
+        }
 
         app(CategoryService::class)->bustTreeCache();
     }

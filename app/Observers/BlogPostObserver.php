@@ -71,9 +71,13 @@ class BlogPostObserver
             return;
         }
 
-        dispatch(new SyncJsonldSchema($blogPost))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($blogPost))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($blogPost))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($blogPost->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($blogPost, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($blogPost, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($blogPost, $locale))->onQueue('seo');
+            }
+        }
     }
 
     /**
@@ -99,19 +103,19 @@ class BlogPostObserver
             ->update(['is_active' => false]);
     }
 
-    /**
-     * Restore: re-sync SEO only when the post is still published.
-     * A restored draft stays invisible in sitemap/llms until published.
-     */
     public function restored(BlogPost $blogPost): void
     {
         if ($blogPost->status !== BlogPostStatus::Published) {
             return;
         }
 
-        dispatch(new SyncJsonldSchema($blogPost))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($blogPost))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($blogPost))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($blogPost->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($blogPost, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($blogPost, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($blogPost, $locale))->onQueue('seo');
+            }
+        }
     }
 
     /**

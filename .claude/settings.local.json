@@ -26,7 +26,8 @@
       "Bash(composer dump-autoload *)",
       "Bash(grep -v \"#\\\\|//\")",
       "Bash(mkdir -p app/View/Components)",
-      "Bash(mkdir -p resources/views/components/seo)"
+      "Bash(mkdir -p resources/views/components/seo)",
+      "Bash(xargs grep *)"
     ]
   }
 }

@@ -15,14 +15,11 @@ class SyncSitemapEntry implements ShouldQueue
 
     public function __construct(
         public readonly Model $model,
+        public readonly string $locale = 'vi',
     ) {}
 
-    /**
-     * Delegate all upsert logic to SitemapService.
-     * The service is the single source of truth for sitemap management.
-     */
     public function handle(SitemapService $service): void
     {
-        $service->upsertEntry($this->model);
+        $service->upsertEntry($this->model, null, $this->locale);
     }
 }

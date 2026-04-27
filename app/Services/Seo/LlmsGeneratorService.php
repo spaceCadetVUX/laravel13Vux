@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Storage;
 class LlmsGeneratorService
 {
     /**
-     * URL prefix per morph alias — used when building entry URLs.
+     * Morph alias → route name for locale-aware URL generation.
      */
-    private const URL_PREFIXES = [
-        'product'       => '/products/',
-        'blog_post'     => '/blog/',
-        'category'      => '/categories/',
-        'blog_category' => '/blog/category/',
+    private const ROUTE_NAMES = [
+        'product'       => 'product.show',
+        'blog_post'     => 'blog.show',
+        'category'      => 'category.show',
+        'blog_category' => 'blog.category',
     ];
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -109,17 +109,23 @@ class LlmsGeneratorService
      *
      * @param  LlmsDocument|null  $document  Pass explicitly to avoid a repeated DB lookup.
      */
-    public function upsertEntry(Model $model, ?LlmsDocument $document = null): void
+    public function upsertEntry(Model $model, ?LlmsDocument $document = null, string $locale = 'vi'): void
     {
         $morphAlias = $model->getMorphClass();
 
         $document ??= LlmsDocument::where('model_type', get_class($model))
             ->where('scope', LlmsScope::Full)
+            ->where('locale', $locale)
             ->first();
 
         if ($document === null) {
             return;
         }
+
+        // ── Translation for locale-aware fields ───────────────────────────────
+        $translation = method_exists($model, 'translation')
+            ? $model->translation($locale)
+            : null;
 
         // ── GEO profile ───────────────────────────────────────────────────────
         $geoProfile = method_exists($model, 'geoProfile')
@@ -127,10 +133,14 @@ class LlmsGeneratorService
             : null;
 
         // ── Core fields ───────────────────────────────────────────────────────
-        $title   = (string) ($model->getAttribute('title') ?? $model->getAttribute('name') ?? '');
-        $slug    = (string) ($model->getAttribute('slug') ?? '');
-        $baseUrl = rtrim((string) config('app.url'), '/');
-        $url     = $baseUrl . (self::URL_PREFIXES[$morphAlias] ?? '/') . $slug;
+        $title = (string) ($translation?->name ?? $translation?->title
+            ?? $model->getAttribute('title') ?? $model->getAttribute('name') ?? '');
+        $slug  = (string) ($translation?->slug ?? $model->getAttribute('slug') ?? '');
+
+        $routeName = self::ROUTE_NAMES[$morphAlias] ?? null;
+        $url       = $routeName && $slug
+            ? route($routeName, ['locale' => $locale, 'slug' => $slug])
+            : rtrim((string) config('app.url'), '/') . '/' . $slug;
 
         // ── Summary block ─────────────────────────────────────────────────────
         // Priority: ai_summary → short_description (products) / excerpt (blog posts) → empty
@@ -138,8 +148,8 @@ class LlmsGeneratorService
         $summaryParts = [];
 
         $aiSummary        = trim((string) ($geoProfile?->ai_summary ?? ''));
-        $shortDescription = trim((string) ($model->getAttribute('short_description') ?? ''));
-        $excerpt          = trim((string) ($model->getAttribute('excerpt') ?? ''));
+        $shortDescription = trim((string) ($translation?->short_description ?? $model->getAttribute('short_description') ?? ''));
+        $excerpt          = trim((string) ($translation?->excerpt ?? $model->getAttribute('excerpt') ?? ''));
 
         // Blog posts use `excerpt`, not `short_description` — fall through both.
         $baseSummary = filled($aiSummary) ? $aiSummary
@@ -283,6 +293,7 @@ class LlmsGeneratorService
                 'model_id'         => $model->getKey(),
             ],
             [
+                'locale'         => $locale,
                 'title'          => $title,
                 'url'            => $url,
                 'summary'        => $summary,

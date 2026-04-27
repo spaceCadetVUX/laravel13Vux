@@ -15,14 +15,11 @@ class SyncLlmsEntry implements ShouldQueue
 
     public function __construct(
         public readonly Model $model,
+        public readonly string $locale = 'vi',
     ) {}
 
-    /**
-     * Delegate all upsert logic to LlmsGeneratorService.
-     * The service is the single source of truth for LLMs entry management.
-     */
     public function handle(LlmsGeneratorService $service): void
     {
-        $service->upsertEntry($this->model);
+        $service->upsertEntry($this->model, null, $this->locale);
     }
 }

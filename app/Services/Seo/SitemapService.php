@@ -11,34 +11,14 @@ use Illuminate\Support\Facades\Storage;
 class SitemapService
 {
     /**
-     * Morph alias → sitemap index name + URL path + SEO defaults.
-     * index_name must match the `name` column in sitemap_indexes (from seeder).
+     * Morph alias → SEO defaults + route name for locale-aware URL generation.
+     * index lookup is now done via SitemapIndex.model_type + locale (not hardcoded name).
      */
     private const MODEL_CONFIG = [
-        'product'   => [
-            'index_name'  => 'products',
-            'path_prefix' => '/products/',
-            'changefreq'  => SitemapChangefreq::Daily,
-            'priority'    => 0.8,
-        ],
-        'blog_post' => [
-            'index_name'  => 'blog',
-            'path_prefix' => '/blog/',
-            'changefreq'  => SitemapChangefreq::Weekly,
-            'priority'    => 0.6,
-        ],
-        'category'  => [
-            'index_name'  => 'product_categories',
-            'path_prefix' => '/categories/',
-            'changefreq'  => SitemapChangefreq::Weekly,
-            'priority'    => 0.7,
-        ],
-        'blog_category' => [
-            'index_name'  => 'blog_categories',
-            'path_prefix' => '/blog/category/',
-            'changefreq'  => SitemapChangefreq::Weekly,
-            'priority'    => 0.5,
-        ],
+        'product'       => ['route_name' => 'product.show',  'changefreq' => SitemapChangefreq::Daily,  'priority' => 0.8],
+        'blog_post'     => ['route_name' => 'blog.show',     'changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.6],
+        'category'      => ['route_name' => 'category.show', 'changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.7],
+        'blog_category' => ['route_name' => 'blog.category', 'changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.5],
     ];
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -116,11 +96,12 @@ class SitemapService
     }
 
     /**
-     * Upsert a single sitemap_entries row for a model.
-     * Resolves the correct SitemapIndex from the model's morph alias.
-     * Updates the parent index entry_count after upsert.
+     * Upsert a single sitemap_entries row for a model + locale.
+     * Finds the correct SitemapIndex by model class + locale.
+     * Skips if no translation exists for the given locale.
+     * Builds alternate_urls jsonb for hreflang xlinks.
      */
-    public function upsertEntry(Model $model, ?SitemapIndex $index = null): void
+    public function upsertEntry(Model $model, ?SitemapIndex $index = null, string $locale = 'vi'): void
     {
         $morphAlias = $model->getMorphClass();
         $config     = self::MODEL_CONFIG[$morphAlias] ?? null;
@@ -129,41 +110,68 @@ class SitemapService
             return;
         }
 
-        $index ??= SitemapIndex::where('name', $config['index_name'])->first();
+        $index ??= SitemapIndex::where('model_type', get_class($model))
+            ->where('locale', $locale)
+            ->first();
 
         if ($index === null) {
             return;
         }
 
-        $slug = (string) ($model->getAttribute('slug') ?? '');
+        // Require a translation for this locale — no translation = no URL to index.
+        $translation = method_exists($model, 'translation')
+            ? $model->translation($locale)
+            : null;
+
+        if ($translation === null) {
+            // Remove stale entry if it exists (e.g. translation deleted).
+            SitemapEntry::where('sitemap_index_id', $index->id)
+                ->where('model_type', $morphAlias)
+                ->where('model_id', $model->getKey())
+                ->delete();
+            return;
+        }
+
+        $slug = (string) ($translation->slug ?? $model->getAttribute('slug') ?? '');
 
         if ($slug === '') {
             return;
         }
 
-        $baseUrl  = rtrim((string) config('app.url'), '/');
-        $url      = $baseUrl . $config['path_prefix'] . $slug;
+        $url = route($config['route_name'], ['locale' => $locale, 'slug' => $slug]);
+
+        // Build alternate_urls for hreflang xlinks.
+        $alternateUrls = [];
+        foreach (config('app.supported_locales') as $altLocale) {
+            $altTranslation = $model->translation($altLocale);
+            if ($altTranslation) {
+                $alternateUrls[$altLocale] = route($config['route_name'], [
+                    'locale' => $altLocale,
+                    'slug'   => $altTranslation->slug,
+                ]);
+            }
+        }
+
         $isActive = (bool) ($model->getAttribute('is_active') ?? true);
 
         SitemapEntry::updateOrCreate(
             [
-                'model_type' => $morphAlias,
-                'model_id'   => $model->getKey(),
+                'sitemap_index_id' => $index->id,
+                'model_type'       => $morphAlias,
+                'model_id'         => $model->getKey(),
             ],
             [
-                'sitemap_index_id' => $index->id,
-                'url'              => $url,
-                'changefreq'       => $config['changefreq'],
-                'priority'         => $config['priority'],
-                'last_modified'    => $model->updated_at ?? now(),
-                'is_active'        => $isActive,
+                'locale'        => $locale,
+                'url'           => $url,
+                'alternate_urls' => $alternateUrls ?: null,
+                'changefreq'    => $config['changefreq'],
+                'priority'      => $config['priority'],
+                'last_modified' => $model->updated_at ?? now(),
+                'is_active'     => $isActive,
             ]
         );
 
         $this->syncEntryCount($index);
-
-        // Regenerate the XML file on disk so the controller always serves fresh content.
-        // This runs inside the SyncSitemapEntry queue job — no performance impact on web requests.
         $this->generateChild($index);
     }
 

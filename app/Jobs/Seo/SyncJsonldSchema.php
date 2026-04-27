@@ -17,14 +17,11 @@ class SyncJsonldSchema implements ShouldQueue
 
     public function __construct(
         public readonly Model $model,
+        public readonly string $locale = 'vi',
     ) {}
 
-    /**
-     * Delegate all sync logic to JsonldService.
-     * The service is the single source of truth for JSON-LD management.
-     */
     public function handle(JsonldService $service): void
     {
-        $service->syncForModel($this->model);
+        $service->syncForModel($this->model, $this->locale);
     }
 }

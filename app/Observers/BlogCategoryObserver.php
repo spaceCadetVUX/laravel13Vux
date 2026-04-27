@@ -65,9 +65,13 @@ class BlogCategoryObserver
             return;
         }
 
-        dispatch(new SyncJsonldSchema($blogCategory))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($blogCategory))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($blogCategory))->onQueue('seo');
+        foreach (config('app.supported_locales') as $locale) {
+            if ($blogCategory->translations()->where('locale', $locale)->exists()) {
+                dispatch(new SyncJsonldSchema($blogCategory, $locale))->onQueue('seo');
+                dispatch(new SyncSitemapEntry($blogCategory, $locale))->onQueue('seo');
+                dispatch(new SyncLlmsEntry($blogCategory, $locale))->onQueue('seo');
+            }
+        }
     }
 
     /**
