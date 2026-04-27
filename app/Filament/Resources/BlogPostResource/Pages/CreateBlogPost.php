@@ -61,5 +61,24 @@ class CreateBlogPost extends CreateRecord
                 'faq'        => $faqItems,
             ]);
         }
+
+        // ── Translations ──────────────────────────────────────────────────────
+        $translationsData = $state['translations'] ?? [];
+
+        foreach (config('app.supported_locales') as $locale) {
+            $localeData = $translationsData[$locale] ?? [];
+
+            if (empty($localeData['title'])) {
+                continue;
+            }
+
+            $this->record->translations()->updateOrCreate(
+                ['locale' => $locale],
+                collect($localeData)
+                    ->only(['title', 'slug', 'excerpt', 'body', 'meta_title', 'meta_description'])
+                    ->filter(fn ($v) => $v !== null && $v !== '')
+                    ->toArray()
+            );
+        }
     }
 }

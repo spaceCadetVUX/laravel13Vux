@@ -7,6 +7,9 @@ use App\Models\BlogCategory;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -59,6 +62,75 @@ class BlogCategoryResource extends Resource
 
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
+
+            // ── Translations ──────────────────────────────────────────────────
+            Section::make('Translations')
+                ->icon('heroicon-o-language')
+                ->schema([
+                    Tabs::make('LocaleTabs')
+                        ->tabs([
+                            Tab::make('🇻🇳 Tiếng Việt (vi)')
+                                ->schema([
+                                    Forms\Components\TextInput::make('translations.vi.name')
+                                        ->label('Tên danh mục (vi)')
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(fn ($state, Set $set) =>
+                                            $set('translations.vi.slug', Str::slug($state ?? '')))
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('translations.vi.slug')
+                                        ->label('Slug (vi)')
+                                        ->helperText('Auto-generated from name. Must be unique per locale.')
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\Textarea::make('translations.vi.description')
+                                        ->label('Mô tả (vi)')
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('translations.vi.meta_title')
+                                        ->label('Meta title (vi)')
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\Textarea::make('translations.vi.meta_description')
+                                        ->label('Meta description (vi)')
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+                                ]),
+
+                            Tab::make('🇬🇧 English (en)')
+                                ->schema([
+                                    Forms\Components\TextInput::make('translations.en.name')
+                                        ->label('Category name (en)')
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(fn ($state, Set $set) =>
+                                            $set('translations.en.slug', Str::slug($state ?? '')))
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('translations.en.slug')
+                                        ->label('Slug (en)')
+                                        ->helperText('Auto-generated from name. Must be unique per locale.')
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\Textarea::make('translations.en.description')
+                                        ->label('Description (en)')
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('translations.en.meta_title')
+                                        ->label('Meta title (en)')
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\Textarea::make('translations.en.meta_description')
+                                        ->label('Meta description (en)')
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+                                ]),
+                        ])
+                        ->columnSpanFull(),
+                ])
+                ->collapsible()
+                ->columnSpanFull(),
         ]);
     }
 

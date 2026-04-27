@@ -31,6 +31,17 @@ class EditBlogPost extends EditRecord
         // ── FAQ from geo_entity_profiles ──────────────────────────────────────
         $data['faq_items'] = $this->record->geoProfile('vi')?->faq ?? [];
 
+        // ── Translations ──────────────────────────────────────────────────────
+        foreach (config('app.supported_locales') as $locale) {
+            $translation = $this->record->translations()->where('locale', $locale)->first();
+
+            if ($translation) {
+                $data['translations'][$locale] = $translation->only([
+                    'title', 'slug', 'excerpt', 'body', 'meta_title', 'meta_description',
+                ]);
+            }
+        }
+
         return $data;
     }
 
@@ -76,6 +87,31 @@ class EditBlogPost extends EditRecord
             ['model_type' => $morphClass, 'model_id' => $modelId, 'locale' => 'vi'],
             ['faq' => $faqItems]
         );
+
+        // ── Translations ──────────────────────────────────────────────────────
+        $this->saveTranslations();
+    }
+
+    private function saveTranslations(): void
+    {
+        $record           = $this->getRecord();
+        $translationsData = $this->data['translations'] ?? [];
+
+        foreach (config('app.supported_locales') as $locale) {
+            $localeData = $translationsData[$locale] ?? [];
+
+            if (empty($localeData['title'])) {
+                continue;
+            }
+
+            $record->translations()->updateOrCreate(
+                ['locale' => $locale],
+                collect($localeData)
+                    ->only(['title', 'slug', 'excerpt', 'body', 'meta_title', 'meta_description'])
+                    ->filter(fn ($v) => $v !== null && $v !== '')
+                    ->toArray()
+            );
+        }
     }
 
     protected function getHeaderActions(): array
