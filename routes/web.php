@@ -49,6 +49,7 @@ Route::middleware('throttle:30,1')->group(function () {
 // ── API Docs: local + staging only ───────────────────────────────────────────
 if (app()->isLocal() || app()->environment('staging')) {
     Route::get('docs', fn () => view('scribe.index'));
+    Route::get('test-seo-head', fn () => view('test-seo-head'));
 }
 
 // ── Locale group: /{locale}/* ─────────────────────────────────────────────────

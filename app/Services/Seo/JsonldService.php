@@ -3,6 +3,7 @@
 namespace App\Services\Seo;
 
 use App\Enums\JsonldSchemaType;
+use App\Models\Product;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\JsonldTemplate;
 use Illuminate\Database\Eloquent\Collection;
@@ -241,6 +242,52 @@ class JsonldService
             '@context'        => 'https://schema.org',
             '@type'           => 'BreadcrumbList',
             'itemListElement' => $listElements,
+        ];
+    }
+
+    /**
+     * Build a locale-aware Schema.org Product schema for Blade rendering.
+     * Uses the translation record for name, slug, description, price, currency.
+     */
+    public function buildProductSchema(Product $product, string $locale): array
+    {
+        $t = $product->translation($locale);
+
+        return [
+            '@context'    => 'https://schema.org',
+            '@type'       => 'Product',
+            'name'        => $t?->name ?? $product->name,
+            'url'         => route('product.show', ['locale' => $locale, 'slug' => $t?->slug ?? $product->slug]),
+            'description' => strip_tags($t?->short_description ?? ''),
+            'sku'         => $product->sku,
+            'offers'      => [
+                '@type'         => 'Offer',
+                'priceCurrency' => $t?->currency ?? config('app.default_currency'),
+                'price'         => $t?->price ?? $product->price,
+                'availability'  => $product->stock_quantity > 0
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/OutOfStock',
+            ],
+        ];
+    }
+
+    /**
+     * Build a Schema.org BreadcrumbList from a simple items array.
+     * Public counterpart for use in controllers/views.
+     *
+     * @param  array<int, array{name: string, url: string}>  $items
+     */
+    public function buildBreadcrumb(array $items): array
+    {
+        return [
+            '@context'        => 'https://schema.org',
+            '@type'           => 'BreadcrumbList',
+            'itemListElement' => collect($items)->map(fn ($item, $i) => [
+                '@type'    => 'ListItem',
+                'position' => $i + 1,
+                'name'     => $item['name'],
+                'item'     => $item['url'],
+            ])->values()->all(),
         ];
     }
 
