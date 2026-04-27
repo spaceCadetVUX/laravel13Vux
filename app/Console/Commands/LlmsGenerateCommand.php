@@ -34,22 +34,26 @@ class LlmsGenerateCommand extends Command
             return self::SUCCESS;
         }
 
-        // Generate all active documents with per-document progress output.
-        $documents = LlmsDocument::where('is_active', true)->get();
+        // Generate per-locale combined llms.txt files (Redis cache).
+        $this->info('Generating locale-combined llms.txt files...');
 
-        if ($documents->isEmpty()) {
-            $this->warn('No active LLMs documents found.');
-
-            return self::SUCCESS;
+        foreach (config('app.supported_locales') as $locale) {
+            $service->regenerate($locale);
+            $this->info("Generated llms.txt for [{$locale}]");
         }
 
-        $this->info("Generating {$documents->count()} LLMs document(s)...");
+        // Also regenerate per-document disk files for scoped routes.
+        $documents = LlmsDocument::where('is_active', true)->get();
 
-        foreach ($documents as $document) {
-            $this->line("  → {$document->slug}.txt");
-            $service->generateDocument($document);
-            $document->refresh();
-            $this->line("    {$document->entry_count} entries, last_generated: {$document->last_generated_at->toDateTimeString()}");
+        if ($documents->isNotEmpty()) {
+            $this->info("Regenerating {$documents->count()} scoped document(s)...");
+
+            foreach ($documents as $document) {
+                $this->line("  → {$document->slug}.txt");
+                $service->generateDocument($document);
+                $document->refresh();
+                $this->line("    {$document->entry_count} entries, last_generated: {$document->last_generated_at->toDateTimeString()}");
+            }
         }
 
         $this->info('All LLMs documents generated successfully.');

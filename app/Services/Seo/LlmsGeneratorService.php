@@ -7,6 +7,7 @@ use App\Models\BusinessProfile;
 use App\Models\Seo\LlmsDocument;
 use App\Models\Seo\LlmsEntry;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class LlmsGeneratorService
@@ -32,6 +33,40 @@ class LlmsGeneratorService
         LlmsDocument::where('is_active', true)->each(
             fn (LlmsDocument $document) => $this->generateDocument($document)
         );
+    }
+
+    /**
+     * Build and return the combined llms.txt content for a locale.
+     * Result is cached in Redis for 1 hour (key: "llms_{$locale}").
+     * Falls back to inline generation if Redis is unavailable.
+     */
+    public function generate(string $locale): string
+    {
+        $cacheKey = "llms_{$locale}";
+
+        try {
+            return Cache::store('redis')->remember(
+                $cacheKey,
+                now()->addHour(),
+                fn (): string => $this->buildLocaleContent($locale)
+            );
+        } catch (\Throwable) {
+            return $this->buildLocaleContent($locale);
+        }
+    }
+
+    /**
+     * Force-regenerate and re-cache the combined llms.txt for a locale.
+     * Used by the artisan command to bypass TTL.
+     */
+    public function regenerate(string $locale): string
+    {
+        try {
+            Cache::store('redis')->forget("llms_{$locale}");
+        } catch (\Throwable) {
+        }
+
+        return $this->generate($locale);
     }
 
     /**
@@ -461,6 +496,56 @@ class LlmsGeneratorService
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Build the combined plain-text llms.txt content for a single locale.
+     * Queries all active documents and their entries for that locale.
+     * Business document is excluded — it has no llms_entries.
+     */
+    private function buildLocaleContent(string $locale): string
+    {
+        $documents = LlmsDocument::where('locale', $locale)
+            ->where('is_active', true)
+            ->where('slug', '!=', 'business')
+            ->orderBy('slug')
+            ->get();
+
+        if ($documents->isEmpty()) {
+            return '# LLMs — ' . strtoupper($locale) . PHP_EOL . PHP_EOL . '_No documents available._' . PHP_EOL;
+        }
+
+        $sections = $documents->map(function (LlmsDocument $document): string {
+            $entries = LlmsEntry::where('llms_document_id', $document->id)
+                ->where('is_active', true)
+                ->orderBy('title')
+                ->get();
+
+            $lines   = [];
+            $lines[] = '# ' . ($document->title ?? $document->slug);
+
+            if (filled($document->description)) {
+                $lines[] = '';
+                $lines[] = $document->description;
+            }
+
+            $lines[] = '';
+
+            if ($entries->isEmpty()) {
+                $lines[] = '_No entries yet._';
+            } elseif ($document->scope === LlmsScope::Index) {
+                foreach ($entries as $entry) {
+                    $lines[] = $this->buildIndexLine($entry);
+                }
+            } else {
+                $blocks  = $entries->map(fn (LlmsEntry $entry) => $this->buildEntryBlock($entry));
+                $lines[] = implode("\n\n---\n\n", $blocks->toArray());
+            }
+
+            return implode("\n", $lines);
+        })->all();
+
+        return implode("\n\n===\n\n", $sections) . PHP_EOL;
+    }
 
     /**
      * Determine whether the LlmsEntry should be active.

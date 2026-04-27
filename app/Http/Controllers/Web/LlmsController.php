@@ -18,19 +18,12 @@ class LlmsController extends Controller
     /**
      * Serve locale-specific llms.txt.
      * GET /{locale}/llms.txt
-     * ML-11: full implementation (currently returns stub).
      */
     public function localized(string $locale): Response
     {
-        $document = LlmsDocument::where('name', 'root-' . $locale)
-            ->where('is_active', true)
-            ->first();
+        $content = $this->llmsService->generate($locale);
 
-        if (! $document) {
-            return $this->textResponse('# LLMs — ' . strtoupper($locale) . PHP_EOL . '_Not yet generated._' . PHP_EOL);
-        }
-
-        return $this->resolveOrGenerate($document);
+        return $this->textResponse($content);
     }
 
     /**
