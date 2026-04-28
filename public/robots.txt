@@ -1,2 +1,24 @@
 User-agent: *
-Disallow:
+
+# Public locale paths
+Allow: /vi/
+Allow: /en/
+
+# Block internal
+Disallow: /admin/
+Disallow: /horizon/
+Disallow: /api/
+Disallow: /telescope/
+
+# Block no-locale paths (all redirect to /vi/ — avoid wasting crawl budget)
+Disallow: /products/
+Disallow: /categories/
+Disallow: /blog/
+
+# Block filter/sort/pagination (near-duplicate risk)
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /*?page=
+
+# Sitemap
+Sitemap: https://YOUR_DOMAIN/sitemap.xml
