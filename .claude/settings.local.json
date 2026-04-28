@@ -27,7 +27,11 @@
       "Bash(grep -v \"#\\\\|//\")",
       "Bash(mkdir -p app/View/Components)",
       "Bash(mkdir -p resources/views/components/seo)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(php -l app/Http/Controllers/Web/ProductController.php)",
+      "Bash(php -l app/Http/Controllers/Web/CategoryController.php)",
+      "Bash(php -l app/Http/Controllers/Web/BlogController.php)",
+      "Bash(php -l app/Http/Controllers/Web/PageController.php)"
     ]
   }
 }

@@ -3,13 +3,52 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Response;
+use App\Models\CategoryTranslation;
+use App\Services\Seo\JsonldService;
+use App\Services\Seo\SeoService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class CategoryController extends Controller
 {
-    // ML-16: resolve slug from category_translations + 302 fallback
-    public function show(string $locale, string $slug): Response
+    public function show(string $locale, string $slug): View|RedirectResponse
     {
-        return response("Category [{$slug}] — {$locale}", 200);
+        $translation = CategoryTranslation::where('locale', $locale)
+            ->where('slug', $slug)
+            ->with('category')
+            ->first();
+
+        if (! $translation) {
+            $viTranslation = CategoryTranslation::where('locale', config('app.fallback_locale'))
+                ->where('slug', $slug)
+                ->first();
+
+            if ($viTranslation) {
+                return redirect(
+                    route('category.show', ['locale' => config('app.fallback_locale'), 'slug' => $viTranslation->slug]),
+                    302
+                );
+            }
+
+            abort(404);
+        }
+
+        $category = $translation->category;
+        if (! $category || ! $category->is_active) {
+            abort(404);
+        }
+
+        $alternateUrls = app(SeoService::class)->alternateUrls($category, 'category.show');
+        $seoMeta       = $category->seoMeta($locale);
+        $jsonldSchemas = [
+            app(JsonldService::class)->buildBreadcrumb([
+                ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
+                ['name' => $translation->name, 'url' => url()->current()],
+            ]),
+        ];
+
+        return view('pages.category.show', compact(
+            'category', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
+        ));
     }
 }
