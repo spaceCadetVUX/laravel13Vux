@@ -7,7 +7,6 @@ use App\Models\Category;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -47,6 +46,11 @@ class CategoryResource extends Resource
                 ->nullable(),
 
             Forms\Components\TextInput::make('name')
+                ->label('Internal Name')
+                ->hint('Dùng trong admin — không hiển thị cho người dùng')
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintColor('warning')
+                ->helperText('Tên ngắn gọn để nhận biết danh mục trong hệ thống. Tên hiển thị thật sự nhập trong tab Translations bên dưới.')
                 ->required()
                 ->live(debounce: 500)
                 ->afterStateUpdated(fn (Set $set, ?string $state) =>
@@ -54,10 +58,19 @@ class CategoryResource extends Resource
                 ),
 
             Forms\Components\TextInput::make('slug')
+                ->label('Internal Slug')
+                ->hint('Dùng trong JSON-LD và API nội bộ — không phải URL công khai')
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintColor('warning')
+                ->helperText('URL công khai dùng slug từ tab Translations.')
                 ->required()
                 ->unique(table: Category::class, column: 'slug', ignoreRecord: true),
 
             Forms\Components\Textarea::make('description')
+                ->label('Internal Description')
+                ->hint('Không hiển thị trực tiếp — dùng làm gợi ý nội dung')
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintColor('warning')
                 ->nullable()
                 ->rows(3),
 
@@ -74,50 +87,6 @@ class CategoryResource extends Resource
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
 
-            // ── SEO ───────────────────────────────────────────────────────────
-            Group::make()
-                ->relationship('seoMetaVi')
-                ->schema([
-                    Section::make('SEO')
-                        ->icon('heroicon-o-magnifying-glass')
-                        ->schema([
-                            Forms\Components\TextInput::make('meta_title')
-                                ->label('Meta Title')
-                                ->maxLength(70)
-                                ->placeholder('Auto-filled from category name')
-                                ->hint('Auto-filled from category name')
-                                ->hintIcon('heroicon-o-sparkles')
-                                ->hintColor('info')
-                                ->helperText('Optimal: 50–70 characters.')
-                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                    if (empty($state) && $livewire->record?->name) {
-                                        $set('meta_title', $livewire->record->name);
-                                    }
-                                })
-                                ->columnSpanFull(),
-
-                            Forms\Components\Textarea::make('meta_description')
-                                ->label('Meta Description')
-                                ->rows(3)
-                                ->maxLength(160)
-                                ->placeholder('Auto-filled from category description')
-                                ->hint('Auto-filled from category description')
-                                ->hintIcon('heroicon-o-sparkles')
-                                ->hintColor('info')
-                                ->helperText('Optimal: 120–160 characters.')
-                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                    if (empty($state) && $livewire->record?->description) {
-                                        $set('meta_description', $livewire->record->description);
-                                    }
-                                })
-                                ->columnSpanFull(),
-                        ])
-                        ->columns(2)
-                        ->collapsible()
-                        ->collapsed(),
-                ])
-                ->columnSpanFull(),
-
             // ── Translations ──────────────────────────────────────────────────
             Section::make('Translations')
                 ->icon('heroicon-o-language')
@@ -127,28 +96,45 @@ class CategoryResource extends Resource
                             Tab::make('🇻🇳 Tiếng Việt (vi)')
                                 ->schema([
                                     Forms\Components\TextInput::make('translations.vi.name')
-                                        ->label('Tên danh mục (vi)')
+                                        ->label('Tên hiển thị (vi)')
+                                        ->hint('Hiển thị trên trang web cho người dùng Việt Nam')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, Set $set) =>
                                             $set('translations.vi.slug', Str::slug($state ?? '')))
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('translations.vi.slug')
-                                        ->label('Slug (vi)')
-                                        ->helperText('Auto-generated from name. Must be unique per locale.')
+                                        ->label('URL Slug (vi)')
+                                        ->hint('Tạo URL: /vi/categories/{slug}')
+                                        ->hintIcon('heroicon-o-link')
+                                        ->hintColor('success')
+                                        ->helperText('Tự động tạo từ tên. Phải unique theo từng ngôn ngữ.')
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('translations.vi.description')
                                         ->label('Mô tả (vi)')
+                                        ->hint('Hiển thị trên trang danh mục — Google đọc để hiểu nội dung')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->rows(3)
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('translations.vi.meta_title')
-                                        ->label('Meta title (vi)')
+                                        ->label('Meta Title (vi)')
+                                        ->hint('Tiêu đề xanh trên Google Search + tab trình duyệt. Tối ưu 50–70 ký tự.')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('info')
+                                        ->maxLength(70)
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('translations.vi.meta_description')
-                                        ->label('Meta description (vi)')
+                                        ->label('Meta Description (vi)')
+                                        ->hint('Đoạn xám dưới tiêu đề trên Google Search. Tối ưu 120–160 ký tự.')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('info')
+                                        ->maxLength(160)
                                         ->rows(3)
                                         ->columnSpanFull(),
                                 ]),
@@ -156,28 +142,45 @@ class CategoryResource extends Resource
                             Tab::make('🇬🇧 English (en)')
                                 ->schema([
                                     Forms\Components\TextInput::make('translations.en.name')
-                                        ->label('Category name (en)')
+                                        ->label('Display Name (en)')
+                                        ->hint('Shown on the website to English-speaking visitors')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, Set $set) =>
                                             $set('translations.en.slug', Str::slug($state ?? '')))
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('translations.en.slug')
-                                        ->label('Slug (en)')
+                                        ->label('URL Slug (en)')
+                                        ->hint('Creates URL: /en/categories/{slug}')
+                                        ->hintIcon('heroicon-o-link')
+                                        ->hintColor('success')
                                         ->helperText('Auto-generated from name. Must be unique per locale.')
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('translations.en.description')
                                         ->label('Description (en)')
+                                        ->hint('Shown on the category page — Google reads this to understand content')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->rows(3)
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('translations.en.meta_title')
-                                        ->label('Meta title (en)')
+                                        ->label('Meta Title (en)')
+                                        ->hint('Blue title on Google Search + browser tab. Optimal 50–70 chars.')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('info')
+                                        ->maxLength(70)
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('translations.en.meta_description')
-                                        ->label('Meta description (en)')
+                                        ->label('Meta Description (en)')
+                                        ->hint('Grey snippet under Google title. Optimal 120–160 chars.')
+                                        ->hintIcon('heroicon-o-magnifying-glass')
+                                        ->hintColor('info')
+                                        ->maxLength(160)
                                         ->rows(3)
                                         ->columnSpanFull(),
                                 ]),

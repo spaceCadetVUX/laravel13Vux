@@ -979,6 +979,7 @@ Mục tiêu: Controllers resolve đúng translation theo locale. Nếu chưa có
 
 File tạo: app/Http/Controllers/Web/ProductController.php
   public function show(string $locale, string $slug): Response
+  
   {
       $translation = ProductTranslation::where('locale', $locale)
                                        ->where('slug', $slug)

@@ -31,7 +31,8 @@
       "Bash(php -l app/Http/Controllers/Web/ProductController.php)",
       "Bash(php -l app/Http/Controllers/Web/CategoryController.php)",
       "Bash(php -l app/Http/Controllers/Web/BlogController.php)",
-      "Bash(php -l app/Http/Controllers/Web/PageController.php)"
+      "Bash(php -l app/Http/Controllers/Web/PageController.php)",
+      "Bash(grep -E \"\\\\.\\(php|sql\\)$\")"
     ]
   }
 }
