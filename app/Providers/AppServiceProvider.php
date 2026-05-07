@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Auth\EncryptedUserProvider;
+use App\Forms\Actions\MediaAttachFilesAction;
 use App\Models\Author;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
@@ -61,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
         $this->registerMorphMap();
         $this->registerEncryptedUserProvider();
         $this->registerObservers();
+        MediaAttachFilesAction::register();
     }
 
     // ── Encrypted user provider ───────────────────────────────────────────────

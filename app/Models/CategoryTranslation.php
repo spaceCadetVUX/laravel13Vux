@@ -13,8 +13,13 @@ class CategoryTranslation extends Model
         'name',
         'slug',
         'description',
+        'rich_content',
         'meta_title',
         'meta_description',
+        'og_title',
+        'og_description',
+        'twitter_title',
+        'twitter_description',
     ];
 
     public function category(): BelongsTo

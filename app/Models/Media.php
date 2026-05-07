@@ -12,7 +12,11 @@ class Media extends Model
         'model_type',
         'model_id',
         'collection',
+        'original_name',
+        'hash',
+        'title',
         'path',
+        'thumb_path',
         'disk',
         'mime_type',
         'size',
@@ -27,14 +31,31 @@ class Media extends Model
 
     // ── Computed attributes ───────────────────────────────────────────────────
 
-    /**
-     * Full public URL for the file using the configured disk.
-     * Supports any disk driver (local, s3, etc.).
-     */
     protected function url(): Attribute
     {
         return Attribute::make(
             get: fn () => Storage::disk($this->disk)->url($this->path),
         );
+    }
+
+    protected function thumbUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->thumb_path
+                ? Storage::disk($this->disk)->url($this->thumb_path)
+                : Storage::disk($this->disk)->url($this->path),
+        );
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    public function isImage(): bool
+    {
+        return str_starts_with($this->mime_type ?? '', 'image/');
+    }
+
+    public function isVideo(): bool
+    {
+        return str_starts_with($this->mime_type ?? '', 'video/');
     }
 }
