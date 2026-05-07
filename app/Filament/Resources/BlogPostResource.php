@@ -4,6 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Enums\BlogPostStatus;
 use App\Filament\Resources\BlogPostResource\Pages;
+use App\Forms\Components\MediaFileUpload;
+use App\Forms\Plugins\MediaRichEditorPlugin;
 use App\Models\Author;
 use App\Models\BlogPost;
 use App\Models\Seo\SeoMeta;
@@ -72,12 +74,11 @@ class BlogPostResource extends Resource
                                 ->columnSpanFull(),
 
                             Forms\Components\RichEditor::make('content')
+                                ->plugins([MediaRichEditorPlugin::make()])
                                 ->columnSpanFull(),
 
-                            Forms\Components\FileUpload::make('featured_image')
+                            MediaFileUpload::make('featured_image')
                                 ->label('Featured Image')
-                                ->disk('public')
-                                ->directory(fn () => 'blog/' . now()->format('Y/m'))
                                 ->image()
                                 ->nullable()
                                 ->columnSpanFull(),
@@ -195,11 +196,9 @@ class BlogPostResource extends Resource
                                 ->maxLength(160)
                                 ->columnSpanFull(),
 
-                            Forms\Components\FileUpload::make('seo_og_image')
+                            MediaFileUpload::make('seo_og_image')
                                 ->label('OG Image')
                                 ->helperText('Used when sharing on Facebook, Twitter, Zalo. Recommended size: 1200 × 630px. Defaults to the featured image if left blank.')
-                                ->disk('public')
-                                ->directory('seo/og')
                                 ->image()
                                 ->nullable()
                                 ->columnSpanFull(),
@@ -489,6 +488,7 @@ class BlogPostResource extends Resource
 
                                             Forms\Components\RichEditor::make('translations.vi.body')
                                                 ->label('Nội dung (vi)')
+                                                ->plugins([MediaRichEditorPlugin::make()])
                                                 ->columnSpanFull(),
 
                                             Forms\Components\TextInput::make('translations.vi.meta_title')
@@ -522,6 +522,7 @@ class BlogPostResource extends Resource
 
                                             Forms\Components\RichEditor::make('translations.en.body')
                                                 ->label('Body (en)')
+                                                ->plugins([MediaRichEditorPlugin::make()])
                                                 ->columnSpanFull(),
 
                                             Forms\Components\TextInput::make('translations.en.meta_title')
