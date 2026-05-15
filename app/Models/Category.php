@@ -31,7 +31,7 @@ class Category extends Model
 
     // ── PK config (bigint auto-increment — explicit for clarity) ─────────────
 
-    protected $keyType    = 'int';
+    protected $keyType    = 'string';
     public    $incrementing = true;
 
     // ── Mass assignment ───────────────────────────────────────────────────────

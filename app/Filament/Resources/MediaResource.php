@@ -44,13 +44,13 @@ class MediaResource extends Resource
             ->modifyQueryUsing(fn (Builder $query) => $query->latest())
             ->columns([
                 Stack::make([
-                    // Thumbnail — lazy loaded, falls back to original for non-thumb files
                     ImageColumn::make('thumb_path')
                         ->disk('public')
-                        ->height(160)
+                        ->height(180)
+                        ->extraAttributes(['style' => 'display:block;width:100%;overflow:hidden;line-height:0;'])
                         ->extraImgAttributes([
                             'loading' => 'lazy',
-                            'class'   => 'w-full h-40 object-cover rounded-t-lg',
+                            'style'   => 'width:100%;height:180px;object-fit:cover;display:block;',
                         ])
                         ->defaultImageUrl(fn (Media $record): ?string => $record->isImage()
                             ? Storage::disk('public')->url($record->path)
@@ -60,8 +60,10 @@ class MediaResource extends Resource
                     Panel::make([
                         TextColumn::make('display_name')
                             ->state(fn (Media $record): string => $record->title ?: $record->original_name)
-                            ->limit(28)
+                            ->limit(24)
                             ->weight(FontWeight::Medium)
+                            ->alignment(\Filament\Support\Enums\Alignment::Center)
+                            ->extraAttributes(['class' => 'truncate w-full text-center block'])
                             ->searchable(query: function (Builder $query, string $search): Builder {
                                 return $query->where(function (Builder $q) use ($search) {
                                     $q->where('title', 'like', "%{$search}%")
@@ -76,9 +78,10 @@ class MediaResource extends Resource
                                     : number_format($state / 1024, 1) . ' KB')
                                 : '—'
                             )
+                            ->alignment(\Filament\Support\Enums\Alignment::Center)
                             ->color('gray'),
-                    ]),
-                ]),
+                    ])->extraAttributes(['class' => 'px-3 py-2 space-y-0.5 text-center overflow-hidden']),
+                ])->extraAttributes(['class' => 'rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 h-full']),
             ])
             ->filters([
                 SelectFilter::make('type')
