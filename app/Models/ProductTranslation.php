@@ -16,6 +16,7 @@ class ProductTranslation extends Model
         'short_description',
         'description',
         'price',
+        'sale_price',
         'currency',
         'meta_title',
         'meta_description',
@@ -24,7 +25,8 @@ class ProductTranslation extends Model
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2',
+            'price'      => 'decimal:2',
+            'sale_price' => 'decimal:2',
         ];
     }
 

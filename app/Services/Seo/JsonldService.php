@@ -90,7 +90,7 @@ class JsonldService
                 continue;
             }
 
-            $resolved = $this->resolvePlaceholders($template->template ?? [], $model);
+            $resolved = $this->resolvePlaceholders($template->template ?? [], $model, $locale);
 
             // Model-specific enrichments applied after placeholder resolution.
             if ($morphAlias === 'product') {
@@ -185,9 +185,9 @@ class JsonldService
      * The prefix is intentionally ignored so the same resolver works for every
      * model type. Only the field name after the dot matters.
      */
-    public function resolvePlaceholders(array $template, Model $model): array
+    public function resolvePlaceholders(array $template, Model $model, string $locale = 'vi'): array
     {
-        $valueMap = $this->buildValueMap($model);
+        $valueMap = $this->buildValueMap($model, $locale);
 
         array_walk_recursive($template, function (mixed &$value) use ($valueMap): void {
             if (! is_string($value)) {
@@ -900,7 +900,7 @@ class JsonldService
      * Build a flat field→value map covering DB attributes and computed values
      * that templates reference but that don't exist as raw DB columns.
      */
-    private function buildValueMap(Model $model): array
+    private function buildValueMap(Model $model, string $locale = 'vi'): array
     {
         $morphAlias   = $model->getMorphClass();
         $baseUrl      = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
@@ -910,6 +910,23 @@ class JsonldService
 
         // Seed with all raw DB attributes (name, slug, sku, price, etc.)
         $map = $model->getAttributes();
+
+        // ── Locale-specific price / currency overrides (products only) ────────
+        // translation(locale) returns the row for the requested locale, falling
+        // back to vi. This ensures EN JSON-LD uses USD pricing, VI uses VND.
+        if ($morphAlias === 'product' && method_exists($model, 'translation')) {
+            $t = $model->translation($locale);
+            if ($t) {
+                if (filled($t->price))      { $map['price']      = (float) $t->price; }
+                if (filled($t->sale_price)) { $map['sale_price']  = (float) $t->sale_price; }
+                if (filled($t->currency))   { $map['currency']    = $t->currency; }
+                if (filled($t->name))       { $map['name']        = $t->name; }
+                if (filled($t->slug))       {
+                    $map['slug']         = $t->slug;
+                    $canonicalUrl        = $baseUrl . $pathPrefix . $t->slug;
+                }
+            }
+        }
 
         // ── Computed values ───────────────────────────────────────────────────
 
@@ -944,8 +961,8 @@ class JsonldService
             ? 'https://schema.org/InStock'
             : 'https://schema.org/OutOfStock';
 
-        // Product: currency — per-product field, fallback to VND
-        $map['price_currency'] = (string) ($model->getAttribute('currency') ?: config('seo.currency', 'VND'));
+        // Product: currency — locale-specific (overridden above for products), fallback to VND
+        $map['price_currency'] = (string) ($map['currency'] ?? $model->getAttribute('currency') ?: config('seo.currency', 'VND'));
 
         // Product: brand and manufacturer names (used as simple placeholders in template)
         if (method_exists($model, 'brand')) {

@@ -12,6 +12,16 @@ trait HasLlmsEntry
         return $this->morphMany(LlmsEntry::class, 'model', 'model_type', 'model_id');
     }
 
+    public function llmsEntriesVi(): MorphMany
+    {
+        return $this->llmsEntries()->where('locale', 'vi');
+    }
+
+    public function llmsEntriesEn(): MorphMany
+    {
+        return $this->llmsEntries()->where('locale', 'en');
+    }
+
     public function llmsEntry(string $locale = null): ?LlmsEntry
     {
         $locale ??= app()->getLocale();

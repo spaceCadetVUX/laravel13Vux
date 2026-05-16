@@ -13,12 +13,18 @@ trait HasSeoMeta
         return $this->morphMany(SeoMeta::class, 'model', 'model_type', 'model_id');
     }
 
-    // Filament bridge — scoped MorphOne for vi locale (used until ML-13/14 rebuilds forms)
     public function seoMetaVi(): MorphOne
     {
         return $this->morphOne(SeoMeta::class, 'model', 'model_type', 'model_id')
             ->where('locale', 'vi')
             ->withDefault(['locale' => 'vi']);
+    }
+
+    public function seoMetaEn(): MorphOne
+    {
+        return $this->morphOne(SeoMeta::class, 'model', 'model_type', 'model_id')
+            ->where('locale', 'en')
+            ->withDefault(['locale' => 'en']);
     }
 
     public function seoMeta(string $locale = null): ?SeoMeta

@@ -80,100 +80,192 @@ class ProductResource extends Resource
                                 ->nullable()
                                 ->native(false),
 
-                            Forms\Components\TextInput::make('name')
-                                ->required()
-                                ->live(debounce: 500)
-                                ->afterStateUpdated(fn (Set $set, ?string $state) =>
-                                    $set('slug', Str::slug($state ?? ''))
-                                )
-                                ->columnSpanFull(),
-
-                            Forms\Components\TextInput::make('slug')
-                                ->required()
-                                ->unique(table: Product::class, column: 'slug', ignoreRecord: true)
-                                ->rules(['regex:/^[a-z0-9]+(-[a-z0-9]+)*$/'])
-                                ->helperText('Chỉ dùng chữ thường, số và dấu gạch ngang. VD: ao-vest-nu-2026'),
-
                             Forms\Components\TextInput::make('sku')
                                 ->label('SKU')
                                 ->required()
                                 ->unique(table: Product::class, column: 'sku', ignoreRecord: true),
-
-                            Forms\Components\Textarea::make('short_description')
-                                ->rows(3)
-                                ->columnSpanFull(),
 
                             Forms\Components\Toggle::make('is_active')
                                 ->default(true),
                         ])
                         ->columns(2),
 
-                    // ── Tab 2: Pricing & Stock ────────────────────────────────
-                    Tab::make('Pricing & Stock')
+                    // ── Tab 2: Content ────────────────────────────────────────
+                    Tab::make('Content')
+                        ->icon('heroicon-o-language')
                         ->schema([
-                            Forms\Components\Select::make('currency')
-                                ->label('Currency')
-                                ->options([
-                                    'VND' => '🇻🇳 VND — Vietnamese Đồng',
-                                    'USD' => '🇺🇸 USD — US Dollar',
-                                    'EUR' => '🇪🇺 EUR — Euro',
-                                    'SGD' => '🇸🇬 SGD — Singapore Dollar',
-                                    'JPY' => '🇯🇵 JPY — Japanese Yen',
-                                    'KRW' => '🇰🇷 KRW — Korean Won',
-                                    'CNY' => '🇨🇳 CNY — Chinese Yuan',
-                                    'THB' => '🇹🇭 THB — Thai Baht',
+                            Tabs::make('LocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt (vi)')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('translations.vi.name')
+                                                ->label('Tên sản phẩm (vi)')
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(function ($state, Set $set) {
+                                                    $set('translations.vi.slug', Str::slug($state ?? ''));
+                                                    $set('name', $state);
+                                                    $set('slug', Str::slug($state ?? ''));
+                                                })
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.vi.slug')
+                                                ->label('Slug (vi)')
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) => $set('slug', $state))
+                                                ->helperText('Auto-generated from name. Must be unique per locale.')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.vi.short_description')
+                                                ->label('Mô tả ngắn (vi)')
+                                                ->rows(3)
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) => $set('short_description', $state))
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\RichEditor::make('translations.vi.description')
+                                                ->label('Mô tả đầy đủ (vi)')
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columns(2),
+
+                                    Tab::make('🇬🇧 English (en)')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('translations.en.name')
+                                                ->label('Product name (en)')
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) =>
+                                                    $set('translations.en.slug', Str::slug($state ?? '')))
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.en.slug')
+                                                ->label('Slug (en)')
+                                                ->helperText('Auto-generated from name. Must be unique per locale.')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.en.short_description')
+                                                ->label('Short description (en)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\RichEditor::make('translations.en.description')
+                                                ->label('Description (en)')
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columns(2),
                                 ])
-                                ->default('VND')
-                                ->native(false)
-                                ->required()
-                                ->hint('Used in JSON-LD schema (priceCurrency)')
-                                ->hintIcon('heroicon-o-code-bracket')
-                                ->hintColor('info')
-                                ->columnSpanFull(),
-
-                            Forms\Components\TextInput::make('price')
-                                ->numeric()
-                                ->prefix(fn ($get) => match($get('currency')) {
-                                    'USD' => '$',
-                                    'EUR' => '€',
-                                    'JPY', 'KRW' => '¥',
-                                    'CNY' => '¥',
-                                    'SGD' => 'S$',
-                                    'THB' => '฿',
-                                    default => '₫',
-                                })
-                                ->required(),
-
-                            Forms\Components\TextInput::make('sale_price')
-                                ->label('Sale Price')
-                                ->numeric()
-                                ->prefix(fn ($get) => match($get('currency')) {
-                                    'USD' => '$',
-                                    'EUR' => '€',
-                                    'JPY', 'KRW' => '¥',
-                                    'CNY' => '¥',
-                                    'SGD' => 'S$',
-                                    'THB' => '฿',
-                                    default => '₫',
-                                }),
-
-                            Forms\Components\TextInput::make('stock_quantity')
-                                ->numeric()
-                                ->required(),
-                        ])
-                        ->columns(2),
-
-                    // ── Tab 3: Description ────────────────────────────────────
-                    Tab::make('Description')
-                        ->schema([
-                            Forms\Components\RichEditor::make('description')
-                                ->fileAttachmentsDisk('public')
-                                ->fileAttachmentsDirectory('products/description')
-                                ->fileAttachmentsVisibility('public')
                                 ->columnSpanFull(),
                         ]),
 
-                    // ── Tab 4: Images ─────────────────────────────────────────
+                    // ── Tab 3: Pricing & Stock ────────────────────────────────
+                    Tab::make('Pricing & Stock')
+                        ->schema([
+
+                            Section::make('🇻🇳 Giá Việt Nam')
+                                ->schema([
+                                    Forms\Components\Select::make('translations.vi.currency')
+                                        ->label('Đơn vị tiền (vi)')
+                                        ->options([
+                                            'VND' => '🇻🇳 VND — Vietnamese Đồng',
+                                            'USD' => '🇺🇸 USD — US Dollar',
+                                            'EUR' => '🇪🇺 EUR — Euro',
+                                            'SGD' => '🇸🇬 SGD — Singapore Dollar',
+                                            'JPY' => '🇯🇵 JPY — Japanese Yen',
+                                            'KRW' => '🇰🇷 KRW — Korean Won',
+                                            'CNY' => '🇨🇳 CNY — Chinese Yuan',
+                                            'THB' => '🇹🇭 THB — Thai Baht',
+                                        ])
+                                        ->default('VND')
+                                        ->native(false)
+                                        ->required()
+                                        ->live()
+                                        ->hint('Dùng trong JSON-LD schema (priceCurrency)')
+                                        ->hintIcon('heroicon-o-code-bracket')
+                                        ->hintColor('info')
+                                        ->afterStateUpdated(fn ($state, Set $set) => $set('currency', $state))
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('translations.vi.price')
+                                        ->label('Giá (vi)')
+                                        ->numeric()
+                                        ->live(onBlur: true)
+                                        ->prefix(fn ($get) => match($get('translations.vi.currency')) {
+                                            'USD' => '$', 'EUR' => '€',
+                                            'JPY', 'KRW', 'CNY' => '¥',
+                                            'SGD' => 'S$', 'THB' => '฿',
+                                            default => '₫',
+                                        })
+                                        ->required()
+                                        ->afterStateUpdated(fn ($state, Set $set) => $set('price', $state)),
+
+                                    Forms\Components\TextInput::make('translations.vi.sale_price')
+                                        ->label('Giá khuyến mãi (vi)')
+                                        ->numeric()
+                                        ->live(onBlur: true)
+                                        ->prefix(fn ($get) => match($get('translations.vi.currency')) {
+                                            'USD' => '$', 'EUR' => '€',
+                                            'JPY', 'KRW', 'CNY' => '¥',
+                                            'SGD' => 'S$', 'THB' => '฿',
+                                            default => '₫',
+                                        })
+                                        ->afterStateUpdated(fn ($state, Set $set) => $set('sale_price', $state)),
+                                ])
+                                ->columns(2),
+
+                            Section::make('🇬🇧 English Pricing')
+                                ->schema([
+                                    Forms\Components\Select::make('translations.en.currency')
+                                        ->label('Currency (en)')
+                                        ->options([
+                                            'VND' => '🇻🇳 VND — Vietnamese Đồng',
+                                            'USD' => '🇺🇸 USD — US Dollar',
+                                            'EUR' => '🇪🇺 EUR — Euro',
+                                            'SGD' => '🇸🇬 SGD — Singapore Dollar',
+                                            'JPY' => '🇯🇵 JPY — Japanese Yen',
+                                            'KRW' => '🇰🇷 KRW — Korean Won',
+                                            'CNY' => '🇨🇳 CNY — Chinese Yuan',
+                                            'THB' => '🇹🇭 THB — Thai Baht',
+                                        ])
+                                        ->default('USD')
+                                        ->native(false)
+                                        ->live()
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('translations.en.price')
+                                        ->label('Price (en)')
+                                        ->numeric()
+                                        ->prefix(fn ($get) => match($get('translations.en.currency')) {
+                                            'EUR' => '€',
+                                            'JPY', 'KRW', 'CNY' => '¥',
+                                            'SGD' => 'S$', 'THB' => '฿',
+                                            'VND' => '₫',
+                                            default => '$',
+                                        }),
+
+                                    Forms\Components\TextInput::make('translations.en.sale_price')
+                                        ->label('Sale Price (en)')
+                                        ->numeric()
+                                        ->prefix(fn ($get) => match($get('translations.en.currency')) {
+                                            'EUR' => '€',
+                                            'JPY', 'KRW', 'CNY' => '¥',
+                                            'SGD' => 'S$', 'THB' => '฿',
+                                            'VND' => '₫',
+                                            default => '$',
+                                        }),
+                                ])
+                                ->columns(2),
+
+                            Section::make('Stock')
+                                ->schema([
+                                    Forms\Components\TextInput::make('stock_quantity')
+                                        ->label('Stock Quantity')
+                                        ->numeric()
+                                        ->required()
+                                        ->columnSpanFull(),
+                                ]),
+
+                        ]),
+
+                    // ── Tab 3: Images ─────────────────────────────────────────
                     Tab::make('Images')
                         ->schema([
                             Forms\Components\Repeater::make('images')
@@ -567,267 +659,519 @@ class ProductResource extends Resource
                     Tab::make('SEO')
                         ->icon('heroicon-o-magnifying-glass')
                         ->schema([
-                            Group::make()
-                                ->relationship('seoMetaVi')
-                                ->schema([
-                                    Section::make('Meta Tags')
+                            Tabs::make('SeoLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
                                         ->schema([
-                                            Forms\Components\TextInput::make('meta_title')
-                                                ->label('Meta Title')
-                                                ->live(debounce: 400)
-                                                ->placeholder('Auto-filled from product name')
-                                                ->hint(fn (?string $state): string => self::charCounter($state, 50, 70))
-                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 50, 70))
-                                                ->helperText('Optimal: 50–70 chars. Longer titles are truncated in search results.')
-                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                                    if (empty($state) && $livewire->record?->name) {
-                                                        $set('meta_title', $livewire->record->name);
-                                                    }
-                                                })
-                                                ->columnSpanFull(),
+                                            Group::make()
+                                                ->relationship('seoMetaVi')
+                                                ->schema([
+                                                    Section::make('Meta Tags')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('meta_title')
+                                                                ->label('Meta Title (vi)')
+                                                                ->live(debounce: 400)
+                                                                ->placeholder('Tự điền từ tên sản phẩm')
+                                                                ->hint(fn (?string $state): string => self::charCounter($state, 50, 70))
+                                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 50, 70))
+                                                                ->helperText('Tối ưu: 50–70 ký tự.')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state) && $livewire->record?->name) {
+                                                                        $set('meta_title', $livewire->record->name);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\Textarea::make('meta_description')
-                                                ->label('Meta Description')
-                                                ->rows(3)
-                                                ->live(debounce: 400)
-                                                ->hint(fn (?string $state): string => self::charCounter($state, 120, 160))
-                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 120, 160))
-                                                ->helperText('Optimal: 120–160 chars. Google truncates at ~160.')
-                                                ->columnSpanFull(),
+                                                            Forms\Components\Textarea::make('meta_description')
+                                                                ->label('Meta Description (vi)')
+                                                                ->rows(3)
+                                                                ->live(debounce: 400)
+                                                                ->hint(fn (?string $state): string => self::charCounter($state, 120, 160))
+                                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 120, 160))
+                                                                ->helperText('Tối ưu: 120–160 ký tự.')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $short = $livewire->record?->translation('vi')?->short_description;
+                                                                        if ($short) {
+                                                                            $set('meta_description', $short);
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\TextInput::make('meta_keywords')
-                                                ->label('Meta Keywords')
-                                                ->helperText('Comma separated')
-                                                ->columnSpanFull(),
+                                                            Forms\Components\TextInput::make('meta_keywords')
+                                                                ->label('Meta Keywords (vi)')
+                                                                ->helperText('Phân cách bằng dấu phẩy')
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\TextInput::make('canonical_url')
-                                                ->label('Canonical URL')
-                                                ->url()
-                                                ->placeholder('Auto-generated from slug')
-                                                ->hint('Auto-generated from slug')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->helperText('Leave blank to auto-generate from product slug.')
-                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                                    if (empty($state) && $livewire->record?->slug) {
-                                                        $set('canonical_url', url('/products/' . $livewire->record->slug));
-                                                    }
-                                                })
-                                                ->columnSpanFull(),
+                                                            Forms\Components\TextInput::make('canonical_url')
+                                                                ->label('Canonical URL (vi)')
+                                                                ->url()
+                                                                ->placeholder('Tự tạo từ slug (vi)')
+                                                                ->hint('Tự tạo từ slug (vi)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $slug = $livewire->record?->translation('vi')?->slug ?? $livewire->record?->slug;
+                                                                        if ($slug) {
+                                                                            $set('canonical_url', url('/products/' . $slug));
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\Select::make('robots')
-                                                ->label('Robots')
-                                                ->options([
-                                                    'index, follow'     => 'index, follow (default)',
-                                                    'noindex, follow'   => 'noindex, follow',
-                                                    'index, nofollow'   => 'index, nofollow',
-                                                    'noindex, nofollow' => 'noindex, nofollow',
-                                                ])
-                                                ->default('index, follow')
-                                                ->native(false),
-                                        ])
-                                        ->columns(2),
+                                                            Forms\Components\Select::make('robots')
+                                                                ->label('Robots')
+                                                                ->options([
+                                                                    'index, follow'     => 'index, follow (default)',
+                                                                    'noindex, follow'   => 'noindex, follow',
+                                                                    'index, nofollow'   => 'index, nofollow',
+                                                                    'noindex, nofollow' => 'noindex, nofollow',
+                                                                ])
+                                                                ->default('index, follow')
+                                                                ->native(false),
+                                                        ])
+                                                        ->columns(2),
 
-                                    Section::make('Open Graph (Facebook / LinkedIn)')
+                                                    Section::make('Open Graph (vi)')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('og_title')
+                                                                ->label('OG Title (vi)')
+                                                                ->placeholder('Tự điền từ Meta Title (vi)')
+                                                                ->hint('Tự điền từ Meta Title (vi)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $set('og_title', $record?->meta_title
+                                                                            ?? $livewire->record?->translation('vi')?->name
+                                                                            ?? $livewire->record?->name);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('og_description')
+                                                                ->label('OG Description (vi)')
+                                                                ->rows(2)
+                                                                ->placeholder('Tự điền từ Meta Description (vi)')
+                                                                ->hint('Tự điền từ Meta Description (vi)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record): void {
+                                                                    if (empty($state) && $record?->meta_description) {
+                                                                        $set('og_description', $record->meta_description);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\TextInput::make('og_image')
+                                                                ->label('OG Image URL')
+                                                                ->url()
+                                                                ->placeholder('Tự điền từ ảnh đầu tiên')
+                                                                ->hint('Tự điền từ ảnh đầu tiên')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->helperText('Khuyến nghị: 1200×630px.')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $firstImage = $livewire->record?->images()->orderBy('sort_order')->first();
+                                                                        if ($firstImage?->path) {
+                                                                            $set('og_image', Storage::disk('public')->url($firstImage->path));
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Select::make('og_type')
+                                                                ->label('OG Type')
+                                                                ->options(collect(OgType::cases())->mapWithKeys(
+                                                                    fn (OgType $case) => [$case->value => $case->value]
+                                                                ))
+                                                                ->default(OgType::Product->value)
+                                                                ->native(false),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->collapsed(),
+
+                                                    Section::make('Twitter Card (vi)')
+                                                        ->schema([
+                                                            Forms\Components\Select::make('twitter_card')
+                                                                ->label('Card Type')
+                                                                ->options([
+                                                                    'summary'             => 'Summary',
+                                                                    'summary_large_image' => 'Summary Large Image',
+                                                                ])
+                                                                ->default('summary_large_image')
+                                                                ->native(false),
+
+                                                            Forms\Components\TextInput::make('twitter_title')
+                                                                ->label('Twitter Title (vi)')
+                                                                ->placeholder('Tự điền từ Meta Title (vi)')
+                                                                ->hint('Tự điền từ Meta Title (vi)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $set('twitter_title', $record?->meta_title
+                                                                            ?? $livewire->record?->translation('vi')?->name
+                                                                            ?? $livewire->record?->name);
+                                                                    }
+                                                                }),
+
+                                                            Forms\Components\Textarea::make('twitter_description')
+                                                                ->label('Twitter Description (vi)')
+                                                                ->rows(2)
+                                                                ->placeholder('Tự điền từ Meta Description (vi)')
+                                                                ->hint('Tự điền từ Meta Description (vi)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record): void {
+                                                                    if (empty($state) && $record?->meta_description) {
+                                                                        $set('twitter_description', $record->meta_description);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->collapsed(),
+                                                ]),
+                                        ]),
+
+                                    Tab::make('🇬🇧 English')
                                         ->schema([
-                                            Forms\Components\TextInput::make('og_title')
-                                                ->label('OG Title')
-                                                ->placeholder('Auto-filled from product name')
-                                                ->hint('Auto-filled from product name')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                                    if (empty($state) && $livewire->record?->name) {
-                                                        $set('og_title', $livewire->record->name);
-                                                    }
-                                                })
-                                                ->columnSpanFull(),
+                                            Group::make()
+                                                ->relationship('seoMetaEn')
+                                                ->schema([
+                                                    Section::make('Meta Tags')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('meta_title')
+                                                                ->label('Meta Title (en)')
+                                                                ->live(debounce: 400)
+                                                                ->placeholder('Auto-filled from product name')
+                                                                ->hint(fn (?string $state): string => self::charCounter($state, 50, 70))
+                                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 50, 70))
+                                                                ->helperText('Optimal: 50–70 chars.')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $name = $livewire->record?->translation('en')?->name ?? $livewire->record?->name;
+                                                                        if ($name) {
+                                                                            $set('meta_title', $name);
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\Textarea::make('og_description')
-                                                ->label('OG Description')
-                                                ->rows(2)
-                                                ->placeholder('Auto-filled from meta description')
-                                                ->hint('Auto-filled from meta description')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->afterStateHydrated(function ($state, $set, $record): void {
-                                                    // $record = SeoMeta (child model inside relationship group)
-                                                    if (empty($state) && $record?->meta_description) {
-                                                        $set('og_description', $record->meta_description);
-                                                    }
-                                                })
-                                                ->columnSpanFull(),
+                                                            Forms\Components\Textarea::make('meta_description')
+                                                                ->label('Meta Description (en)')
+                                                                ->rows(3)
+                                                                ->live(debounce: 400)
+                                                                ->hint(fn (?string $state): string => self::charCounter($state, 120, 160))
+                                                                ->hintColor(fn (?string $state): string => self::charCounterColor($state, 120, 160))
+                                                                ->helperText('Optimal: 120–160 chars.')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $short = $livewire->record?->translation('en')?->short_description;
+                                                                        if ($short) {
+                                                                            $set('meta_description', $short);
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\TextInput::make('og_image')
-                                                ->label('OG Image URL')
-                                                ->url()
-                                                ->placeholder('Auto-filled from first product image')
-                                                ->hint('Auto-filled from first product image')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->helperText('Recommended: 1200×630px. Leave blank to auto-use the first product image.')
-                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                                    if (empty($state)) {
-                                                        // $livewire->record = Product (parent model)
-                                                        $firstImage = $livewire->record?->images()->orderBy('sort_order')->first();
-                                                        if ($firstImage?->path) {
-                                                            $set('og_image', Storage::disk('public')->url($firstImage->path));
-                                                        }
-                                                    }
-                                                })
-                                                ->columnSpanFull(),
+                                                            Forms\Components\TextInput::make('meta_keywords')
+                                                                ->label('Meta Keywords (en)')
+                                                                ->helperText('Comma separated')
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\Select::make('og_type')
-                                                ->label('OG Type')
-                                                ->options(collect(OgType::cases())->mapWithKeys(
-                                                    fn (OgType $case) => [$case->value => $case->value]
-                                                ))
-                                                ->default(OgType::Product->value)
-                                                ->native(false),
-                                        ])
-                                        ->columns(2)
-                                        ->collapsed(),
+                                                            Forms\Components\TextInput::make('canonical_url')
+                                                                ->label('Canonical URL (en)')
+                                                                ->url()
+                                                                ->placeholder('Auto-generated from slug')
+                                                                ->hint('Auto-generated from slug')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $slug = $livewire->record?->translation('en')?->slug ?? $livewire->record?->slug;
+                                                                        if ($slug) {
+                                                                            $set('canonical_url', url('/products/' . $slug));
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                    Section::make('Twitter Card')
-                                        ->schema([
-                                            Forms\Components\Select::make('twitter_card')
-                                                ->label('Card Type')
-                                                ->options([
-                                                    'summary'             => 'Summary',
-                                                    'summary_large_image' => 'Summary Large Image',
-                                                ])
-                                                ->default('summary_large_image')
-                                                ->native(false),
+                                                            Forms\Components\Select::make('robots')
+                                                                ->label('Robots')
+                                                                ->options([
+                                                                    'index, follow'     => 'index, follow (default)',
+                                                                    'noindex, follow'   => 'noindex, follow',
+                                                                    'index, nofollow'   => 'index, nofollow',
+                                                                    'noindex, nofollow' => 'noindex, nofollow',
+                                                                ])
+                                                                ->default('index, follow')
+                                                                ->native(false),
+                                                        ])
+                                                        ->columns(2),
 
-                                            Forms\Components\TextInput::make('twitter_title')
-                                                ->label('Twitter Title')
-                                                ->placeholder('Auto-filled from product name')
-                                                ->hint('Auto-filled from product name')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
-                                                    if (empty($state) && $livewire->record?->name) {
-                                                        $set('twitter_title', $livewire->record->name);
-                                                    }
-                                                }),
+                                                    Section::make('Open Graph (en)')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('og_title')
+                                                                ->label('OG Title (en)')
+                                                                ->placeholder('Auto-filled from Meta Title (en)')
+                                                                ->hint('Auto-filled from Meta Title (en)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $set('og_title', $record?->meta_title
+                                                                            ?? $livewire->record?->translation('en')?->name
+                                                                            ?? $livewire->record?->name);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
 
-                                            Forms\Components\Textarea::make('twitter_description')
-                                                ->label('Twitter Description')
-                                                ->rows(2)
-                                                ->placeholder('Auto-filled from meta description')
-                                                ->hint('Auto-filled from meta description')
-                                                ->hintIcon('heroicon-o-sparkles')
-                                                ->hintColor('info')
-                                                ->afterStateHydrated(function ($state, $set, $record): void {
-                                                    // $record = SeoMeta (child model inside relationship group)
-                                                    if (empty($state) && $record?->meta_description) {
-                                                        $set('twitter_description', $record->meta_description);
-                                                    }
-                                                })
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->columns(2)
-                                        ->collapsed(),
-                                ]),
+                                                            Forms\Components\Textarea::make('og_description')
+                                                                ->label('OG Description (en)')
+                                                                ->rows(2)
+                                                                ->placeholder('Auto-filled from Meta Description (en)')
+                                                                ->hint('Auto-filled from Meta Description (en)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record): void {
+                                                                    if (empty($state) && $record?->meta_description) {
+                                                                        $set('og_description', $record->meta_description);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\TextInput::make('og_image')
+                                                                ->label('OG Image URL')
+                                                                ->url()
+                                                                ->placeholder('Auto-filled from first product image')
+                                                                ->hint('Auto-filled from first product image')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->helperText('Recommended: 1200×630px.')
+                                                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $firstImage = $livewire->record?->images()->orderBy('sort_order')->first();
+                                                                        if ($firstImage?->path) {
+                                                                            $set('og_image', Storage::disk('public')->url($firstImage->path));
+                                                                        }
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Select::make('og_type')
+                                                                ->label('OG Type')
+                                                                ->options(collect(OgType::cases())->mapWithKeys(
+                                                                    fn (OgType $case) => [$case->value => $case->value]
+                                                                ))
+                                                                ->default(OgType::Product->value)
+                                                                ->native(false),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->collapsed(),
+
+                                                    Section::make('Twitter Card (en)')
+                                                        ->schema([
+                                                            Forms\Components\Select::make('twitter_card')
+                                                                ->label('Card Type')
+                                                                ->options([
+                                                                    'summary'             => 'Summary',
+                                                                    'summary_large_image' => 'Summary Large Image',
+                                                                ])
+                                                                ->default('summary_large_image')
+                                                                ->native(false),
+
+                                                            Forms\Components\TextInput::make('twitter_title')
+                                                                ->label('Twitter Title (en)')
+                                                                ->placeholder('Auto-filled from Meta Title (en)')
+                                                                ->hint('Auto-filled from Meta Title (en)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                                    if (empty($state)) {
+                                                                        $set('twitter_title', $record?->meta_title
+                                                                            ?? $livewire->record?->translation('en')?->name
+                                                                            ?? $livewire->record?->name);
+                                                                    }
+                                                                }),
+
+                                                            Forms\Components\Textarea::make('twitter_description')
+                                                                ->label('Twitter Description (en)')
+                                                                ->rows(2)
+                                                                ->placeholder('Auto-filled from Meta Description (en)')
+                                                                ->hint('Auto-filled from Meta Description (en)')
+                                                                ->hintIcon('heroicon-o-sparkles')
+                                                                ->hintColor('info')
+                                                                ->afterStateHydrated(function ($state, $set, $record): void {
+                                                                    if (empty($state) && $record?->meta_description) {
+                                                                        $set('twitter_description', $record->meta_description);
+                                                                    }
+                                                                })
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->collapsed(),
+                                                ]),
+                                        ]),
+                                ])
+                                ->columnSpanFull(),
                         ]),
 
                     // ── Tab 7: GEO / AI ───────────────────────────────────────
                     Tab::make('GEO / AI')
                         ->icon('heroicon-o-cpu-chip')
                         ->schema([
-                            Group::make()
-                                ->relationship('geoProfileVi')
-                                ->schema([
-                                    Section::make('AI Context')
-                                        ->description('Used by ChatGPT, Gemini, Perplexity when answering questions about this product.')
+                            Tabs::make('GeoLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
                                         ->schema([
-                                            Forms\Components\Textarea::make('ai_summary')
-                                                ->label('AI Summary')
-                                                ->rows(4)
-                                                ->helperText('2–4 sentences describing this product for AI engines. Shown first in llms.txt.')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('use_cases')
-                                                ->label('Use Cases')
-                                                ->rows(3)
-                                                ->placeholder('e.g. Indoor accent lighting, museum displays, retail shelving')
-                                                ->helperText('When / where should this product be used?'),
-
-                                            Forms\Components\TextInput::make('target_audience')
-                                                ->label('Target Audience')
-                                                ->maxLength(255)
-                                                ->placeholder('e.g. Lighting designers, electrical contractors')
-                                                ->helperText('Who is this product for? (max 255 chars)'),
-
-                                            Forms\Components\Textarea::make('llm_context_hint')
-                                                ->label('LLM Context Hint')
-                                                ->rows(2)
-                                                ->placeholder('e.g. Competes with Philips Hue, CE/RoHS certified, not waterproof')
-                                                ->helperText('Extra context for AI: certifications, competitor comparisons, caveats.')
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->columns(2),
-
-                                    Section::make('Key Facts')
-                                        ->description('Structured facts for AI engines — certifications, compliance, key selling points.')
-                                        ->schema([
-                                            Placeholder::make('key_facts_hint')
-                                                ->label('')
-                                                ->content(new HtmlString('
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                        💡 <strong>Do not duplicate</strong> technical specs already in the <strong>Attributes</strong> tab — Google reads those via JSON-LD automatically.<br>
-                                                        Use Key Facts for AI-only context: certifications (CE, RoHS, IP67), warranty terms, compliance standards, competitor comparisons, or important caveats.
-                                                    </p>
-                                                '))
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\KeyValue::make('key_facts')
-                                                ->label('')
-                                                ->keyLabel('Fact')
-                                                ->valueLabel('Value')
-                                                ->keyPlaceholder('e.g. Certification')
-                                                ->valuePlaceholder('e.g. CE / RoHS')
-                                                ->addActionLabel('+ Add fact')
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->collapsed(),
-
-                                    Section::make('FAQ')
-                                        ->description('Frequently asked questions — injected into JSON-LD FAQPage schema and llms.txt.')
-                                        ->schema([
-                                            Placeholder::make('faq_hint')
-                                                ->label('')
-                                                ->content(new HtmlString('
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                        ⚠️ <strong>Google recommends ≤ 10 FAQ items</strong> for rich results eligibility.
-                                                        Each Q&A will appear in the FAQPage JSON-LD schema and in the AI document file.
-                                                    </p>
-                                                '))
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Repeater::make('faq')
-                                                ->label('')
+                                            Group::make()
+                                                ->relationship('geoProfileVi')
                                                 ->schema([
-                                                    Forms\Components\TextInput::make('question')
-                                                        ->label('Question')
-                                                        ->placeholder('e.g. Is this product waterproof?')
-                                                        ->required()
-                                                        ->columnSpanFull(),
+                                                    Section::make('AI Context (vi)')
+                                                        ->description('Dùng bởi ChatGPT, Gemini, Perplexity khi trả lời về sản phẩm này.')
+                                                        ->schema([
+                                                            Forms\Components\Textarea::make('ai_summary')
+                                                                ->label('AI Summary (vi)')
+                                                                ->rows(4)
+                                                                ->helperText('2–4 câu mô tả sản phẩm cho AI. Hiển thị đầu tiên trong llms.txt.')
+                                                                ->columnSpanFull(),
 
-                                                    Forms\Components\Textarea::make('answer')
-                                                        ->label('Answer')
-                                                        ->rows(2)
-                                                        ->placeholder('e.g. No, it is rated IP40 — suitable for dry indoor use only.')
-                                                        ->required()
-                                                        ->columnSpanFull(),
-                                                ])
-                                                ->maxItems(10)
-                                                ->defaultItems(0)
-                                                ->addActionLabel('+ Add Q&A')
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->collapsed(),
-                                ]),
+                                                            Forms\Components\Textarea::make('use_cases')
+                                                                ->label('Use Cases (vi)')
+                                                                ->rows(3)
+                                                                ->placeholder('vd: Chiếu sáng nội thất, trưng bày bảo tàng, kệ bán lẻ'),
+
+                                                            Forms\Components\TextInput::make('target_audience')
+                                                                ->label('Target Audience (vi)')
+                                                                ->maxLength(255)
+                                                                ->placeholder('vd: Nhà thiết kế chiếu sáng, nhà thầu điện'),
+
+                                                            Forms\Components\Textarea::make('llm_context_hint')
+                                                                ->label('LLM Context Hint (vi)')
+                                                                ->rows(2)
+                                                                ->placeholder('vd: Cạnh tranh với Philips Hue, đạt CE/RoHS, không chống nước')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->columns(2),
+
+                                                    Section::make('Key Facts (vi)')
+                                                        ->description('Thông tin cấu trúc cho AI — chứng nhận, tiêu chuẩn, điểm bán hàng.')
+                                                        ->schema([
+                                                            Forms\Components\KeyValue::make('key_facts')
+                                                                ->label('')
+                                                                ->keyLabel('Thông tin')
+                                                                ->valueLabel('Giá trị')
+                                                                ->keyPlaceholder('vd: Chứng nhận')
+                                                                ->valuePlaceholder('vd: CE / RoHS')
+                                                                ->addActionLabel('+ Thêm thông tin')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->collapsed(),
+
+                                                    Section::make('FAQ (vi)')
+                                                        ->description('Câu hỏi thường gặp — đưa vào JSON-LD FAQPage và llms.txt.')
+                                                        ->schema([
+                                                            Forms\Components\Repeater::make('faq')
+                                                                ->label('')
+                                                                ->schema([
+                                                                    Forms\Components\TextInput::make('question')
+                                                                        ->label('Câu hỏi')
+                                                                        ->required()
+                                                                        ->columnSpanFull(),
+
+                                                                    Forms\Components\Textarea::make('answer')
+                                                                        ->label('Trả lời')
+                                                                        ->rows(2)
+                                                                        ->required()
+                                                                        ->columnSpanFull(),
+                                                                ])
+                                                                ->maxItems(10)
+                                                                ->defaultItems(0)
+                                                                ->addActionLabel('+ Thêm Q&A')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->collapsed(),
+                                                ]),
+                                        ]),
+
+                                    Tab::make('🇬🇧 English')
+                                        ->schema([
+                                            Group::make()
+                                                ->relationship('geoProfileEn')
+                                                ->schema([
+                                                    Section::make('AI Context (en)')
+                                                        ->description('Used by ChatGPT, Gemini, Perplexity when answering questions about this product.')
+                                                        ->schema([
+                                                            Forms\Components\Textarea::make('ai_summary')
+                                                                ->label('AI Summary (en)')
+                                                                ->rows(4)
+                                                                ->helperText('2–4 sentences describing this product for AI engines. Shown first in llms.txt.')
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('use_cases')
+                                                                ->label('Use Cases (en)')
+                                                                ->rows(3)
+                                                                ->placeholder('e.g. Indoor accent lighting, museum displays, retail shelving'),
+
+                                                            Forms\Components\TextInput::make('target_audience')
+                                                                ->label('Target Audience (en)')
+                                                                ->maxLength(255)
+                                                                ->placeholder('e.g. Lighting designers, electrical contractors'),
+
+                                                            Forms\Components\Textarea::make('llm_context_hint')
+                                                                ->label('LLM Context Hint (en)')
+                                                                ->rows(2)
+                                                                ->placeholder('e.g. Competes with Philips Hue, CE/RoHS certified, not waterproof')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->columns(2),
+
+                                                    Section::make('Key Facts (en)')
+                                                        ->description('Structured facts for AI engines — certifications, compliance, key selling points.')
+                                                        ->schema([
+                                                            Forms\Components\KeyValue::make('key_facts')
+                                                                ->label('')
+                                                                ->keyLabel('Fact')
+                                                                ->valueLabel('Value')
+                                                                ->keyPlaceholder('e.g. Certification')
+                                                                ->valuePlaceholder('e.g. CE / RoHS')
+                                                                ->addActionLabel('+ Add fact')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->collapsed(),
+
+                                                    Section::make('FAQ (en)')
+                                                        ->description('Frequently asked questions — injected into JSON-LD FAQPage schema and llms.txt.')
+                                                        ->schema([
+                                                            Forms\Components\Repeater::make('faq')
+                                                                ->label('')
+                                                                ->schema([
+                                                                    Forms\Components\TextInput::make('question')
+                                                                        ->label('Question')
+                                                                        ->required()
+                                                                        ->columnSpanFull(),
+
+                                                                    Forms\Components\Textarea::make('answer')
+                                                                        ->label('Answer')
+                                                                        ->rows(2)
+                                                                        ->required()
+                                                                        ->columnSpanFull(),
+                                                                ])
+                                                                ->maxItems(10)
+                                                                ->defaultItems(0)
+                                                                ->addActionLabel('+ Add Q&A')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->collapsed(),
+                                                ]),
+                                        ]),
+                                ])
+                                ->columnSpanFull(),
                         ]),
 
                     // ── Tab 8: LLMs ───────────────────────────────────────────
@@ -835,7 +1179,6 @@ class ProductResource extends Resource
                         ->icon('heroicon-o-document-text')
                         ->schema([
 
-                            // ── Source of truth notice ────────────────────────
                             Section::make('How LLMs entries work')
                                 ->schema([
                                     Placeholder::make('llms_source_hint')
@@ -853,98 +1196,121 @@ class ProductResource extends Resource
                                 ->collapsed()
                                 ->collapsible(),
 
-                            // ── Entry preview cards ───────────────────────────
-                            Forms\Components\Repeater::make('llmsEntries')
-                                ->relationship()
-                                ->label('Published Entries')
-                                ->schema([
+                            Tabs::make('LlmsLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('llmsEntriesVi')
+                                                ->relationship()
+                                                ->label('Entries (vi)')
+                                                ->schema([
+                                                    Placeholder::make('llms_preview')
+                                                        ->label('Preview (llms.txt output)')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record) {
+                                                                return new HtmlString('<em class="text-gray-400">Not generated yet — save the product to trigger sync.</em>');
+                                                            }
+                                                            $lines   = [];
+                                                            $lines[] = '## ' . e($record->title);
+                                                            $lines[] = 'URL: ' . e($record->url);
+                                                            if (filled($record->summary)) { $lines[] = ''; $lines[] = 'Summary: ' . e($record->summary); }
+                                                            if (filled($record->key_facts_text)) { $lines[] = ''; $lines[] = 'Key Facts:'; $lines[] = e($record->key_facts_text); }
+                                                            if (filled($record->faq_text)) { $lines[] = ''; $lines[] = 'FAQ:'; $lines[] = e($record->faq_text); }
+                                                            return new HtmlString('<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;color:#334155;">' . implode("\n", $lines) . '</pre>');
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label('Published to llms.txt')
+                                                        ->helperText('Toggle off to exclude this entry from the AI document.')
+                                                        ->inline(false),
+                                                    Placeholder::make('updated_at')
+                                                        ->label('Last synced')
+                                                        ->content(fn ($record) => $record?->updated_at
+                                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                                            : '—'
+                                                        ),
+                                                ])
+                                                ->addable(false)
+                                                ->deletable(false)
+                                                ->reorderable(false)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
 
-                                    // Preview — read-only block of what appears in llms.txt
-                                    Placeholder::make('llms_preview')
-                                        ->label('Preview (llms.txt output)')
-                                        ->content(function ($record): HtmlString {
-                                            if (! $record) {
-                                                return new HtmlString('<em class="text-gray-400">Not generated yet — save the product to trigger sync.</em>');
-                                            }
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_llms_vi')
+                                                    ->label('Regenerate vi')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate LLMs Entry (vi)')
+                                                    ->modalDescription('This will re-pull data from GEO/AI (vi) tab and overwrite the current entry. Proceed?')
+                                                    ->action(function ($livewire): void {
+                                                        $product = $livewire->record;
+                                                        if (! $product?->exists) { return; }
+                                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product, 'vi');
+                                                        Notification::make()->title('LLMs entry (vi) regenerated')->success()->send();
+                                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
+                                                    }),
+                                            ]),
+                                        ]),
 
-                                            $lines   = [];
-                                            $lines[] = '## ' . e($record->title);
-                                            $lines[] = 'URL: ' . e($record->url);
+                                    Tab::make('🇬🇧 English')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('llmsEntriesEn')
+                                                ->relationship()
+                                                ->label('Entries (en)')
+                                                ->schema([
+                                                    Placeholder::make('llms_preview')
+                                                        ->label('Preview (llms.txt output)')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record) {
+                                                                return new HtmlString('<em class="text-gray-400">Not generated yet — save the product to trigger sync.</em>');
+                                                            }
+                                                            $lines   = [];
+                                                            $lines[] = '## ' . e($record->title);
+                                                            $lines[] = 'URL: ' . e($record->url);
+                                                            if (filled($record->summary)) { $lines[] = ''; $lines[] = 'Summary: ' . e($record->summary); }
+                                                            if (filled($record->key_facts_text)) { $lines[] = ''; $lines[] = 'Key Facts:'; $lines[] = e($record->key_facts_text); }
+                                                            if (filled($record->faq_text)) { $lines[] = ''; $lines[] = 'FAQ:'; $lines[] = e($record->faq_text); }
+                                                            return new HtmlString('<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;color:#334155;">' . implode("\n", $lines) . '</pre>');
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label('Published to llms.txt')
+                                                        ->helperText('Toggle off to exclude this entry from the AI document.')
+                                                        ->inline(false),
+                                                    Placeholder::make('updated_at')
+                                                        ->label('Last synced')
+                                                        ->content(fn ($record) => $record?->updated_at
+                                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                                            : '—'
+                                                        ),
+                                                ])
+                                                ->addable(false)
+                                                ->deletable(false)
+                                                ->reorderable(false)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
 
-                                            if (filled($record->summary)) {
-                                                $lines[] = '';
-                                                $lines[] = 'Summary: ' . e($record->summary);
-                                            }
-
-                                            if (filled($record->key_facts_text)) {
-                                                $lines[] = '';
-                                                $lines[] = 'Key Facts:';
-                                                $lines[] = e($record->key_facts_text);
-                                            }
-
-                                            if (filled($record->faq_text)) {
-                                                $lines[] = '';
-                                                $lines[] = 'FAQ:';
-                                                $lines[] = e($record->faq_text);
-                                            }
-
-                                            $content = implode("\n", $lines);
-
-                                            return new HtmlString(
-                                                '<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;color:#334155;">'
-                                                . $content
-                                                . '</pre>'
-                                            );
-                                        })
-                                        ->columnSpanFull(),
-
-                                    // Only 2 admin-controlled fields
-                                    Forms\Components\Toggle::make('is_active')
-                                        ->label('Published to llms.txt')
-                                        ->helperText('Toggle off to exclude this entry from the AI document.')
-                                        ->inline(false),
-
-                                    Placeholder::make('updated_at')
-                                        ->label('Last synced')
-                                        ->content(fn ($record) => $record?->updated_at
-                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
-                                            : '—'
-                                        ),
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_llms_en')
+                                                    ->label('Regenerate en')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate LLMs Entry (en)')
+                                                    ->modalDescription('This will re-pull data from GEO/AI (en) tab and overwrite the current entry. Proceed?')
+                                                    ->action(function ($livewire): void {
+                                                        $product = $livewire->record;
+                                                        if (! $product?->exists) { return; }
+                                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product, 'en');
+                                                        Notification::make()->title('LLMs entry (en) regenerated')->success()->send();
+                                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
+                                                    }),
+                                            ]),
+                                        ]),
                                 ])
-                                ->addable(false)
-                                ->deletable(false)
-                                ->reorderable(false)
-                                ->defaultItems(0)
                                 ->columnSpanFull(),
-
-                            // ── Regenerate action ─────────────────────────────
-                            \Filament\Schemas\Components\Actions::make([
-                                \Filament\Actions\Action::make('regenerate_llms')
-                                    ->label('Regenerate')
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->color('gray')
-                                    ->requiresConfirmation()
-                                    ->modalHeading('Regenerate LLMs Entry')
-                                    ->modalDescription('This will re-pull data from GEO/AI tab and overwrite the current entry. Proceed?')
-                                    ->action(function ($livewire): void {
-                                        $product = $livewire->record;
-
-                                        if (! $product?->exists) {
-                                            return;
-                                        }
-
-                                        // Run synchronously — no queue worker needed, result visible immediately.
-                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product);
-
-                                        Notification::make()
-                                            ->title('LLMs entry regenerated')
-                                            ->body('The entry has been updated successfully.')
-                                            ->success()
-                                            ->send();
-
-                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
-                                    }),
-                            ]),
                         ]),
 
                     // ── Tab 9: JSON-LD ────────────────────────────────────────
@@ -952,7 +1318,6 @@ class ProductResource extends Resource
                         ->icon('heroicon-o-code-bracket')
                         ->schema([
 
-                            // ── Info notice ───────────────────────────────────
                             Section::make('How JSON-LD schemas work')
                                 ->schema([
                                     Placeholder::make('jsonld_info')
@@ -960,7 +1325,7 @@ class ProductResource extends Resource
                                         ->content(new HtmlString('
                                             <ul class="list-disc pl-5 space-y-1 text-sm text-gray-600 dark:text-gray-400">
                                                 <li>Schemas marked <strong>Auto</strong> are regenerated every time this product is saved — do not manually edit their payload here.</li>
-                                                <li>To customize a payload, go to <strong>SEO &amp; GEO → JSON-LD Schemas</strong> and set <em>Auto Generated = off</em> first.</li>
+                                                <li>To customize a payload, set <em>Auto Generated = off</em> first.</li>
                                                 <li>Toggle <strong>Active</strong> to include / exclude a schema from the page <code>&lt;head&gt;</code>.</li>
                                             </ul>
                                         '))
@@ -969,210 +1334,148 @@ class ProductResource extends Resource
                                 ->collapsed()
                                 ->collapsible(),
 
-                            // ── Schema cards ──────────────────────────────────
-                            Forms\Components\Repeater::make('jsonldSchemas')
-                                ->relationship()
-                                ->label('Schemas')
-                                ->schema([
+                            Tabs::make('JsonldLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('jsonldSchemasVi')
+                                                ->relationship()
+                                                ->label('Schemas (vi)')
+                                                ->schema([
+                                                    Placeholder::make('schema_header')
+                                                        ->label('')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record) { return new HtmlString(''); }
+                                                            $type  = $record->schema_type?->value ?? '—';
+                                                            $label = e($record->label ?? '');
+                                                            $auto  = $record->is_auto_generated
+                                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
+                                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+                                                            return new HtmlString("<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'><span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>" . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "{$auto}</div>");
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Placeholder::make('payload_preview')
+                                                        ->label('Payload (what Google reads)')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record || empty($record->payload)) {
+                                                                return new HtmlString('<em class="text-gray-400">No payload yet — save the product to generate.</em>');
+                                                            }
+                                                            $json = json_encode($record->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                                            return new HtmlString('<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">' . e($json) . '</pre>');
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label('Active (inject into page <head>)')
+                                                        ->inline(false),
+                                                    Placeholder::make('schema_updated_at')
+                                                        ->label('Last generated')
+                                                        ->content(fn ($record) => $record?->updated_at
+                                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                                            : '—'
+                                                        ),
+                                                ])
+                                                ->itemLabel(fn (array $state): ?string =>
+                                                    filled($state['schema_type'] ?? '')
+                                                        ? (is_object($state['schema_type']) ? $state['schema_type']->value : (string) $state['schema_type'])
+                                                        : null
+                                                )
+                                                ->collapsed()
+                                                ->addable(false)
+                                                ->deletable(false)
+                                                ->reorderable(false)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
 
-                                    // Header row: type badge + label + auto badge
-                                    Placeholder::make('schema_header')
-                                        ->label('')
-                                        ->content(function ($record): HtmlString {
-                                            if (! $record) {
-                                                return new HtmlString('');
-                                            }
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_jsonld_vi')
+                                                    ->label('Regenerate vi')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate JSON-LD (vi)')
+                                                    ->modalDescription('Re-generate all Auto schemas for the Vietnamese locale. Manual schemas will not be affected.')
+                                                    ->action(function ($livewire): void {
+                                                        $product = $livewire->record;
+                                                        if (! $product?->exists) { return; }
+                                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($product, 'vi');
+                                                        Notification::make()->title('JSON-LD (vi) regenerated')->success()->send();
+                                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
+                                                    }),
+                                            ]),
+                                        ]),
 
-                                            $type  = $record->schema_type?->value ?? '—';
-                                            $label = e($record->label ?? '');
-                                            $auto  = $record->is_auto_generated
-                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
-                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+                                    Tab::make('🇬🇧 English')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('jsonldSchemasEn')
+                                                ->relationship()
+                                                ->label('Schemas (en)')
+                                                ->schema([
+                                                    Placeholder::make('schema_header')
+                                                        ->label('')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record) { return new HtmlString(''); }
+                                                            $type  = $record->schema_type?->value ?? '—';
+                                                            $label = e($record->label ?? '');
+                                                            $auto  = $record->is_auto_generated
+                                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
+                                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+                                                            return new HtmlString("<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'><span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>" . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "{$auto}</div>");
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Placeholder::make('payload_preview')
+                                                        ->label('Payload (what Google reads)')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record || empty($record->payload)) {
+                                                                return new HtmlString('<em class="text-gray-400">No payload yet — save the product to generate.</em>');
+                                                            }
+                                                            $json = json_encode($record->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                                            return new HtmlString('<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">' . e($json) . '</pre>');
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label('Active (inject into page <head>)')
+                                                        ->inline(false),
+                                                    Placeholder::make('schema_updated_at')
+                                                        ->label('Last generated')
+                                                        ->content(fn ($record) => $record?->updated_at
+                                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                                            : '—'
+                                                        ),
+                                                ])
+                                                ->itemLabel(fn (array $state): ?string =>
+                                                    filled($state['schema_type'] ?? '')
+                                                        ? (is_object($state['schema_type']) ? $state['schema_type']->value : (string) $state['schema_type'])
+                                                        : null
+                                                )
+                                                ->collapsed()
+                                                ->addable(false)
+                                                ->deletable(false)
+                                                ->reorderable(false)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
 
-                                            return new HtmlString("
-                                                <div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>
-                                                    <span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>
-                                                    " . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "
-                                                    {$auto}
-                                                </div>
-                                            ");
-                                        })
-                                        ->columnSpanFull(),
-
-                                    // Payload preview — the most useful part
-                                    Placeholder::make('payload_preview')
-                                        ->label('Payload (what Google reads)')
-                                        ->content(function ($record): HtmlString {
-                                            if (! $record || empty($record->payload)) {
-                                                return new HtmlString('<em class="text-gray-400">No payload yet — save the product to generate.</em>');
-                                            }
-
-                                            $json = json_encode(
-                                                $record->payload,
-                                                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                                            );
-
-                                            return new HtmlString(
-                                                '<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">'
-                                                . e($json)
-                                                . '</pre>'
-                                            );
-                                        })
-                                        ->columnSpanFull(),
-
-                                    // Only editable field
-                                    Forms\Components\Toggle::make('is_active')
-                                        ->label('Active (inject into page <head>)')
-                                        ->inline(false),
-
-                                    Placeholder::make('schema_updated_at')
-                                        ->label('Last generated')
-                                        ->content(fn ($record) => $record?->updated_at
-                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
-                                            : '—'
-                                        ),
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_jsonld_en')
+                                                    ->label('Regenerate en')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate JSON-LD (en)')
+                                                    ->modalDescription('Re-generate all Auto schemas for the English locale. Manual schemas will not be affected.')
+                                                    ->action(function ($livewire): void {
+                                                        $product = $livewire->record;
+                                                        if (! $product?->exists) { return; }
+                                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($product, 'en');
+                                                        Notification::make()->title('JSON-LD (en) regenerated')->success()->send();
+                                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
+                                                    }),
+                                            ]),
+                                        ]),
                                 ])
-                                ->itemLabel(fn (array $state): ?string =>
-                                    filled($state['schema_type'] ?? '')
-                                        ? (is_object($state['schema_type'])
-                                            ? $state['schema_type']->value
-                                            : (string) $state['schema_type'])
-                                        : null
-                                )
-                                ->collapsed()
-                                ->addable(false)
-                                ->deletable(false)
-                                ->reorderable(false)
-                                ->defaultItems(0)
                                 ->columnSpanFull(),
-
-                            // ── Regenerate action ─────────────────────────────
-                            \Filament\Schemas\Components\Actions::make([
-                                \Filament\Actions\Action::make('regenerate_jsonld')
-                                    ->label('Regenerate all schemas')
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->color('gray')
-                                    ->requiresConfirmation()
-                                    ->modalHeading('Regenerate JSON-LD Schemas')
-                                    ->modalDescription('This will re-generate all Auto schemas from the current product data. Manual schemas will not be affected.')
-                                    ->action(function ($livewire): void {
-                                        $product = $livewire->record;
-
-                                        if (! $product?->exists) {
-                                            return;
-                                        }
-
-                                        // Run synchronously — no queue worker needed, result visible immediately.
-                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($product);
-
-                                        Notification::make()
-                                            ->title('JSON-LD schemas regenerated')
-                                            ->body('All auto schemas have been updated.')
-                                            ->success()
-                                            ->send();
-
-                                        redirect(ProductResource::getUrl('edit', ['record' => $product]));
-                                    }),
-                            ]),
                         ]),
 
                     // ── Tab: Translations ─────────────────────────────────────
-                    Tab::make('Translations')
-                        ->icon('heroicon-o-language')
-                        ->schema([
-                            Tabs::make('LocaleTabs')
-                                ->tabs([
-                                    Tab::make('🇻🇳 Tiếng Việt (vi)')
-                                        ->schema([
-                                            Forms\Components\TextInput::make('translations.vi.name')
-                                                ->label('Tên sản phẩm (vi)')
-                                                ->live(onBlur: true)
-                                                ->afterStateUpdated(fn ($state, Set $set) =>
-                                                    $set('translations.vi.slug', Str::slug($state ?? '')))
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.vi.slug')
-                                                ->label('Slug (vi)')
-                                                ->helperText('Auto-generated from name. Must be unique per locale.')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.vi.short_description')
-                                                ->label('Mô tả ngắn (vi)')
-                                                ->rows(3)
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\RichEditor::make('translations.vi.description')
-                                                ->label('Mô tả đầy đủ (vi)')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.vi.price')
-                                                ->label('Giá (vi)')
-                                                ->numeric()
-                                                ->nullable(),
-
-                                            Forms\Components\TextInput::make('translations.vi.currency')
-                                                ->label('Tiền tệ (vi)')
-                                                ->placeholder('VND')
-                                                ->nullable(),
-
-                                            Forms\Components\TextInput::make('translations.vi.meta_title')
-                                                ->label('Meta title (vi)')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.vi.meta_description')
-                                                ->label('Meta description (vi)')
-                                                ->rows(3)
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->columns(2),
-
-                                    Tab::make('🇬🇧 English (en)')
-                                        ->schema([
-                                            Forms\Components\TextInput::make('translations.en.name')
-                                                ->label('Product name (en)')
-                                                ->live(onBlur: true)
-                                                ->afterStateUpdated(fn ($state, Set $set) =>
-                                                    $set('translations.en.slug', Str::slug($state ?? '')))
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.en.slug')
-                                                ->label('Slug (en)')
-                                                ->helperText('Auto-generated from name. Must be unique per locale.')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.en.short_description')
-                                                ->label('Short description (en)')
-                                                ->rows(3)
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\RichEditor::make('translations.en.description')
-                                                ->label('Description (en)')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.en.price')
-                                                ->label('Price (en)')
-                                                ->numeric()
-                                                ->nullable(),
-
-                                            Forms\Components\TextInput::make('translations.en.currency')
-                                                ->label('Currency (en)')
-                                                ->placeholder('USD')
-                                                ->nullable(),
-
-                                            Forms\Components\TextInput::make('translations.en.meta_title')
-                                                ->label('Meta title (en)')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.en.meta_description')
-                                                ->label('Meta description (en)')
-                                                ->rows(3)
-                                                ->columnSpanFull(),
-                                        ])
-                                        ->columns(2),
-                                ])
-                                ->columnSpanFull(),
-                        ]),
-
                 ])
                 ->columnSpanFull(),
         ]);
@@ -1293,33 +1596,11 @@ class ProductResource extends Resource
     private static function charCounter(?string $state, int $min, int $max): string
     {
         $len = mb_strlen($state ?? '');
-
-        if ($len === 0) {
-            return "0 / {$max} chars";
-        }
-
-        if ($len < $min) {
-            return "{$len} / {$max} chars — " . ($min - $len) . ' short';
-        }
-
-        if ($len > $max) {
-            return "{$len} / {$max} chars — " . ($len - $max) . ' over';
-        }
-
-        return "{$len} / {$max} chars ✓";
+        return "{$len} / {$max} chars";
     }
 
-    /**
-     * Hint color: success (in range) · warning (slightly short) · danger (over limit)
-     */
     private static function charCounterColor(?string $state, int $min, int $max): string
     {
-        $len = mb_strlen($state ?? '');
-
-        if ($len === 0)        return 'gray';
-        if ($len > $max)       return 'danger';
-        if ($len < $min)       return 'warning';
-
-        return 'success';
+        return 'gray';
     }
 }
