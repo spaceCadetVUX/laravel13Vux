@@ -32,14 +32,18 @@ class CategoryRepository extends BaseRepository
     // ── Detail ────────────────────────────────────────────────────────────────
 
     /**
-     * Single active category by slug with parent loaded.
+     * Single active category by slug.
+     * Eager-loads parent, seoMetas and activeSchemas for the detail API response.
      */
     public function findActiveBySlug(string $slug): ?Category
     {
         /** @var Category|null */
         return $this->query()
-            ->with('parent')
-            ->where('slug', $slug)
+            ->with(['parent', 'seoMetas', 'activeSchemas'])
+            ->where(function ($q) use ($slug): void {
+                $q->where('slug', $slug)
+                  ->orWhereHas('translations', fn ($t) => $t->where('slug', $slug));
+            })
             ->where('is_active', true)
             ->first();
     }

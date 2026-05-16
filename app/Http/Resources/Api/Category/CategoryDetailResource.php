@@ -1,40 +1,20 @@
 <?php
 
-namespace App\Http\Resources\Api\Product;
+namespace App\Http\Resources\Api\Category;
 
 use Illuminate\Http\Request;
 
-class ProductDetailResource extends ProductResource
+class CategoryDetailResource extends CategoryResource
 {
     /**
-     * Full product detail representation — extends list resource with
-     * rich content, media, and SEO data for product detail pages.
+     * Full category detail representation — extends the list resource with
+     * SEO meta and JSON-LD schemas for category detail pages.
      *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
         return array_merge(parent::toArray($request), [
-
-            'description' => $this->description,
-
-            // ── Media ──────────────────────────────────────────────────────────
-            'images' => $this->whenLoaded(
-                'images',
-                fn () => $this->images->map(fn ($img) => [
-                    'url'        => $img->url,
-                    'alt_text'   => $img->alt_text,
-                    'sort_order' => $img->sort_order,
-                ])->values(),
-            ),
-
-            'videos' => $this->whenLoaded(
-                'videos',
-                fn () => $this->videos->map(fn ($vid) => [
-                    'url'           => $vid->url,
-                    'thumbnail_url' => $vid->thumbnail_url,
-                ])->values(),
-            ),
 
             // ── SEO meta ───────────────────────────────────────────────────────
             'seo' => $this->whenLoaded(
@@ -59,7 +39,6 @@ class ProductDetailResource extends ProductResource
             ),
 
             // ── JSON-LD schemas ────────────────────────────────────────────────
-            // Only active schemas, pre-ordered by sort_order (loaded via activeSchemas scope).
             'jsonld_schemas' => $this->whenLoaded(
                 'activeSchemas',
                 fn () => $this->activeSchemas
@@ -70,6 +49,7 @@ class ProductDetailResource extends ProductResource
                         'payload' => $schema->payload,
                     ])->values(),
             ),
+
         ]);
     }
 }

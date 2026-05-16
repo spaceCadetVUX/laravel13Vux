@@ -21,9 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleRedirects::class,
         ]);
 
-        // Force JSON on all API requests (ForceJsonResponse)
+        // Force JSON on all API requests + detect locale from X-Locale header / ?locale= param
         $middleware->api(append: [
             \App\Http\Middleware\ForceJsonResponse::class,
+            \App\Http\Middleware\SetApiLocale::class,
         ]);
 
         // Alias for Sanctum token guard used in route definitions

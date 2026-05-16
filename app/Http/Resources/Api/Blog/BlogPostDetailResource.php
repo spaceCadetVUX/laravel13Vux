@@ -20,7 +20,13 @@ class BlogPostDetailResource extends BlogPostResource
                 ];
             }),
             'jsonld_schemas' => $this->whenLoaded('activeSchemas', fn () =>
-                $this->activeSchemas->pluck('payload')->values()->all()
+                $this->activeSchemas
+                    ->where('locale', app()->getLocale())
+                    ->map(fn ($schema) => [
+                        'type'    => $schema->schema_type?->value,
+                        'label'   => $schema->label,
+                        'payload' => $schema->payload,
+                    ])->values()->all()
             ),
             'updated_at'     => $this->updated_at?->toIso8601String(),
         ]);

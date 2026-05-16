@@ -91,11 +91,23 @@ class GeoEntityProfileResource extends Resource
                     // ── Tab 2: Key Facts ──────────────────────────────────────
                     Tab::make('Key Facts')
                         ->schema([
-                            Forms\Components\KeyValue::make('key_facts')
+                            Forms\Components\Repeater::make('key_facts')
                                 ->label('Key Facts')
-                                ->keyLabel('Fact')
-                                ->valueLabel('Value')
+                                ->schema([
+                                    Forms\Components\TextInput::make('label')
+                                        ->label('Fact')
+                                        ->required()
+                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('value')
+                                        ->label('Value')
+                                        ->required()
+                                        ->columnSpan(1),
+                                ])
+                                ->columns(2)
                                 ->reorderable()
+                                ->reorderableWithButtons()
+                                ->collapsible()
+                                ->itemLabel(fn (array $state): ?string => filled($state['label'] ?? '') ? $state['label'] : null)
                                 ->columnSpanFull(),
                         ]),
 

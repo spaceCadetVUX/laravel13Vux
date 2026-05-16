@@ -299,11 +299,18 @@ class LlmsGeneratorService
         }
 
         // GEO key_facts jsonb → indented plain text
-        // Stored as {"Label": "Value", ...} by the Filament KeyValue component.
+        // Stored as [{"label":"...","value":"..."},...] by the Filament Repeater.
         $keyFacts = (array) ($geoProfile?->key_facts ?? []);
         if (! empty($keyFacts)) {
             $factLines = collect($keyFacts)
-                ->map(fn ($v, string $k): string => "  - {$k}: " . (is_array($v) ? implode(', ', array_map('strval', $v)) : (string) $v))
+                ->map(function ($v, $k): string {
+                    if (is_array($v)) {
+                        $label = (string) ($v['label'] ?? $k);
+                        $value = (string) ($v['value'] ?? '');
+                        return "  - {$label}: {$value}";
+                    }
+                    return "  - {$k}: {$v}";
+                })
                 ->values()
                 ->all();
 

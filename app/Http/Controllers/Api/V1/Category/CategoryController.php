@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Category;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\Category\CategoryDetailResource;
 use App\Http\Resources\Api\Category\CategoryResource;
 use App\Http\Resources\Api\Category\CategoryTreeResource;
 use App\Http\Resources\Traits\ApiResponse;
@@ -44,7 +45,7 @@ class CategoryController extends Controller
 
         return $this->success(
             data: [
-                'category' => new CategoryResource($category),
+                'category' => new CategoryDetailResource($category),
                 'products' => $products->items(),   // raw items; wrapped by pagination meta
             ],
             meta: $this->paginationMeta($products),
