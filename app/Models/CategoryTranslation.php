@@ -22,6 +22,13 @@ class CategoryTranslation extends Model
         'twitter_description',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'rich_content' => 'array',
+        ];
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

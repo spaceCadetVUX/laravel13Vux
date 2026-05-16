@@ -37,4 +37,31 @@ class GeoEntityProfile extends Model
     {
         return $q->where('locale', $locale);
     }
+
+    protected function performInsert(\Illuminate\Database\Eloquent\Builder $query): bool
+    {
+        if (filled($this->model_type) && filled($this->model_id) && filled($this->locale)) {
+            $existing = static::query()
+                ->where('model_type', $this->model_type)
+                ->where('model_id',   $this->model_id)
+                ->where('locale',     $this->locale)
+                ->first();
+
+            if ($existing) {
+                $attrs = $this->getAttributes();
+                unset($attrs[$this->getKeyName()], $attrs['created_at']);
+
+                static::where($this->getKeyName(), $existing->getKey())->update($attrs);
+
+                $this->setAttribute($this->getKeyName(), $existing->getKey());
+                $this->exists             = true;
+                $this->wasRecentlyCreated = false;
+                $this->syncOriginal();
+
+                return true;
+            }
+        }
+
+        return parent::performInsert($query);
+    }
 }

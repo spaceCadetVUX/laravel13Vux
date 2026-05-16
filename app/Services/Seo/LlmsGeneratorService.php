@@ -163,8 +163,11 @@ class LlmsGeneratorService
             : null;
 
         // ── GEO profile ───────────────────────────────────────────────────────
+        if (method_exists($model, 'geoProfiles')) {
+            $model->loadMissing('geoProfiles');
+        }
         $geoProfile = method_exists($model, 'geoProfile')
-            ? $model->geoProfile()
+            ? $model->geoProfile($locale)
             : null;
 
         // ── Core fields ───────────────────────────────────────────────────────
@@ -300,7 +303,7 @@ class LlmsGeneratorService
         $keyFacts = (array) ($geoProfile?->key_facts ?? []);
         if (! empty($keyFacts)) {
             $factLines = collect($keyFacts)
-                ->map(fn (string $v, string $k): string => "  - {$k}: {$v}")
+                ->map(fn ($v, string $k): string => "  - {$k}: " . (is_array($v) ? implode(', ', array_map('strval', $v)) : (string) $v))
                 ->values()
                 ->all();
 

@@ -198,6 +198,9 @@ class CategoryResource extends Resource
                                             Group::make()
                                                 ->relationship('seoMetaVi')
                                                 ->schema([
+                                                    Forms\Components\Hidden::make('locale')
+                                                        ->default('vi'),
+
                                                     Section::make('Meta Tags')
                                                         ->schema([
                                                             Forms\Components\TextInput::make('meta_title')
@@ -375,6 +378,9 @@ class CategoryResource extends Resource
                                             Group::make()
                                                 ->relationship('seoMetaEn')
                                                 ->schema([
+                                                    Forms\Components\Hidden::make('locale')
+                                                        ->default('en'),
+
                                                     Section::make('Meta Tags')
                                                         ->schema([
                                                             Forms\Components\TextInput::make('meta_title')
@@ -560,6 +566,9 @@ class CategoryResource extends Resource
                                             Group::make()
                                                 ->relationship('geoProfileVi')
                                                 ->schema([
+                                                    Forms\Components\Hidden::make('locale')
+                                                        ->default('vi'),
+
                                                     Section::make('AI Context')
                                                         ->schema([
                                                             Forms\Components\Textarea::make('ai_summary')
@@ -645,6 +654,9 @@ class CategoryResource extends Resource
                                             Group::make()
                                                 ->relationship('geoProfileEn')
                                                 ->schema([
+                                                    Forms\Components\Hidden::make('locale')
+                                                        ->default('en'),
+
                                                     Section::make('AI Context')
                                                         ->schema([
                                                             Forms\Components\Textarea::make('ai_summary')

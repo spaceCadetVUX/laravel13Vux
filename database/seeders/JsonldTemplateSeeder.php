@@ -91,19 +91,24 @@ class JsonldTemplateSeeder extends Seeder
             ],
 
             // ── c) CollectionPage (Category) ──────────────────────────────────
+            // @id, image, inLanguage, publisher, numberOfItems, mainEntity (ItemList)
+            // are injected at sync time by JsonldService::enrichCategorySchema().
+            // Only static placeholders live here.
             [
                 'schema_type'      => 'CollectionPage',
                 'label'            => 'Collection Page Schema (Category)',
                 'is_auto_generated' => true,
                 'template'         => json_encode([
-                    '@context' => 'https://schema.org',
-                    '@type'    => 'CollectionPage',
-                    'name'     => '{{category.name}}',
-                    'url'      => '{{category.canonical_url}}',
+                    '@context'    => 'https://schema.org',
+                    '@type'       => 'CollectionPage',
+                    'name'        => '{{category.name}}',
+                    'description' => '{{category.description}}',
+                    'url'         => '{{category.canonical_url}}',
                 ]),
                 'placeholders'     => json_encode([
                     '{{category.name}}'          => 'name',
                     '{{category.slug}}'          => 'slug',
+                    '{{category.description}}'   => 'description',
                     '{{category.canonical_url}}' => 'canonical_url',
                 ]),
                 'created_at' => $now,

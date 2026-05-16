@@ -114,8 +114,12 @@ class JsonldService
             }
 
             if ($morphAlias === 'category') {
+                if ($schemaType === JsonldSchemaType::CollectionPage) {
+                    $resolved = $this->enrichCategorySchema($resolved, $model, $locale);
+                }
+
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
-                    $resolved = $this->buildCategoryBreadcrumb($model);
+                    $resolved = $this->buildCategoryBreadcrumb($model, $locale);
                 }
             }
 
@@ -149,7 +153,7 @@ class JsonldService
         }
 
         // ── FAQPage — any model with geoProfile.faq data ──────────────────────
-        if (in_array($morphAlias, ['product', 'blog_post'], true)) {
+        if (in_array($morphAlias, ['product', 'blog_post', 'category'], true)) {
             $this->syncFaqPage($model, $locale);
         }
     }
@@ -607,37 +611,177 @@ class JsonldService
 
     /**
      * Build a BreadcrumbList payload for a catalog category page.
-     * Structure: Home → [{Parent} →] {Category}
+     * Walks the full ancestor chain — supports unlimited nesting depth.
      *
-     * The parent level is included only when parent_id is set.
-     * Falls back to Home → Category for top-level categories.
-     * Prevents duplicate breadcrumb structure across tree levels.
+     * Structure: Home → [Root →] [...] → [Parent →] {Category}
+     *
+     * Each ancestor is resolved with its locale-aware translation (name + slug).
+     * A seen-ID guard prevents infinite loops from circular parent_id references.
+     * Each loadMissing() call adds one DB query — acceptable for a background job
+     * since category trees are typically 2–4 levels deep.
      */
-    private function buildCategoryBreadcrumb(Model $model): array
+    private function buildCategoryBreadcrumb(Model $model, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
-        $name    = (string) ($model->getAttribute('name') ?? '');
-        $slug    = (string) ($model->getAttribute('slug') ?? '');
 
+        // ── Walk up the ancestor chain ────────────────────────────────────────
+        // Collect ancestors from nearest parent → root, then reverse to root → parent.
+        $ancestors = [];
+        $seenIds   = [$model->getKey()]; // guard against circular parent_id references
+        $cursor    = $model;
+
+        while (method_exists($cursor, 'parent')) {
+            $cursor->loadMissing('parent');
+            $parent = $cursor->getRelationValue('parent');
+
+            if (! $parent || in_array($parent->getKey(), $seenIds, strict: true)) {
+                break;
+            }
+
+            $seenIds[]   = $parent->getKey();
+            $ancestors[] = $parent;
+            $cursor      = $parent;
+        }
+
+        $ancestors = array_reverse($ancestors); // now root → nearest parent
+
+        // ── Build item list ───────────────────────────────────────────────────
         $items = [
             ['name' => 'Home', 'url' => $baseUrl],
         ];
 
-        if (method_exists($model, 'parent')) {
-            $model->loadMissing('parent');
-            $parent = $model->getRelationValue('parent');
+        foreach ($ancestors as $ancestor) {
+            $t    = method_exists($ancestor, 'translation') ? $ancestor->translation($locale) : null;
+            $name = (string) ($t?->name ?? $ancestor->getAttribute('name') ?? '');
+            $slug = (string) ($t?->slug ?? $ancestor->getAttribute('slug') ?? '');
 
-            if ($parent && filled($parent->name)) {
+            if (filled($name)) {
                 $items[] = [
-                    'name' => (string) $parent->name,
-                    'url'  => $baseUrl . '/categories/' . ($parent->slug ?? ''),
+                    'name' => $name,
+                    'url'  => $baseUrl . '/categories/' . $slug,
                 ];
             }
         }
 
+        // ── Current category ──────────────────────────────────────────────────
+        $t    = method_exists($model, 'translation') ? $model->translation($locale) : null;
+        $name = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
+        $slug = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
+
         $items[] = ['name' => $name, 'url' => $baseUrl . '/categories/' . $slug];
 
         return $this->buildBreadcrumbSchema($items);
+    }
+
+    /**
+     * Enrich a resolved CollectionPage payload with dynamic category data.
+     *
+     * Added fields (not expressible as simple template placeholders):
+     *   @id          → canonical URL (entity disambiguation)
+     *   inLanguage   → locale signal for Google multilingual indexing
+     *   image        → full URL built from categories.image_path
+     *   publisher    → Organization block from BusinessProfile (E-E-A-T)
+     *   numberOfItems → total active product count for this category
+     *   mainEntity   → ItemList of top 20 active products (name, url, image, offers)
+     *
+     * Products are loaded with thumbnail + translations in two queries (no N+1).
+     * All errors are caught silently so a broken products relation never crashes the job.
+     */
+    private function enrichCategorySchema(array $payload, Model $model, string $locale): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+
+        // @id — canonical entity identifier required by Google for entity disambiguation.
+        if (isset($payload['url']) && ! isset($payload['@id'])) {
+            $payload['@id'] = $payload['url'];
+        }
+
+        // inLanguage — tells Google which language edition this schema describes.
+        $payload['inLanguage'] = $locale;
+
+        // image — category thumbnail stored as a relative path in image_path column.
+        $imagePath = (string) ($model->getAttribute('image_path') ?? '');
+        if (filled($imagePath)) {
+            $payload['image'] = $baseUrl . '/storage/' . ltrim($imagePath, '/');
+        }
+
+        // publisher — Organization block (same pattern as Article schemas).
+        if (! isset($payload['publisher'])) {
+            $payload['publisher'] = app(BusinessJsonldService::class)->publisherBlock();
+        }
+
+        // numberOfItems + mainEntity ItemList — products belonging to this category.
+        if (method_exists($model, 'products')) {
+            try {
+                $productCount             = $model->products()->where('products.is_active', true)->count();
+                $payload['numberOfItems'] = $productCount;
+
+                if ($productCount > 0) {
+                    $fallbackLocale = config('app.fallback_locale', 'vi');
+                    $locales        = array_unique([$locale, $fallbackLocale]);
+
+                    // Eager-load thumbnail (HasOne) and translations for the target locale
+                    // in 2 queries total — no N+1 across the 20 product loop.
+                    $topProducts = $model->products()
+                        ->where('products.is_active', true)
+                        ->with([
+                            'thumbnail',
+                            'translations' => fn ($q) => $q->whereIn('locale', $locales),
+                        ])
+                        ->orderBy('products.sort_order')
+                        ->limit(20)
+                        ->get();
+
+                    if ($topProducts->isNotEmpty()) {
+                        $listItems = $topProducts->map(function ($product, int $index) use ($baseUrl, $locale): array {
+                            $t           = method_exists($product, 'translation') ? $product->translation($locale) : null;
+                            $productName = (string) ($t?->name ?? $product->getAttribute('name') ?? '');
+                            $productSlug = (string) ($t?->slug ?? $product->getAttribute('slug') ?? '');
+
+                            $item = [
+                                '@type'    => 'ListItem',
+                                'position' => $index + 1,
+                                'name'     => $productName,
+                                'url'      => $baseUrl . '/products/' . $productSlug,
+                            ];
+
+                            // Thumbnail — relation is already eager-loaded, no extra query.
+                            $thumb = $product->getRelationValue('thumbnail');
+                            if ($thumb && filled($thumb->url)) {
+                                $item['image'] = (string) $thumb->url;
+                            }
+
+                            // Price and availability — use locale-specific translation when available.
+                            $price    = $t?->price ?? $product->getAttribute('price');
+                            $currency = $t?->currency ?? $product->getAttribute('currency') ?? config('seo.currency', 'VND');
+                            if (filled($price)) {
+                                $item['offers'] = [
+                                    '@type'         => 'Offer',
+                                    'price'         => (float) $price,
+                                    'priceCurrency' => $currency,
+                                    'availability'  => ((int) $product->getAttribute('stock_quantity')) > 0
+                                        ? 'https://schema.org/InStock'
+                                        : 'https://schema.org/OutOfStock',
+                                ];
+                            }
+
+                            return $item;
+                        })->values()->all();
+
+                        $payload['mainEntity'] = [
+                            '@type'           => 'ItemList',
+                            'name'            => $payload['name'] ?? '',
+                            'numberOfItems'   => $productCount,
+                            'itemListElement' => $listItems,
+                        ];
+                    }
+                }
+            } catch (\Throwable) {
+                // Silently skip — products relationship may be unavailable in test/seeder context.
+            }
+        }
+
+        return $payload;
     }
 
     /**
@@ -678,14 +822,14 @@ class JsonldService
 
     /**
      * Generate a FAQPage schema for any model that has geoProfile.faq data.
-     * Supports products and blog posts. Skips if: no FAQ data, manual override
-     * exists, or geoProfile is missing.
+     * Supports products, blog posts, and categories. Skips if: no FAQ data,
+     * manual override exists, or geoProfile is missing.
      */
     private function syncFaqPage(Model $model, string $locale = 'vi'): void
     {
         $morphAlias = $model->getMorphClass();
         $model->loadMissing('geoProfiles');
-        $geoProfile = $model->geoProfile();
+        $geoProfile = $model->geoProfile($locale);
         $faq        = (array) ($geoProfile?->faq ?? []);
 
         if (empty($faq)) {
@@ -924,6 +1068,19 @@ class JsonldService
                 if (filled($t->slug))       {
                     $map['slug']         = $t->slug;
                     $canonicalUrl        = $baseUrl . $pathPrefix . $t->slug;
+                }
+            }
+        }
+
+        // ── Locale-specific field overrides for categories ────────────────────────
+        if ($morphAlias === 'category' && method_exists($model, 'translation')) {
+            $t = $model->translation($locale);
+            if ($t) {
+                if (filled($t->name))        { $map['name']        = $t->name; }
+                if (filled($t->description)) { $map['description'] = $t->description; }
+                if (filled($t->slug))        {
+                    $map['slug']  = $t->slug;
+                    $canonicalUrl = $baseUrl . $pathPrefix . $t->slug;
                 }
             }
         }
