@@ -6,6 +6,7 @@ use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Brand;
+use App\Services\Catalog\BrandService;
 use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
@@ -16,9 +17,13 @@ class BrandObserver
 {
     public function saved(Brand $brand): void
     {
-        dispatch(new SyncJsonldSchema($brand))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($brand))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($brand))->onQueue('seo');
+        app(BrandService::class)->bustListCache();
+
+        foreach (config('app.supported_locales', ['vi', 'en']) as $locale) {
+            dispatch(new SyncJsonldSchema($brand, $locale))->onQueue('seo');
+            dispatch(new SyncSitemapEntry($brand, $locale))->onQueue('seo');
+            dispatch(new SyncLlmsEntry($brand, $locale))->onQueue('seo');
+        }
     }
 
     public function deleted(Brand $brand): void

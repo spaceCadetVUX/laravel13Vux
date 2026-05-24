@@ -8,8 +8,8 @@
 
     <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{{ asset("/vendor/scribe/css/theme-default.style.css") }}" media="screen">
-    <link rel="stylesheet" href="{{ asset("/vendor/scribe/css/theme-default.print.css") }}" media="print">
+    <link rel="stylesheet" href="../docs/css/theme-default.style.css" media="screen">
+    <link rel="stylesheet" href="../docs/css/theme-default.print.css" media="print">
 
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
 
@@ -30,9 +30,9 @@
         var useCsrf = Boolean();
         var csrfUrl = "/sanctum/csrf-cookie";
     </script>
-    <script src="{{ asset("/vendor/scribe/js/tryitout-5.9.0.js") }}"></script>
+    <script src="../docs/js/tryitout-5.9.0.js"></script>
 
-    <script src="{{ asset("/vendor/scribe/js/theme-default-5.9.0.js") }}"></script>
+    <script src="../docs/js/theme-default-5.9.0.js"></script>
 
 </head>
 
@@ -41,7 +41,7 @@
 <a href="#" id="nav-button">
     <span>
         MENU
-        <img src="{{ asset("/vendor/scribe/images/navbar.png") }}" alt="navbar-image"/>
+        <img src="../docs/images/navbar.png" alt="navbar-image"/>
     </span>
 </a>
 <div class="tocify-wrapper">
@@ -215,8 +215,8 @@ Cancel a pending order. Policy ensures user owns the order.</a>
             </div>
 
     <ul class="toc-footer" id="toc-footer">
-                    <li style="padding-bottom: 5px;"><a href="{{ route("scribe.postman") }}">View Postman collection</a></li>
-                            <li style="padding-bottom: 5px;"><a href="{{ route("scribe.openapi") }}">View OpenAPI spec</a></li>
+                    <li style="padding-bottom: 5px;"><a href="../docs/collection.json">View Postman collection</a></li>
+                            <li style="padding-bottom: 5px;"><a href="../docs/openapi.yaml">View OpenAPI spec</a></li>
                 <li><a href="http://github.com/knuckleswtf/scribe">Documentation powered by Scribe ✍</a></li>
     </ul>
 
@@ -2174,7 +2174,7 @@ fetch(url, {
 
 <span id="example-responses-GETapi-v1-categories">
             <blockquote>
-            <p>Example response (200):</p>
+            <p>Example response (500):</p>
         </blockquote>
                 <details class="annotation">
             <summary style="cursor: pointer;">
@@ -2187,84 +2187,7 @@ access-control-allow-credentials: true
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">{
-    &quot;status&quot;: &quot;success&quot;,
-    &quot;message&quot;: &quot;OK&quot;,
-    &quot;data&quot;: [
-        {
-            &quot;id&quot;: &quot;2&quot;,
-            &quot;name&quot;: &quot;damh mục sản phẩm 1&quot;,
-            &quot;slug&quot;: &quot;damh-muc-san-pham-1&quot;,
-            &quot;image_url&quot;: null,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: []
-        },
-        {
-            &quot;id&quot;: &quot;3&quot;,
-            &quot;name&quot;: &quot;danh mục sản phẩm một not for displaying&quot;,
-            &quot;slug&quot;: &quot;danh-muc-san-pham-mot-not-for-displaying&quot;,
-            &quot;image_url&quot;: &quot;http://127.0.0.1:8000/storage/media/2026/05/30652792df33cec0587a350379d699e176c060ac6841f47612febe24710c8e95.jpg&quot;,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: []
-        },
-        {
-            &quot;id&quot;: &quot;5&quot;,
-            &quot;name&quot;: &quot;Electronics&quot;,
-            &quot;slug&quot;: &quot;electronics&quot;,
-            &quot;image_url&quot;: null,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: [
-                {
-                    &quot;id&quot;: &quot;6&quot;,
-                    &quot;name&quot;: &quot;Phones&quot;,
-                    &quot;slug&quot;: &quot;phones&quot;,
-                    &quot;image_url&quot;: null,
-                    &quot;sort_order&quot;: 0,
-                    &quot;children&quot;: [
-                        {
-                            &quot;id&quot;: &quot;7&quot;,
-                            &quot;name&quot;: &quot;Smartphones&quot;,
-                            &quot;slug&quot;: &quot;smartphones&quot;,
-                            &quot;image_url&quot;: null,
-                            &quot;sort_order&quot;: 0,
-                            &quot;children&quot;: []
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            &quot;id&quot;: &quot;9&quot;,
-            &quot;name&quot;: &quot;OBS2&quot;,
-            &quot;slug&quot;: &quot;obs-test-2&quot;,
-            &quot;image_url&quot;: null,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: []
-        },
-        {
-            &quot;id&quot;: &quot;10&quot;,
-            &quot;name&quot;: &quot;OBS3&quot;,
-            &quot;slug&quot;: &quot;obs-test-3&quot;,
-            &quot;image_url&quot;: null,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: []
-        },
-        {
-            &quot;id&quot;: &quot;8&quot;,
-            &quot;name&quot;: &quot;OBS Test 1&quot;,
-            &quot;slug&quot;: &quot;obs-test-1&quot;,
-            &quot;image_url&quot;: null,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: []
-        },
-        {
-            &quot;id&quot;: &quot;4&quot;,
-            &quot;name&quot;: &quot;Test Category&quot;,
-            &quot;slug&quot;: &quot;test-category&quot;,
-            &quot;image_url&quot;: null,
-            &quot;sort_order&quot;: 0,
-            &quot;children&quot;: []
-        }
-    ]
+    &quot;message&quot;: &quot;Server Error&quot;
 }</code>
  </pre>
     </span>
@@ -4520,7 +4443,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Content-Type: application/json" \
     --header "Accept: application/json" \
     --data "{
-    \"label\": \"office\",
+    \"label\": \"home\",
     \"full_name\": \"b\",
     \"phone\": \"ngzmiyvdljnikhwa\",
     \"address_line\": \"y\",
@@ -4544,7 +4467,7 @@ const headers = {
 };
 
 let body = {
-    "label": "office",
+    "label": "home",
     "full_name": "b",
     "phone": "ngzmiyvdljnikhwa",
     "address_line": "y",
@@ -4655,10 +4578,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="label"                data-endpoint="POSTapi-v1-addresses"
-               value="office"
+               value="home"
                data-component="body">
     <br>
-<p>Example: <code>office</code></p>
+<p>Example: <code>home</code></p>
 Must be one of:
 <ul style="list-style-type: square;"><li><code>home</code></li> <li><code>office</code></li> <li><code>other</code></li></ul>
         </div>
@@ -4777,14 +4700,14 @@ Must be one of:
     --header "Content-Type: application/json" \
     --header "Accept: application/json" \
     --data "{
-    \"label\": \"other\",
+    \"label\": \"office\",
     \"full_name\": \"b\",
     \"phone\": \"ngzmiyvdljnikhwa\",
     \"address_line\": \"y\",
     \"city\": \"k\",
     \"district\": \"c\",
     \"ward\": \"m\",
-    \"is_default\": false
+    \"is_default\": true
 }"
 </code></pre></div>
 
@@ -4801,14 +4724,14 @@ const headers = {
 };
 
 let body = {
-    "label": "other",
+    "label": "office",
     "full_name": "b",
     "phone": "ngzmiyvdljnikhwa",
     "address_line": "y",
     "city": "k",
     "district": "c",
     "ward": "m",
-    "is_default": false
+    "is_default": true
 };
 
 fetch(url, {
@@ -4929,10 +4852,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="label"                data-endpoint="PUTapi-v1-addresses--id-"
-               value="other"
+               value="office"
                data-component="body">
     <br>
-<p>Example: <code>other</code></p>
+<p>Example: <code>office</code></p>
 Must be one of:
 <ul style="list-style-type: square;"><li><code>home</code></li> <li><code>office</code></li> <li><code>other</code></li></ul>
         </div>
@@ -5028,7 +4951,7 @@ Must be one of:
             <code>false</code>
         </label>
     <br>
-<p>Example: <code>false</code></p>
+<p>Example: <code>true</code></p>
         </div>
         </form>
 

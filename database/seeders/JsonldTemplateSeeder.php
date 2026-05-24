@@ -115,7 +115,30 @@ class JsonldTemplateSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // ── d) BreadcrumbList (shared) ────────────────────────────────────
+            // ── d) Brand ─────────────────────────────────────────────────────
+            // logo, sameAs, @id, inLanguage are injected by enrichBrandSchema().
+            [
+                'schema_type'       => 'Brand',
+                'label'             => 'Brand Schema',
+                'is_auto_generated' => true,
+                'template'          => json_encode([
+                    '@context'    => 'https://schema.org',
+                    '@type'       => 'Brand',
+                    'name'        => '{{brand.name}}',
+                    'description' => '{{brand.description}}',
+                    'url'         => '{{brand.canonical_url}}',
+                ]),
+                'placeholders'      => json_encode([
+                    '{{brand.name}}'          => 'name',
+                    '{{brand.slug}}'          => 'slug',
+                    '{{brand.description}}'   => 'description',
+                    '{{brand.canonical_url}}' => 'canonical_url',
+                ]),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+
+            // ── e) BreadcrumbList (shared) ────────────────────────────────────
             [
                 'schema_type'      => 'BreadcrumbList',
                 'label'            => 'Breadcrumb List Schema',

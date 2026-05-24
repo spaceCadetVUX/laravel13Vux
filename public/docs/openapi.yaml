@@ -1,0 +1,1557 @@
+openapi: 3.0.3
+info:
+  title: 'YourShop API Documentation'
+  description: ''
+  version: 1.0.0
+servers:
+  -
+    url: 'http://127.0.0.1:8000'
+tags:
+  -
+    name: Endpoints
+    description: ''
+components:
+  securitySchemes:
+    default:
+      type: http
+      scheme: bearer
+      description: 'You can retrieve your token by visiting your dashboard and clicking <b>Generate API token</b>.'
+security:
+  -
+    default: []
+paths:
+  /api/v1/site/config:
+    get:
+      summary: 'GET /api/v1/site/config'
+      operationId: gETapiv1siteconfig
+      description: "Returns business profile data and global JSON-LD schemas.\nNuxt layout calls this once (SSR, cached) to render Organization/WebSite\nschemas and populate footer contact info."
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  message: OK
+                  data:
+                    name: 'Laravel Shop'
+                    legal_name: null
+                    tagline: null
+                    email: null
+                    phone: null
+                    address:
+                      line: null
+                      city: null
+                      state: null
+                      country: null
+                      postal_code: null
+                      latitude: null
+                      longitude: null
+                    business_hours: null
+                    social_links: null
+                    currency: VND
+                    logo_path: null
+                    jsonld_schemas:
+                      -
+                        '@context': 'https://schema.org'
+                        '@type': Organization
+                        '@id': 'http://127.0.0.1:8000/#organization'
+                        name: 'Laravel Shop'
+                        url: 'http://127.0.0.1:8000'
+                      -
+                        '@context': 'https://schema.org'
+                        '@type': WebSite
+                        '@id': 'http://127.0.0.1:8000/#website'
+                        name: 'Laravel Shop'
+                        url: 'http://127.0.0.1:8000'
+                        potentialAction:
+                          '@type': SearchAction
+                          target:
+                            '@type': EntryPoint
+                            urlTemplate: 'http://127.0.0.1:8000/search?q={search_term_string}'
+                          query-input: 'required name=search_term_string'
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: 'Laravel Shop'
+                      legal_name:
+                        type: string
+                        example: null
+                        nullable: true
+                      tagline:
+                        type: string
+                        example: null
+                        nullable: true
+                      email:
+                        type: string
+                        example: null
+                        nullable: true
+                      phone:
+                        type: string
+                        example: null
+                        nullable: true
+                      address:
+                        type: object
+                        properties:
+                          line:
+                            type: string
+                            example: null
+                            nullable: true
+                          city:
+                            type: string
+                            example: null
+                            nullable: true
+                          state:
+                            type: string
+                            example: null
+                            nullable: true
+                          country:
+                            type: string
+                            example: null
+                            nullable: true
+                          postal_code:
+                            type: string
+                            example: null
+                            nullable: true
+                          latitude:
+                            type: string
+                            example: null
+                            nullable: true
+                          longitude:
+                            type: string
+                            example: null
+                            nullable: true
+                      business_hours:
+                        type: string
+                        example: null
+                        nullable: true
+                      social_links:
+                        type: string
+                        example: null
+                        nullable: true
+                      currency:
+                        type: string
+                        example: VND
+                      logo_path:
+                        type: string
+                        example: null
+                        nullable: true
+                      jsonld_schemas:
+                        type: array
+                        example:
+                          -
+                            '@context': 'https://schema.org'
+                            '@type': Organization
+                            '@id': 'http://127.0.0.1:8000/#organization'
+                            name: 'Laravel Shop'
+                            url: 'http://127.0.0.1:8000'
+                          -
+                            '@context': 'https://schema.org'
+                            '@type': WebSite
+                            '@id': 'http://127.0.0.1:8000/#website'
+                            name: 'Laravel Shop'
+                            url: 'http://127.0.0.1:8000'
+                            potentialAction:
+                              '@type': SearchAction
+                              target:
+                                '@type': EntryPoint
+                                urlTemplate: 'http://127.0.0.1:8000/search?q={search_term_string}'
+                              query-input: 'required name=search_term_string'
+                        items:
+                          type: object
+                          properties:
+                            '@context':
+                              type: string
+                              example: 'https://schema.org'
+                            '@type':
+                              type: string
+                              example: Organization
+                            '@id':
+                              type: string
+                              example: 'http://127.0.0.1:8000/#organization'
+                            name:
+                              type: string
+                              example: 'Laravel Shop'
+                            url:
+                              type: string
+                              example: 'http://127.0.0.1:8000'
+      tags:
+        - Endpoints
+  /api/v1/ping:
+    get:
+      summary: ''
+      operationId: getApiV1Ping
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: ok
+                properties:
+                  status:
+                    type: string
+                    example: ok
+      tags:
+        - Endpoints
+  /api/v1/auth/register:
+    post:
+      summary: "POST /api/v1/auth/register\nRegister a new customer account."
+      operationId: pOSTapiv1authregisterRegisterANewCustomerAccount
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: validation.max.
+                  example: b
+                email:
+                  type: string
+                  description: 'validation.email validation.max.'
+                  example: zbailey@example.net
+                password:
+                  type: string
+                  description: validation.min.
+                  example: '-0pBNvYgxw'
+              required:
+                - name
+                - email
+                - password
+  /api/v1/auth/login:
+    post:
+      summary: "POST /api/v1/auth/login\nLogin with email + password."
+      operationId: pOSTapiv1authloginLoginWithEmail+Password
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: validation.email.
+                  example: gbailey@example.net
+                password:
+                  type: string
+                  description: ''
+                  example: '|]|{+-'
+              required:
+                - email
+                - password
+  /api/v1/auth/google:
+    post:
+      summary: 'POST /api/v1/auth/google'
+      operationId: pOSTapiv1authgoogle
+      description: "Authenticate via Google ID token (sent from the Nuxt frontend after\nthe user completes the Google consent flow on the client side)."
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_token:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - id_token
+  /api/v1/auth/forgot-password:
+    post:
+      summary: 'POST /api/v1/auth/forgot-password'
+      operationId: pOSTapiv1authforgotPassword
+      description: "Always returns 200 regardless of whether the email exists — prevents\nuser enumeration."
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: validation.email.
+                  example: gbailey@example.net
+              required:
+                - email
+  /api/v1/auth/reset-password:
+    post:
+      summary: 'POST /api/v1/auth/reset-password'
+      operationId: pOSTapiv1authresetPassword
+      description: "Validates the token and updates the user's password.\nRevokes all existing Sanctum tokens on success."
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: validation.email.
+                  example: gbailey@example.net
+                token:
+                  type: string
+                  description: ''
+                  example: architecto
+                password:
+                  type: string
+                  description: validation.min.
+                  example: ']|{+-0pBNvYg'
+                password_confirmation:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - email
+                - token
+                - password
+                - password_confirmation
+  '/api/v1/auth/email/verify/{id}/{hash}':
+    get:
+      summary: 'GET /api/v1/auth/email/verify/{id}/{hash}  [signed]'
+      operationId: gETapiv1authemailverifyidhashsigned
+      description: "Validates the signed URL, checks the hash, and marks the email as verified.\nThe `signed` middleware aborts with 403 before this runs if the URL is\ninvalid or expired."
+      parameters: []
+      responses:
+        403:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Invalid signature.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Invalid signature.'
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the verify.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+      -
+        in: path
+        name: hash
+        description: ''
+        example: architecto
+        required: true
+        schema:
+          type: string
+  /api/v1/auth/logout:
+    post:
+      summary: "POST /api/v1/auth/logout  [auth:sanctum]\nRevoke current access token."
+      operationId: pOSTapiv1authlogoutauthsanctumRevokeCurrentAccessToken
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+  /api/v1/auth/me:
+    get:
+      summary: "GET /api/v1/auth/me  [auth:sanctum]\nReturn the authenticated user's profile."
+      operationId: gETapiv1authmeauthsanctumReturnTheAuthenticatedUsersProfile
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+    put:
+      summary: "PUT /api/v1/auth/me  [auth:sanctum]\nUpdate the authenticated user's name and/or phone."
+      operationId: pUTapiv1authmeauthsanctumUpdateTheAuthenticatedUsersNameAndorPhone
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: validation.max.
+                  example: b
+                phone:
+                  type: string
+                  description: validation.max.
+                  example: ngzmiyvdljnikhwa
+                  nullable: true
+  /api/v1/auth/email/resend:
+    post:
+      summary: 'POST /api/v1/auth/email/resend  [auth:sanctum]'
+      operationId: pOSTapiv1authemailresendauthsanctum
+      description: 'Re-sends the verification email for the authenticated user.'
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+  /api/v1/categories:
+    get:
+      summary: "GET /api/v1/categories\nReturn the full active category tree (root categories + nested children)."
+      operationId: gETapiv1categoriesReturnTheFullActiveCategoryTreerootCategories+NestedChildren
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+  '/api/v1/categories/{slug}':
+    get:
+      summary: "GET /api/v1/categories/{slug}\nReturn a single category with its paginated active products."
+      operationId: gETapiv1categoriesslugReturnASingleCategoryWithItsPaginatedActiveProducts
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Category not found.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Category not found.'
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: slug
+        description: 'The slug of the category.'
+        example: '2'
+        required: true
+        schema:
+          type: string
+  /api/v1/brands:
+    get:
+      summary: "GET /api/v1/brands\nReturn all active brands ordered by sort_order."
+      operationId: gETapiv1brandsReturnAllActiveBrandsOrderedBySortOrder
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  message: OK
+                  data:
+                    -
+                      id: '2'
+                      name: Philips
+                      slug: philips
+                      logo_url: null
+                      description: 'Thương hiệu chiếu sáng hàng đầu thế giới, tiên phong trong công nghệ LED và giải pháp ánh sáng thông minh cho nhà ở, văn phòng và công trình.'
+                      website: 'https://www.signify.com'
+                      sort_order: 1
+                      products_count: 0
+                    -
+                      id: '3'
+                      name: 'Schneider Electric'
+                      slug: schneider-electric
+                      logo_url: null
+                      description: 'Tập đoàn quản lý năng lượng và tự động hóa hàng đầu thế giới, cung cấp các giải pháp ổ cắm, thiết bị điện, tủ điện và hệ thống quản lý toà nhà.'
+                      website: 'https://www.se.com'
+                      sort_order: 2
+                      products_count: 0
+                    -
+                      id: '4'
+                      name: Panasonic
+                      slug: panasonic
+                      logo_url: null
+                      description: 'Tập đoàn điện tử Nhật Bản nổi tiếng với các dòng đèn LED, ổ cắm, công tắc và thiết bị điện dân dụng chất lượng cao, bền bỉ và tiết kiệm điện.'
+                      website: 'https://www.panasonic.com'
+                      sort_order: 3
+                      products_count: 0
+                    -
+                      id: '5'
+                      name: 'Rạng Đông'
+                      slug: rang-dong
+                      logo_url: null
+                      description: 'Thương hiệu chiếu sáng uy tín hàng đầu Việt Nam, chuyên sản xuất bóng đèn LED, đèn huỳnh quang và các thiết bị chiếu sáng cho gia đình và công nghiệp.'
+                      website: 'https://rangdong.com.vn'
+                      sort_order: 4
+                      products_count: 0
+                    -
+                      id: '6'
+                      name: Legrand
+                      slug: legrand
+                      logo_url: null
+                      description: 'Tập đoàn Pháp chuyên thiết bị hạ tầng điện và kỹ thuật số, nổi tiếng với dòng ổ cắm Céliane, Mosaic và hệ thống quản lý tòa nhà BTicino.'
+                      website: 'https://www.legrand.com'
+                      sort_order: 5
+                      products_count: 0
+                    -
+                      id: '7'
+                      name: OSRAM
+                      slug: osram
+                      logo_url: null
+                      description: 'Thương hiệu chiếu sáng hàng đầu nước Đức với hơn 115 năm kinh nghiệm, chuyên cung cấp đèn LED, đèn chiếu sáng chuyên dụng, automotive và hệ thống điều khiển ánh sáng thông minh.'
+                      website: 'https://www.osram.com'
+                      sort_order: 6
+                      products_count: 0
+                    -
+                      id: '8'
+                      name: 'Điện Quang'
+                      slug: dien-quang
+                      logo_url: null
+                      description: 'Công ty cổ phần Bóng đèn Điện Quang — thương hiệu chiếu sáng Việt Nam lâu đời với các sản phẩm LED, compact và đèn công nghiệp phân phối toàn quốc.'
+                      website: 'https://www.dienquang.com.vn'
+                      sort_order: 7
+                      products_count: 0
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: '2'
+                        name: Philips
+                        slug: philips
+                        logo_url: null
+                        description: 'Thương hiệu chiếu sáng hàng đầu thế giới, tiên phong trong công nghệ LED và giải pháp ánh sáng thông minh cho nhà ở, văn phòng và công trình.'
+                        website: 'https://www.signify.com'
+                        sort_order: 1
+                        products_count: 0
+                      -
+                        id: '3'
+                        name: 'Schneider Electric'
+                        slug: schneider-electric
+                        logo_url: null
+                        description: 'Tập đoàn quản lý năng lượng và tự động hóa hàng đầu thế giới, cung cấp các giải pháp ổ cắm, thiết bị điện, tủ điện và hệ thống quản lý toà nhà.'
+                        website: 'https://www.se.com'
+                        sort_order: 2
+                        products_count: 0
+                      -
+                        id: '4'
+                        name: Panasonic
+                        slug: panasonic
+                        logo_url: null
+                        description: 'Tập đoàn điện tử Nhật Bản nổi tiếng với các dòng đèn LED, ổ cắm, công tắc và thiết bị điện dân dụng chất lượng cao, bền bỉ và tiết kiệm điện.'
+                        website: 'https://www.panasonic.com'
+                        sort_order: 3
+                        products_count: 0
+                      -
+                        id: '5'
+                        name: 'Rạng Đông'
+                        slug: rang-dong
+                        logo_url: null
+                        description: 'Thương hiệu chiếu sáng uy tín hàng đầu Việt Nam, chuyên sản xuất bóng đèn LED, đèn huỳnh quang và các thiết bị chiếu sáng cho gia đình và công nghiệp.'
+                        website: 'https://rangdong.com.vn'
+                        sort_order: 4
+                        products_count: 0
+                      -
+                        id: '6'
+                        name: Legrand
+                        slug: legrand
+                        logo_url: null
+                        description: 'Tập đoàn Pháp chuyên thiết bị hạ tầng điện và kỹ thuật số, nổi tiếng với dòng ổ cắm Céliane, Mosaic và hệ thống quản lý tòa nhà BTicino.'
+                        website: 'https://www.legrand.com'
+                        sort_order: 5
+                        products_count: 0
+                      -
+                        id: '7'
+                        name: OSRAM
+                        slug: osram
+                        logo_url: null
+                        description: 'Thương hiệu chiếu sáng hàng đầu nước Đức với hơn 115 năm kinh nghiệm, chuyên cung cấp đèn LED, đèn chiếu sáng chuyên dụng, automotive và hệ thống điều khiển ánh sáng thông minh.'
+                        website: 'https://www.osram.com'
+                        sort_order: 6
+                        products_count: 0
+                      -
+                        id: '8'
+                        name: 'Điện Quang'
+                        slug: dien-quang
+                        logo_url: null
+                        description: 'Công ty cổ phần Bóng đèn Điện Quang — thương hiệu chiếu sáng Việt Nam lâu đời với các sản phẩm LED, compact và đèn công nghiệp phân phối toàn quốc.'
+                        website: 'https://www.dienquang.com.vn'
+                        sort_order: 7
+                        products_count: 0
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: '2'
+                        name:
+                          type: string
+                          example: Philips
+                        slug:
+                          type: string
+                          example: philips
+                        logo_url:
+                          type: string
+                          example: null
+                          nullable: true
+                        description:
+                          type: string
+                          example: 'Thương hiệu chiếu sáng hàng đầu thế giới, tiên phong trong công nghệ LED và giải pháp ánh sáng thông minh cho nhà ở, văn phòng và công trình.'
+                        website:
+                          type: string
+                          example: 'https://www.signify.com'
+                        sort_order:
+                          type: integer
+                          example: 1
+                        products_count:
+                          type: integer
+                          example: 0
+      tags:
+        - Endpoints
+  '/api/v1/brands/{slug}':
+    get:
+      summary: "GET /api/v1/brands/{slug}\nReturn a single brand with SEO, JSON-LD, and its paginated active products."
+      operationId: gETapiv1brandsslugReturnASingleBrandWithSEOJSONLDAndItsPaginatedActiveProducts
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Brand not found.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Brand not found.'
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: slug
+        description: 'The slug of the brand.'
+        example: '2'
+        required: true
+        schema:
+          type: string
+  /api/v1/products:
+    get:
+      summary: 'List products'
+      operationId: listProducts
+      description: 'Returns a paginated list of active products with optional filters.'
+      parameters:
+        -
+          in: query
+          name: page
+          description: 'Page number. Default: 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Page number. Default: 1.'
+            example: 1
+        -
+          in: query
+          name: per_page
+          description: 'Items per page. Default: 15. Max: 100.'
+          example: 15
+          required: false
+          schema:
+            type: integer
+            description: 'Items per page. Default: 15. Max: 100.'
+            example: 15
+        -
+          in: query
+          name: category
+          description: 'Filter by category slug.'
+          example: smartphones
+          required: false
+          schema:
+            type: string
+            description: 'Filter by category slug.'
+            example: smartphones
+        -
+          in: query
+          name: sort
+          description: 'Sort order: price_asc, price_desc, name_asc, name_desc, newest.'
+          example: newest
+          required: false
+          schema:
+            type: string
+            description: 'Sort order: price_asc, price_desc, name_asc, name_desc, newest.'
+            example: newest
+        -
+          in: query
+          name: min_price
+          description: 'Minimum price filter.'
+          example: 100000.0
+          required: false
+          schema:
+            type: number
+            description: 'Minimum price filter.'
+            example: 100000.0
+        -
+          in: query
+          name: max_price
+          description: 'Maximum price filter.'
+          example: 5000000.0
+          required: false
+          schema:
+            type: number
+            description: 'Maximum price filter.'
+            example: 5000000.0
+        -
+          in: query
+          name: in_stock
+          description: 'Set to 1 to return only in-stock products.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Set to 1 to return only in-stock products.'
+            example: 1
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  data:
+                    -
+                      slug: iphone-15
+                      name: 'iPhone 15'
+                      price: 22990000
+                  meta:
+                    current_page: 1
+                    total: 50
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    example:
+                      -
+                        slug: iphone-15
+                        name: 'iPhone 15'
+                        price: 22990000
+                    items:
+                      type: object
+                      properties:
+                        slug:
+                          type: string
+                          example: iphone-15
+                        name:
+                          type: string
+                          example: 'iPhone 15'
+                        price:
+                          type: integer
+                          example: 22990000
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      total:
+                        type: integer
+                        example: 50
+      tags:
+        - Endpoints
+      security: []
+  '/api/v1/products/{slug}':
+    get:
+      summary: 'Get product detail'
+      operationId: getProductDetail
+      description: 'Returns full product detail including images, videos, SEO meta, and JSON-LD schemas.'
+      parameters: []
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: true
+                  data:
+                    slug: iphone-15
+                    name: 'iPhone 15'
+                    price: 22990000
+                    seo: {  }
+                    jsonld_schemas: []
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      slug:
+                        type: string
+                        example: iphone-15
+                      name:
+                        type: string
+                        example: 'iPhone 15'
+                      price:
+                        type: integer
+                        example: 22990000
+                      seo:
+                        type: object
+                        properties: {  }
+                      jsonld_schemas:
+                        type: array
+                        example: []
+        404:
+          description: 'Not found'
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: 'Not found'
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Not found'
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: slug
+        description: 'The product slug.'
+        example: iphone-15
+        required: true
+        schema:
+          type: string
+  /api/v1/search:
+    get:
+      summary: 'GET /api/v1/search?q={term}&type={products|blog|all}&page={n}&per_page={n}'
+      operationId: gETapiv1searchqtermtypeproductsblogallpagenperPagen
+      description: "Full-text search via Meilisearch (Scout). Falls back to Eloquent LIKE\nqueries when SCOUT_DRIVER=null or Meilisearch is unreachable."
+      parameters: []
+      responses:
+        422:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: validation.min.string
+                  errors:
+                    q:
+                      - validation.min.string
+                properties:
+                  message:
+                    type: string
+                    example: validation.min.string
+                  errors:
+                    type: object
+                    properties:
+                      q:
+                        type: array
+                        example:
+                          - validation.min.string
+                        items:
+                          type: string
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                q:
+                  type: string
+                  description: 'validation.min validation.max.'
+                  example: b
+                type:
+                  type: string
+                  description: ''
+                  example: all
+                  enum:
+                    - products
+                    - blog
+                    - all
+                  nullable: true
+                page:
+                  type: integer
+                  description: validation.min.
+                  example: 22
+                  nullable: true
+                per_page:
+                  type: integer
+                  description: 'validation.min validation.max.'
+                  example: 7
+                  nullable: true
+              required:
+                - q
+  /api/v1/cart:
+    get:
+      summary: "GET /api/v1/cart\nReturn the current cart. Creates one if none exists."
+      operationId: gETapiv1cartReturnTheCurrentCartCreatesOneIfNoneExists
+      description: ''
+      parameters: []
+      responses:
+        400:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'X-Session-ID header is required for guest carts.'
+                properties:
+                  message:
+                    type: string
+                    example: 'X-Session-ID header is required for guest carts.'
+      tags:
+        - Endpoints
+    delete:
+      summary: "DELETE /api/v1/cart\nRemove all items from the cart."
+      operationId: dELETEapiv1cartRemoveAllItemsFromTheCart
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+  /api/v1/cart/items:
+    post:
+      summary: "POST /api/v1/cart/items\nAdd a product to the cart. Increments quantity if already present."
+      operationId: pOSTapiv1cartitemsAddAProductToTheCartIncrementsQuantityIfAlreadyPresent
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: string
+                  description: 'validation.uuid The <code>id</code> of an existing record in the products table.'
+                  example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
+                quantity:
+                  type: integer
+                  description: validation.min.
+                  example: 67
+              required:
+                - product_id
+                - quantity
+  '/api/v1/cart/items/{cartItem_id}':
+    put:
+      summary: "PUT /api/v1/cart/items/{cartItem}\nSet an item's quantity to an exact value."
+      operationId: pUTapiv1cartitemscartItemSetAnItemsQuantityToAnExactValue
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  description: validation.min.
+                  example: 16
+              required:
+                - quantity
+    delete:
+      summary: "DELETE /api/v1/cart/items/{cartItem}\nRemove a single item from the cart."
+      operationId: dELETEapiv1cartitemscartItemRemoveASingleItemFromTheCart
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: cartItem_id
+        description: 'The ID of the cartItem.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  /api/v1/cart/merge:
+    post:
+      summary: "POST /api/v1/cart/merge  [auth:sanctum]\nMerge guest cart into the authenticated user's cart."
+      operationId: pOSTapiv1cartmergeauthsanctumMergeGuestCartIntoTheAuthenticatedUsersCart
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_id:
+                  type: string
+                  description: validation.uuid.
+                  example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
+              required:
+                - session_id
+  /api/v1/addresses:
+    get:
+      summary: 'GET /api/v1/addresses'
+      operationId: gETapiv1addresses
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+    post:
+      summary: 'POST /api/v1/addresses'
+      operationId: pOSTapiv1addresses
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: ''
+                  example: home
+                  enum:
+                    - home
+                    - office
+                    - other
+                full_name:
+                  type: string
+                  description: validation.max.
+                  example: b
+                phone:
+                  type: string
+                  description: validation.max.
+                  example: ngzmiyvdljnikhwa
+                address_line:
+                  type: string
+                  description: validation.max.
+                  example: 'y'
+                city:
+                  type: string
+                  description: validation.max.
+                  example: k
+                district:
+                  type: string
+                  description: validation.max.
+                  example: c
+                ward:
+                  type: string
+                  description: validation.max.
+                  example: m
+                is_default:
+                  type: boolean
+                  description: ''
+                  example: false
+              required:
+                - full_name
+                - phone
+                - address_line
+                - city
+                - district
+                - ward
+  '/api/v1/addresses/{id}':
+    put:
+      summary: 'PUT/PATCH /api/v1/addresses/{address}'
+      operationId: pUTPATCHapiv1addressesaddress
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: ''
+                  example: office
+                  enum:
+                    - home
+                    - office
+                    - other
+                full_name:
+                  type: string
+                  description: validation.max.
+                  example: b
+                phone:
+                  type: string
+                  description: validation.max.
+                  example: ngzmiyvdljnikhwa
+                address_line:
+                  type: string
+                  description: validation.max.
+                  example: 'y'
+                city:
+                  type: string
+                  description: validation.max.
+                  example: k
+                district:
+                  type: string
+                  description: validation.max.
+                  example: c
+                ward:
+                  type: string
+                  description: validation.max.
+                  example: m
+                is_default:
+                  type: boolean
+                  description: ''
+                  example: true
+    delete:
+      summary: 'DELETE /api/v1/addresses/{address}'
+      operationId: dELETEapiv1addressesaddress
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the address.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  '/api/v1/addresses/{address_id}/default':
+    patch:
+      summary: 'PATCH /api/v1/addresses/{address}/default'
+      operationId: pATCHapiv1addressesaddressdefault
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: address_id
+        description: 'The ID of the address.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  /api/v1/orders:
+    get:
+      summary: "GET /api/v1/orders\nPaginated order history for the authenticated user."
+      operationId: gETapiv1ordersPaginatedOrderHistoryForTheAuthenticatedUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+    post:
+      summary: "POST /api/v1/orders\nPlace a new order from the current cart."
+      operationId: pOSTapiv1ordersPlaceANewOrderFromTheCurrentCart
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address_id:
+                  type: string
+                  description: 'validation.uuid The <code>id</code> of an existing record in the addresses table.'
+                  example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
+                note:
+                  type: string
+                  description: validation.max.
+                  example: g
+                  nullable: true
+              required:
+                - address_id
+  '/api/v1/orders/{order_id}':
+    get:
+      summary: "GET /api/v1/orders/{order}\nSingle order detail. Policy ensures user owns the order."
+      operationId: gETapiv1ordersorderSingleOrderDetailPolicyEnsuresUserOwnsTheOrder
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: Unauthenticated.
+                properties:
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: order_id
+        description: 'The ID of the order.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  '/api/v1/orders/{order_id}/cancel':
+    patch:
+      summary: "PATCH /api/v1/orders/{order}/cancel\nCancel a pending order. Policy ensures user owns the order."
+      operationId: pATCHapiv1ordersordercancelCancelAPendingOrderPolicyEnsuresUserOwnsTheOrder
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: order_id
+        description: 'The ID of the order.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  /api/v1/blog:
+    get:
+      summary: 'GET /api/v1/blog'
+      operationId: gETapiv1blog
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  message: OK
+                  data: []
+                  meta:
+                    current_page: 1
+                    last_page: 1
+                    per_page: 12
+                    total: 0
+                    from: null
+                    to: null
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    example: []
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 12
+                      total:
+                        type: integer
+                        example: 0
+                      from:
+                        type: string
+                        example: null
+                        nullable: true
+                      to:
+                        type: string
+                        example: null
+                        nullable: true
+      tags:
+        - Endpoints
+  /api/v1/blog/categories:
+    get:
+      summary: ''
+      operationId: getApiV1BlogCategories
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  message: OK
+                  data: []
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    example: []
+      tags:
+        - Endpoints
+  /api/v1/blog/tags:
+    get:
+      summary: ''
+      operationId: getApiV1BlogTags
+      description: ''
+      parameters: []
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: success
+                  message: OK
+                  data: []
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: OK
+                  data:
+                    type: array
+                    example: []
+      tags:
+        - Endpoints
+  '/api/v1/blog/{slug}':
+    get:
+      summary: 'GET /api/v1/blog/{slug}'
+      operationId: gETapiv1blogslug
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Blog post not found.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Blog post not found.'
+      tags:
+        - Endpoints
+    parameters:
+      -
+        in: path
+        name: slug
+        description: 'The slug of the blog.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  '/api/v1/blog/{slug}/comments':
+    get:
+      summary: ''
+      operationId: getApiV1BlogSlugComments
+      description: ''
+      parameters: []
+      responses:
+        404:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Blog post not found.'
+                properties:
+                  message:
+                    type: string
+                    example: 'Blog post not found.'
+      tags:
+        - Endpoints
+    post:
+      summary: ''
+      operationId: postApiV1BlogSlugComments
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: 'validation.min validation.max.'
+                  example: b
+              required:
+                - body
+    parameters:
+      -
+        in: path
+        name: slug
+        description: 'The slug of the blog.'
+        example: architecto
+        required: true
+        schema:
+          type: string

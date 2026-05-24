@@ -32,7 +32,13 @@
       "Bash(php -l app/Http/Controllers/Web/CategoryController.php)",
       "Bash(php -l app/Http/Controllers/Web/BlogController.php)",
       "Bash(php -l app/Http/Controllers/Web/PageController.php)",
-      "Bash(grep -E \"\\\\.\\(php|sql\\)$\")"
+      "Bash(grep -E \"\\\\.\\(php|sql\\)$\")",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(curl -s http://localhost:8000/api/v1/brands)",
+      "Bash(curl -s http://localhost:8000/api/v1/brands/philips)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s http://127.0.0.1:8000/api/v1/brands -H \"Accept: application/json\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('message',''\\)\\); print\\(d.get\\('exception',''\\)\\)\")"
     ]
   }
 }

@@ -6,6 +6,7 @@ use App\Enums\JsonldSchemaType;
 use App\Models\Product;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\JsonldTemplate;
+use App\Support\LocaleUrl;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -23,17 +24,10 @@ class JsonldService
         'blog_post'     => [JsonldSchemaType::Article,        JsonldSchemaType::BreadcrumbList],
         'category'      => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
         'blog_category' => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
+        'brand'         => [JsonldSchemaType::Brand,          JsonldSchemaType::BreadcrumbList],
     ];
 
-    /**
-     * Front-end URL prefix per morph alias.
-     */
-    private const URL_PREFIXES = [
-        'product'       => '/products/',
-        'blog_post'     => '/blog/',
-        'category'      => '/categories/',
-        'blog_category' => '/blog/category/',
-    ];
+    // URL prefixes are now managed by config/localeurl.php + App\Support\LocaleUrl.
 
     /**
      * Render order for <head> — lower = earlier.
@@ -129,6 +123,16 @@ class JsonldService
                 }
             }
 
+            if ($morphAlias === 'brand') {
+                if ($schemaType === JsonldSchemaType::Brand) {
+                    $resolved = $this->enrichBrandSchema($resolved, $model, $locale);
+                }
+
+                if ($schemaType === JsonldSchemaType::BreadcrumbList) {
+                    $resolved = $this->buildBrandBreadcrumb($model, $locale);
+                }
+            }
+
             JsonldSchema::updateOrCreate(
                 [
                     'model_type'  => $morphAlias,
@@ -153,7 +157,7 @@ class JsonldService
         }
 
         // ── FAQPage — any model with geoProfile.faq data ──────────────────────
-        if (in_array($morphAlias, ['product', 'blog_post', 'category'], true)) {
+        if (in_array($morphAlias, ['product', 'blog_post', 'category', 'brand'], true)) {
             $this->syncFaqPage($model, $locale);
         }
     }
@@ -658,7 +662,7 @@ class JsonldService
             if (filled($name)) {
                 $items[] = [
                     'name' => $name,
-                    'url'  => $baseUrl . '/categories/' . $slug,
+                    'url'  => LocaleUrl::for('category', $slug, $locale),
                 ];
             }
         }
@@ -668,7 +672,7 @@ class JsonldService
         $name = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
         $slug = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
-        $items[] = ['name' => $name, 'url' => $baseUrl . '/categories/' . $slug];
+        $items[] = ['name' => $name, 'url' => LocaleUrl::for('category', $slug, $locale)];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -1041,6 +1045,49 @@ class JsonldService
     }
 
     /**
+     * Enrich a resolved Brand schema payload with logo, sameAs, @id, inLanguage.
+     */
+    private function enrichBrandSchema(array $payload, Model $model, string $locale): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+
+        if (isset($payload['url']) && ! isset($payload['@id'])) {
+            $payload['@id'] = $payload['url'];
+        }
+
+        $payload['inLanguage'] = $locale;
+
+        $logo = (string) ($model->getAttribute('logo') ?? '');
+        if (filled($logo)) {
+            $payload['logo'] = $baseUrl . '/storage/' . ltrim($logo, '/');
+        }
+
+        $website = (string) ($model->getAttribute('website') ?? '');
+        if (filled($website)) {
+            $payload['sameAs'] = $website;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Build a BreadcrumbList payload for a brand page.
+     * Structure: Home → Brands → {Brand name}
+     */
+    private function buildBrandBreadcrumb(Model $model, string $locale = 'vi'): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $name    = (string) ($model->getAttribute('name') ?? '');
+        $slug    = (string) ($model->getAttribute('slug') ?? '');
+
+        return $this->buildBreadcrumbSchema([
+            ['name' => 'Home',                                       'url' => $baseUrl],
+            ['name' => LocaleUrl::listLabel('brand', $locale),       'url' => LocaleUrl::listUrl('brand', $locale)],
+            ['name' => $name,                                        'url' => LocaleUrl::for('brand', $slug, $locale)],
+        ]);
+    }
+
+    /**
      * Build a flat field→value map covering DB attributes and computed values
      * that templates reference but that don't exist as raw DB columns.
      */
@@ -1049,8 +1096,7 @@ class JsonldService
         $morphAlias   = $model->getMorphClass();
         $baseUrl      = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
         $slug         = (string) ($model->getAttribute('slug') ?? '');
-        $pathPrefix   = self::URL_PREFIXES[$morphAlias] ?? '/';
-        $canonicalUrl = $baseUrl . $pathPrefix . $slug;
+        $canonicalUrl = LocaleUrl::for($morphAlias, $slug, $locale);
 
         // Seed with all raw DB attributes (name, slug, sku, price, etc.)
         $map = $model->getAttributes();
@@ -1066,8 +1112,8 @@ class JsonldService
                 if (filled($t->currency))   { $map['currency']    = $t->currency; }
                 if (filled($t->name))       { $map['name']        = $t->name; }
                 if (filled($t->slug))       {
-                    $map['slug']         = $t->slug;
-                    $canonicalUrl        = $baseUrl . $pathPrefix . $t->slug;
+                    $map['slug']  = $t->slug;
+                    $canonicalUrl = LocaleUrl::for($morphAlias, $t->slug, $locale);
                 }
             }
         }
@@ -1080,7 +1126,7 @@ class JsonldService
                 if (filled($t->description)) { $map['description'] = $t->description; }
                 if (filled($t->slug))        {
                     $map['slug']  = $t->slug;
-                    $canonicalUrl = $baseUrl . $pathPrefix . $t->slug;
+                    $canonicalUrl = LocaleUrl::for($morphAlias, $t->slug, $locale);
                 }
             }
         }

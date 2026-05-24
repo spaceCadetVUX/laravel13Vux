@@ -39,7 +39,7 @@ class CategoryRepository extends BaseRepository
     {
         /** @var Category|null */
         return $this->query()
-            ->with(['parent', 'seoMetas', 'activeSchemas'])
+            ->with(['parent', 'seoMetas', 'activeSchemas', 'translations'])
             ->where(function ($q) use ($slug): void {
                 $q->where('slug', $slug)
                   ->orWhereHas('translations', fn ($t) => $t->where('slug', $slug));

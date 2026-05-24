@@ -6,6 +6,7 @@ enum JsonldSchemaType: string
 {
     case Product         = 'Product';
     case Article         = 'Article';
+    case Brand           = 'Brand';
     case BreadcrumbList  = 'BreadcrumbList';
     case FaqPage         = 'FAQPage';
     case Organization    = 'Organization';

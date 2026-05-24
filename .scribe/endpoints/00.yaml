@@ -5,6 +5,54 @@ endpoints:
     custom: []
     httpMethods:
       - GET
+    uri: api/v1/site/config
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'GET /api/v1/site/config'
+      description: |-
+        Returns business profile data and global JSON-LD schemas.
+        Nuxt layout calls this once (SSR, cached) to render Organization/WebSite
+        schemas and populate footer contact info.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"status":"success","message":"OK","data":{"name":"Laravel Shop","legal_name":null,"tagline":null,"email":null,"phone":null,"address":{"line":null,"city":null,"state":null,"country":null,"postal_code":null,"latitude":null,"longitude":null},"business_hours":null,"social_links":null,"currency":"VND","logo_path":null,"jsonld_schemas":[{"@context":"https:\/\/schema.org","@type":"Organization","@id":"http:\/\/127.0.0.1:8000\/#organization","name":"Laravel Shop","url":"http:\/\/127.0.0.1:8000"},{"@context":"https:\/\/schema.org","@type":"WebSite","@id":"http:\/\/127.0.0.1:8000\/#website","name":"Laravel Shop","url":"http:\/\/127.0.0.1:8000","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"http:\/\/127.0.0.1:8000\/search?q={search_term_string}"},"query-input":"required name=search_term_string"}}]}}'
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: 'http://localhost:3000'
+          access-control-allow-credentials: 'true'
+        description: null
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
     uri: api/v1/ping
     metadata:
       custom: []
@@ -75,7 +123,7 @@ endpoints:
       name:
         custom: []
         name: name
-        description: 'Must not be greater than 255 characters.'
+        description: validation.max.
         required: true
         example: b
         type: string
@@ -86,7 +134,7 @@ endpoints:
       email:
         custom: []
         name: email
-        description: 'Must be a valid email address. Must not be greater than 255 characters.'
+        description: 'validation.email validation.max.'
         required: true
         example: zbailey@example.net
         type: string
@@ -97,7 +145,7 @@ endpoints:
       password:
         custom: []
         name: password
-        description: 'Must be at least 8 characters.'
+        description: validation.min.
         required: true
         example: '-0pBNvYgxw'
         type: string
@@ -148,7 +196,7 @@ endpoints:
       email:
         custom: []
         name: email
-        description: 'Must be a valid email address.'
+        description: validation.email.
         required: true
         example: gbailey@example.net
         type: string
@@ -221,6 +269,215 @@ endpoints:
       id_token: architecto
     fileParameters: []
     responses: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/v1/auth/forgot-password
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'POST /api/v1/auth/forgot-password'
+      description: |-
+        Always returns 200 regardless of whether the email exists — prevents
+        user enumeration.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        custom: []
+        name: email
+        description: validation.email.
+        required: true
+        example: gbailey@example.net
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      email: gbailey@example.net
+    fileParameters: []
+    responses: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/v1/auth/reset-password
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'POST /api/v1/auth/reset-password'
+      description: |-
+        Validates the token and updates the user's password.
+        Revokes all existing Sanctum tokens on success.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        custom: []
+        name: email
+        description: validation.email.
+        required: true
+        example: gbailey@example.net
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      token:
+        custom: []
+        name: token
+        description: ''
+        required: true
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      password:
+        custom: []
+        name: password
+        description: validation.min.
+        required: true
+        example: ']|{+-0pBNvYg'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      password_confirmation:
+        custom: []
+        name: password_confirmation
+        description: ''
+        required: true
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanBodyParameters:
+      email: gbailey@example.net
+      token: architecto
+      password: ']|{+-0pBNvYg'
+      password_confirmation: architecto
+    fileParameters: []
+    responses: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/auth/email/verify/{id}/{hash}'
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'GET /api/v1/auth/email/verify/{id}/{hash}  [signed]'
+      description: |-
+        Validates the signed URL, checks the hash, and marks the email as verified.
+        The `signed` middleware aborts with 403 before this runs if the URL is
+        invalid or expired.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      id:
+        custom: []
+        name: id
+        description: 'The ID of the verify.'
+        required: true
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      hash:
+        custom: []
+        name: hash
+        description: ''
+        required: true
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      id: architecto
+      hash: architecto
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 403
+        content: |-
+          {
+              "message": "Invalid signature."
+          }
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: 'http://localhost:3000'
+          access-control-allow-credentials: 'true'
+        description: null
     responseFields: []
     auth:
       - headers
@@ -342,7 +599,7 @@ endpoints:
       name:
         custom: []
         name: name
-        description: 'Must not be greater than 255 characters.'
+        description: validation.max.
         required: false
         example: b
         type: string
@@ -353,7 +610,7 @@ endpoints:
       phone:
         custom: []
         name: phone
-        description: 'Must not be greater than 20 characters.'
+        description: validation.max.
         required: false
         example: ngzmiyvdljnikhwa
         type: string
@@ -364,6 +621,41 @@ endpoints:
     cleanBodyParameters:
       name: b
       phone: ngzmiyvdljnikhwa
+    fileParameters: []
+    responses: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/v1/auth/email/resend
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'POST /api/v1/auth/email/resend  [auth:sanctum]'
+      description: 'Re-sends the verification email for the authenticated user.'
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
     fileParameters: []
     responses: []
     responseFields: []
@@ -405,8 +697,11 @@ endpoints:
     responses:
       -
         custom: []
-        status: 200
-        content: '{"status":"success","message":"OK","data":[]}'
+        status: 500
+        content: |-
+          {
+              "message": "Server Error"
+          }
         headers:
           cache-control: 'no-cache, private'
           content-type: application/json
@@ -448,14 +743,14 @@ endpoints:
         name: slug
         description: 'The slug of the category.'
         required: true
-        example: 16
-        type: integer
+        example: '2'
+        type: string
         enumValues: []
         exampleWasSpecified: false
         nullable: false
         deprecated: false
     cleanUrlParameters:
-      slug: 16
+      slug: '2'
     queryParameters: []
     cleanQueryParameters: []
     bodyParameters: []
@@ -467,7 +762,116 @@ endpoints:
         status: 404
         content: |-
           {
-              "message": "No query results for model [App\\Models\\Category]."
+              "message": "Category not found."
+          }
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: 'http://localhost:3000'
+          access-control-allow-credentials: 'true'
+        description: null
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/v1/brands
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: |-
+        GET /api/v1/brands
+        Return all active brands ordered by sort_order.
+      description: ''
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: '{"status":"success","message":"OK","data":[{"id":"2","name":"Philips","slug":"philips","logo_url":null,"description":"Th\u01b0\u01a1ng hi\u1ec7u chi\u1ebfu s\u00e1ng h\u00e0ng \u0111\u1ea7u th\u1ebf gi\u1edbi, ti\u00ean phong trong c\u00f4ng ngh\u1ec7 LED v\u00e0 gi\u1ea3i ph\u00e1p \u00e1nh s\u00e1ng th\u00f4ng minh cho nh\u00e0 \u1edf, v\u0103n ph\u00f2ng v\u00e0 c\u00f4ng tr\u00ecnh.","website":"https:\/\/www.signify.com","sort_order":1,"products_count":0},{"id":"3","name":"Schneider Electric","slug":"schneider-electric","logo_url":null,"description":"T\u1eadp \u0111o\u00e0n qu\u1ea3n l\u00fd n\u0103ng l\u01b0\u1ee3ng v\u00e0 t\u1ef1 \u0111\u1ed9ng h\u00f3a h\u00e0ng \u0111\u1ea7u th\u1ebf gi\u1edbi, cung c\u1ea5p c\u00e1c gi\u1ea3i ph\u00e1p \u1ed5 c\u1eafm, thi\u1ebft b\u1ecb \u0111i\u1ec7n, t\u1ee7 \u0111i\u1ec7n v\u00e0 h\u1ec7 th\u1ed1ng qu\u1ea3n l\u00fd to\u00e0 nh\u00e0.","website":"https:\/\/www.se.com","sort_order":2,"products_count":0},{"id":"4","name":"Panasonic","slug":"panasonic","logo_url":null,"description":"T\u1eadp \u0111o\u00e0n \u0111i\u1ec7n t\u1eed Nh\u1eadt B\u1ea3n n\u1ed5i ti\u1ebfng v\u1edbi c\u00e1c d\u00f2ng \u0111\u00e8n LED, \u1ed5 c\u1eafm, c\u00f4ng t\u1eafc v\u00e0 thi\u1ebft b\u1ecb \u0111i\u1ec7n d\u00e2n d\u1ee5ng ch\u1ea5t l\u01b0\u1ee3ng cao, b\u1ec1n b\u1ec9 v\u00e0 ti\u1ebft ki\u1ec7m \u0111i\u1ec7n.","website":"https:\/\/www.panasonic.com","sort_order":3,"products_count":0},{"id":"5","name":"R\u1ea1ng \u0110\u00f4ng","slug":"rang-dong","logo_url":null,"description":"Th\u01b0\u01a1ng hi\u1ec7u chi\u1ebfu s\u00e1ng uy t\u00edn h\u00e0ng \u0111\u1ea7u Vi\u1ec7t Nam, chuy\u00ean s\u1ea3n xu\u1ea5t b\u00f3ng \u0111\u00e8n LED, \u0111\u00e8n hu\u1ef3nh quang v\u00e0 c\u00e1c thi\u1ebft b\u1ecb chi\u1ebfu s\u00e1ng cho gia \u0111\u00ecnh v\u00e0 c\u00f4ng nghi\u1ec7p.","website":"https:\/\/rangdong.com.vn","sort_order":4,"products_count":0},{"id":"6","name":"Legrand","slug":"legrand","logo_url":null,"description":"T\u1eadp \u0111o\u00e0n Ph\u00e1p chuy\u00ean thi\u1ebft b\u1ecb h\u1ea1 t\u1ea7ng \u0111i\u1ec7n v\u00e0 k\u1ef9 thu\u1eadt s\u1ed1, n\u1ed5i ti\u1ebfng v\u1edbi d\u00f2ng \u1ed5 c\u1eafm C\u00e9liane, Mosaic v\u00e0 h\u1ec7 th\u1ed1ng qu\u1ea3n l\u00fd t\u00f2a nh\u00e0 BTicino.","website":"https:\/\/www.legrand.com","sort_order":5,"products_count":0},{"id":"7","name":"OSRAM","slug":"osram","logo_url":null,"description":"Th\u01b0\u01a1ng hi\u1ec7u chi\u1ebfu s\u00e1ng h\u00e0ng \u0111\u1ea7u n\u01b0\u1edbc \u0110\u1ee9c v\u1edbi h\u01a1n 115 n\u0103m kinh nghi\u1ec7m, chuy\u00ean cung c\u1ea5p \u0111\u00e8n LED, \u0111\u00e8n chi\u1ebfu s\u00e1ng chuy\u00ean d\u1ee5ng, automotive v\u00e0 h\u1ec7 th\u1ed1ng \u0111i\u1ec1u khi\u1ec3n \u00e1nh s\u00e1ng th\u00f4ng minh.","website":"https:\/\/www.osram.com","sort_order":6,"products_count":0},{"id":"8","name":"\u0110i\u1ec7n Quang","slug":"dien-quang","logo_url":null,"description":"C\u00f4ng ty c\u1ed5 ph\u1ea7n B\u00f3ng \u0111\u00e8n \u0110i\u1ec7n Quang \u2014 th\u01b0\u01a1ng hi\u1ec7u chi\u1ebfu s\u00e1ng Vi\u1ec7t Nam l\u00e2u \u0111\u1eddi v\u1edbi c\u00e1c s\u1ea3n ph\u1ea9m LED, compact v\u00e0 \u0111\u00e8n c\u00f4ng nghi\u1ec7p ph\u00e2n ph\u1ed1i to\u00e0n qu\u1ed1c.","website":"https:\/\/www.dienquang.com.vn","sort_order":7,"products_count":0}]}'
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: 'http://localhost:3000'
+          access-control-allow-credentials: 'true'
+        description: null
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/brands/{slug}'
+    metadata:
+      custom: []
+      groupName: Endpoints
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: |-
+        GET /api/v1/brands/{slug}
+        Return a single brand with SEO, JSON-LD, and its paginated active products.
+      description: ''
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_AUTH_KEY}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      slug:
+        custom: []
+        name: slug
+        description: 'The slug of the brand.'
+        required: true
+        example: '2'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      slug: '2'
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+              "message": "Brand not found."
           }
         headers:
           cache-control: 'no-cache, private'
@@ -688,7 +1092,7 @@ endpoints:
       q:
         custom: []
         name: q
-        description: 'Must be at least 2 characters. Must not be greater than 255 characters.'
+        description: 'validation.min validation.max.'
         required: true
         example: b
         type: string
@@ -701,7 +1105,7 @@ endpoints:
         name: type
         description: ''
         required: false
-        example: products
+        example: all
         type: string
         enumValues:
           - products
@@ -713,7 +1117,7 @@ endpoints:
       page:
         custom: []
         name: page
-        description: 'Must be at least 1.'
+        description: validation.min.
         required: false
         example: 22
         type: integer
@@ -724,7 +1128,7 @@ endpoints:
       per_page:
         custom: []
         name: per_page
-        description: 'Must be at least 1. Must not be greater than 100.'
+        description: 'validation.min validation.max.'
         required: false
         example: 7
         type: integer
@@ -734,7 +1138,7 @@ endpoints:
         deprecated: false
     cleanBodyParameters:
       q: b
-      type: products
+      type: all
       page: 22
       per_page: 7
     fileParameters: []
@@ -742,7 +1146,7 @@ endpoints:
       -
         custom: []
         status: 422
-        content: '{"message":"The q field must be at least 2 characters.","errors":{"q":["The q field must be at least 2 characters."]}}'
+        content: '{"message":"validation.min.string","errors":{"q":["validation.min.string"]}}'
         headers:
           cache-control: 'no-cache, private'
           content-type: application/json
@@ -873,7 +1277,7 @@ endpoints:
       product_id:
         custom: []
         name: product_id
-        description: 'Must be a valid UUID. The <code>id</code> of an existing record in the products table.'
+        description: 'validation.uuid The <code>id</code> of an existing record in the products table.'
         required: true
         example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
         type: string
@@ -884,7 +1288,7 @@ endpoints:
       quantity:
         custom: []
         name: quantity
-        description: 'Must be at least 1.'
+        description: validation.min.
         required: true
         example: 67
         type: integer
@@ -946,7 +1350,7 @@ endpoints:
       quantity:
         custom: []
         name: quantity
-        description: 'Must be at least 1.'
+        description: validation.min.
         required: true
         example: 16
         type: integer
@@ -1044,7 +1448,7 @@ endpoints:
       session_id:
         custom: []
         name: session_id
-        description: 'Must be a valid UUID.'
+        description: validation.uuid.
         required: true
         example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
         type: string
@@ -1138,7 +1542,7 @@ endpoints:
         name: label
         description: ''
         required: false
-        example: office
+        example: home
         type: string
         enumValues:
           - home
@@ -1150,7 +1554,7 @@ endpoints:
       full_name:
         custom: []
         name: full_name
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: true
         example: b
         type: string
@@ -1161,7 +1565,7 @@ endpoints:
       phone:
         custom: []
         name: phone
-        description: 'Must not be greater than 20 characters.'
+        description: validation.max.
         required: true
         example: ngzmiyvdljnikhwa
         type: string
@@ -1172,7 +1576,7 @@ endpoints:
       address_line:
         custom: []
         name: address_line
-        description: 'Must not be greater than 255 characters.'
+        description: validation.max.
         required: true
         example: 'y'
         type: string
@@ -1183,7 +1587,7 @@ endpoints:
       city:
         custom: []
         name: city
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: true
         example: k
         type: string
@@ -1194,7 +1598,7 @@ endpoints:
       district:
         custom: []
         name: district
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: true
         example: c
         type: string
@@ -1205,7 +1609,7 @@ endpoints:
       ward:
         custom: []
         name: ward
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: true
         example: m
         type: string
@@ -1225,7 +1629,7 @@ endpoints:
         nullable: false
         deprecated: false
     cleanBodyParameters:
-      label: office
+      label: home
       full_name: b
       phone: ngzmiyvdljnikhwa
       address_line: 'y'
@@ -1285,7 +1689,7 @@ endpoints:
         name: label
         description: ''
         required: false
-        example: other
+        example: office
         type: string
         enumValues:
           - home
@@ -1297,7 +1701,7 @@ endpoints:
       full_name:
         custom: []
         name: full_name
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: false
         example: b
         type: string
@@ -1308,7 +1712,7 @@ endpoints:
       phone:
         custom: []
         name: phone
-        description: 'Must not be greater than 20 characters.'
+        description: validation.max.
         required: false
         example: ngzmiyvdljnikhwa
         type: string
@@ -1319,7 +1723,7 @@ endpoints:
       address_line:
         custom: []
         name: address_line
-        description: 'Must not be greater than 255 characters.'
+        description: validation.max.
         required: false
         example: 'y'
         type: string
@@ -1330,7 +1734,7 @@ endpoints:
       city:
         custom: []
         name: city
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: false
         example: k
         type: string
@@ -1341,7 +1745,7 @@ endpoints:
       district:
         custom: []
         name: district
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: false
         example: c
         type: string
@@ -1352,7 +1756,7 @@ endpoints:
       ward:
         custom: []
         name: ward
-        description: 'Must not be greater than 100 characters.'
+        description: validation.max.
         required: false
         example: m
         type: string
@@ -1372,7 +1776,7 @@ endpoints:
         nullable: false
         deprecated: false
     cleanBodyParameters:
-      label: other
+      label: office
       full_name: b
       phone: ngzmiyvdljnikhwa
       address_line: 'y'
@@ -1560,7 +1964,7 @@ endpoints:
       address_id:
         custom: []
         name: address_id
-        description: 'Must be a valid UUID. The <code>id</code> of an existing record in the addresses table.'
+        description: 'validation.uuid The <code>id</code> of an existing record in the addresses table.'
         required: true
         example: 6ff8f7f6-1eb3-3525-be4a-3932c805afed
         type: string
@@ -1571,7 +1975,7 @@ endpoints:
       note:
         custom: []
         name: note
-        description: 'Must not be greater than 500 characters.'
+        description: validation.max.
         required: false
         example: g
         type: string
@@ -1756,9 +2160,7 @@ endpoints:
       groupDescription: ''
       subgroup: ''
       subgroupDescription: ''
-      title: |-
-        GET /api/v1/blog/categories
-        Returns the full tree: root categories with children eager-loaded.
+      title: ''
       description: ''
       authenticated: true
       deprecated: false
@@ -1803,7 +2205,7 @@ endpoints:
       groupDescription: ''
       subgroup: ''
       subgroupDescription: ''
-      title: 'GET /api/v1/blog/tags'
+      title: ''
       description: ''
       authenticated: true
       deprecated: false
@@ -1881,7 +2283,7 @@ endpoints:
         status: 404
         content: |-
           {
-              "message": "No query results for model [App\\Models\\BlogPost]."
+              "message": "Blog post not found."
           }
         headers:
           cache-control: 'no-cache, private'
@@ -1908,9 +2310,7 @@ endpoints:
       groupDescription: ''
       subgroup: ''
       subgroupDescription: ''
-      title: |-
-        GET /api/v1/blog/{slug}/comments
-        Paginated approved comments for a published post.
+      title: ''
       description: ''
       authenticated: true
       deprecated: false
@@ -1943,7 +2343,7 @@ endpoints:
         status: 404
         content: |-
           {
-              "message": "No query results for model [App\\Models\\BlogPost]."
+              "message": "Blog post not found."
           }
         headers:
           cache-control: 'no-cache, private'
@@ -1970,9 +2370,7 @@ endpoints:
       groupDescription: ''
       subgroup: ''
       subgroupDescription: ''
-      title: |-
-        POST /api/v1/blog/{slug}/comments  (auth:sanctum)
-        Submit a comment — stored as is_approved=false until admin approves.
+      title: ''
       description: ''
       authenticated: true
       deprecated: false
@@ -2000,7 +2398,7 @@ endpoints:
       body:
         custom: []
         name: body
-        description: 'Must be at least 3 characters. Must not be greater than 2000 characters.'
+        description: 'validation.min validation.max.'
         required: true
         example: b
         type: string

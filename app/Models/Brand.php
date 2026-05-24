@@ -6,6 +6,7 @@ use App\Traits\HasActivityLog;
 use App\Traits\HasGeoProfile;
 use App\Traits\HasJsonldSchemas;
 use App\Traits\HasLlmsEntry;
+use App\Traits\HasMedia;
 use App\Traits\HasSeoMeta;
 use App\Traits\HasSitemapEntry;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,10 @@ class Brand extends Model
     use HasJsonldSchemas;
     use HasSitemapEntry;
     use HasLlmsEntry;
+    use HasMedia;
     use HasActivityLog;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'name',

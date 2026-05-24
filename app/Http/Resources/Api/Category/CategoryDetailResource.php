@@ -2,24 +2,26 @@
 
 namespace App\Http\Resources\Api\Category;
 
+use App\Support\LocaleUrl;
 use Illuminate\Http\Request;
 
 class CategoryDetailResource extends CategoryResource
 {
     /**
-     * Full category detail representation — extends the list resource with
-     * SEO meta and JSON-LD schemas for category detail pages.
-     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
+        $locale = app()->getLocale();
+        $t      = $this->resource->translation($locale);
+        $slug   = $t?->slug ?? $this->resource->slug;
+
         return array_merge(parent::toArray($request), [
 
             // ── SEO meta ───────────────────────────────────────────────────────
             'seo' => $this->whenLoaded(
                 'seoMetas',
-                function () {
+                function () use ($locale, $slug) {
                     $seo = $this->resource->seoMeta();
                     return $seo ? [
                         'meta_title'          => $seo->meta_title,
@@ -32,8 +34,11 @@ class CategoryDetailResource extends CategoryResource
                         'twitter_card'        => $seo->twitter_card,
                         'twitter_title'       => $seo->twitter_title,
                         'twitter_description' => $seo->twitter_description,
-                        'canonical_url'       => $seo->canonical_url,
                         'robots'              => $seo->robots,
+                        // Always computed — never read from DB to avoid stale domain / wrong prefix.
+                        'canonical_url'       => LocaleUrl::for('category', $slug, $locale),
+                        // hreflang map uses per-locale translation slug (vi=den-led, en=led-lighting).
+                        'hreflang'            => $this->buildHreflang(),
                     ] : null;
                 },
             ),
@@ -51,5 +56,27 @@ class CategoryDetailResource extends CategoryResource
             ),
 
         ]);
+    }
+
+    /**
+     * Build hreflang map using locale-specific translation slugs.
+     * Each locale gets its own canonical: vi=/danh-muc/den-led, en=/en/categories/led-lighting.
+     *
+     * @return array<string, string>
+     */
+    private function buildHreflang(): array
+    {
+        $locales       = config('localeurl.supported_locales', ['vi', 'en']);
+        $defaultLocale = config('localeurl.default_locale', 'vi');
+
+        $map = [];
+        foreach ($locales as $locale) {
+            $t            = $this->resource->translation($locale);
+            $slug         = $t?->slug ?? $this->resource->slug;
+            $map[$locale] = LocaleUrl::for('category', $slug, $locale);
+        }
+        $map['x-default'] = $map[$defaultLocale];
+
+        return $map;
     }
 }
