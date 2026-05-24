@@ -41,9 +41,26 @@ class EditProduct extends EditRecord
             if ($translation) {
                 $data['translations'][$locale] = $translation->only([
                     'name', 'slug', 'short_description', 'description',
-                    'price', 'currency', 'meta_title', 'meta_description',
+                    'price', 'sale_price', 'currency', 'meta_title', 'meta_description',
                 ]);
             }
+        }
+
+        return $data;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $vi = $data['translations']['vi'] ?? [];
+
+        if (filled($vi['name'] ?? null)) {
+            $data['name']              = $vi['name'];
+            $data['slug']              = $vi['slug'] ?? $data['slug'] ?? null;
+            $data['short_description'] = $vi['short_description'] ?? null;
+            $data['description']       = $vi['description'] ?? null;
+            $data['price']             = $vi['price'] ?? $data['price'] ?? null;
+            $data['sale_price']        = $vi['sale_price'] ?? null;
+            $data['currency']          = $vi['currency'] ?? 'VND';
         }
 
         return $data;

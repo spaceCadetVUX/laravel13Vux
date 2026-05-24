@@ -49,11 +49,15 @@ class SeoMeta extends Model
      */
     protected function performInsert(\Illuminate\Database\Eloquent\Builder $query): bool
     {
-        if (filled($this->model_type) && filled($this->model_id) && filled($this->locale)) {
+        if (filled($this->model_type) && filled($this->model_id)) {
+            // locale may be null when Filament creates a new model via the relationship
+            // without including the WHERE-clause attribute; fall back to the DB default.
+            $locale = $this->locale ?: config('app.fallback_locale', 'vi');
+
             $existing = static::query()
                 ->where('model_type', $this->model_type)
                 ->where('model_id',   $this->model_id)
-                ->where('locale',     $this->locale)
+                ->where('locale',     $locale)
                 ->first();
 
             if ($existing) {

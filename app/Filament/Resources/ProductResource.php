@@ -665,6 +665,9 @@ class ProductResource extends Resource
                                         ->schema([
                                             Group::make()
                                                 ->relationship('seoMetaVi')
+                                                ->mutateRelationshipDataBeforeCreateUsing(
+                                                    fn (array $data) => ['locale' => 'vi', ...$data]
+                                                )
                                                 ->schema([
                                                     Section::make('Meta Tags')
                                                         ->schema([
@@ -842,6 +845,9 @@ class ProductResource extends Resource
                                         ->schema([
                                             Group::make()
                                                 ->relationship('seoMetaEn')
+                                                ->mutateRelationshipDataBeforeCreateUsing(
+                                                    fn (array $data) => ['locale' => 'en', ...$data]
+                                                )
                                                 ->schema([
                                                     Section::make('Meta Tags')
                                                         ->schema([
@@ -1031,6 +1037,9 @@ class ProductResource extends Resource
                                         ->schema([
                                             Group::make()
                                                 ->relationship('geoProfileVi')
+                                                ->mutateRelationshipDataBeforeCreateUsing(
+                                                    fn (array $data) => ['locale' => 'vi', ...$data]
+                                                )
                                                 ->schema([
                                                     Section::make('AI Context (vi)')
                                                         ->description('Dùng bởi ChatGPT, Gemini, Perplexity khi trả lời về sản phẩm này.')
@@ -1103,6 +1112,9 @@ class ProductResource extends Resource
                                         ->schema([
                                             Group::make()
                                                 ->relationship('geoProfileEn')
+                                                ->mutateRelationshipDataBeforeCreateUsing(
+                                                    fn (array $data) => ['locale' => 'en', ...$data]
+                                                )
                                                 ->schema([
                                                     Section::make('AI Context (en)')
                                                         ->description('Used by ChatGPT, Gemini, Perplexity when answering questions about this product.')
