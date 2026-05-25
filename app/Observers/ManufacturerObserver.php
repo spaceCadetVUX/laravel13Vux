@@ -6,6 +6,7 @@ use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Manufacturer;
+use App\Services\Catalog\ManufacturerService;
 use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
@@ -16,9 +17,13 @@ class ManufacturerObserver
 {
     public function saved(Manufacturer $manufacturer): void
     {
-        dispatch(new SyncJsonldSchema($manufacturer))->onQueue('seo');
-        dispatch(new SyncSitemapEntry($manufacturer))->onQueue('seo');
-        dispatch(new SyncLlmsEntry($manufacturer))->onQueue('seo');
+        app(ManufacturerService::class)->bustListCache();
+
+        foreach (config('app.supported_locales', ['vi', 'en']) as $locale) {
+            dispatch(new SyncJsonldSchema($manufacturer, $locale))->onQueue('seo');
+            dispatch(new SyncSitemapEntry($manufacturer, $locale))->onQueue('seo');
+            dispatch(new SyncLlmsEntry($manufacturer, $locale))->onQueue('seo');
+        }
     }
 
     public function deleted(Manufacturer $manufacturer): void

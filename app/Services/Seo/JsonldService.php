@@ -25,6 +25,7 @@ class JsonldService
         'category'      => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
         'blog_category' => [JsonldSchemaType::CollectionPage, JsonldSchemaType::BreadcrumbList],
         'brand'         => [JsonldSchemaType::Brand,          JsonldSchemaType::BreadcrumbList],
+        'manufacturer'  => [JsonldSchemaType::Manufacturer,   JsonldSchemaType::BreadcrumbList],
     ];
 
     // URL prefixes are now managed by config/localeurl.php + App\Support\LocaleUrl.
@@ -133,6 +134,16 @@ class JsonldService
                 }
             }
 
+            if ($morphAlias === 'manufacturer') {
+                if ($schemaType === JsonldSchemaType::Manufacturer) {
+                    $resolved = $this->enrichManufacturerSchema($resolved, $model, $locale);
+                }
+
+                if ($schemaType === JsonldSchemaType::BreadcrumbList) {
+                    $resolved = $this->buildManufacturerBreadcrumb($model, $locale);
+                }
+            }
+
             JsonldSchema::updateOrCreate(
                 [
                     'model_type'  => $morphAlias,
@@ -157,7 +168,7 @@ class JsonldService
         }
 
         // ── FAQPage — any model with geoProfile.faq data ──────────────────────
-        if (in_array($morphAlias, ['product', 'blog_post', 'category', 'brand'], true)) {
+        if (in_array($morphAlias, ['product', 'blog_post', 'category', 'brand', 'manufacturer'], true)) {
             $this->syncFaqPage($model, $locale);
         }
     }
@@ -1068,6 +1079,53 @@ class JsonldService
         }
 
         return $payload;
+    }
+
+    /**
+     * Enrich a resolved Manufacturer schema payload with logo, sameAs, country, @id, inLanguage.
+     */
+    private function enrichManufacturerSchema(array $payload, Model $model, string $locale): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+
+        if (isset($payload['url']) && ! isset($payload['@id'])) {
+            $payload['@id'] = $payload['url'];
+        }
+
+        $payload['inLanguage'] = $locale;
+
+        $logo = (string) ($model->getAttribute('logo') ?? '');
+        if (filled($logo)) {
+            $payload['logo'] = $baseUrl . '/storage/' . ltrim($logo, '/');
+        }
+
+        $website = (string) ($model->getAttribute('website') ?? '');
+        if (filled($website)) {
+            $payload['sameAs'] = $website;
+        }
+
+        $country = (string) ($model->getAttribute('country') ?? '');
+        if (filled($country)) {
+            $payload['address'] = ['@type' => 'PostalAddress', 'addressCountry' => $country];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Build a BreadcrumbList payload for a manufacturer page.
+     * Structure: Home → Manufacturers → {Manufacturer name}
+     */
+    private function buildManufacturerBreadcrumb(Model $model, string $locale = 'vi'): array
+    {
+        $name = (string) ($model->getAttribute('name') ?? '');
+        $slug = (string) ($model->getAttribute('slug') ?? '');
+
+        return $this->buildBreadcrumbSchema([
+            ['name' => 'Home',                                            'url' => rtrim((string) (config('seo.app_url') ?: config('app.url')), '/')],
+            ['name' => LocaleUrl::listLabel('manufacturer', $locale),    'url' => LocaleUrl::listUrl('manufacturer', $locale)],
+            ['name' => $name,                                             'url' => LocaleUrl::for('manufacturer', $slug, $locale)],
+        ]);
     }
 
     /**

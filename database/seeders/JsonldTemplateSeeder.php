@@ -138,7 +138,30 @@ class JsonldTemplateSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // ── e) BreadcrumbList (shared) ────────────────────────────────────
+            // ── e) Manufacturer ───────────────────────────────────────────────
+            // logo, sameAs, @id, inLanguage are injected at sync time if needed.
+            [
+                'schema_type'      => 'Manufacturer',
+                'label'            => 'Manufacturer Schema',
+                'is_auto_generated' => true,
+                'template'         => json_encode([
+                    '@context'    => 'https://schema.org',
+                    '@type'       => 'Organization',
+                    'name'        => '{{manufacturer.name}}',
+                    'description' => '{{manufacturer.description}}',
+                    'url'         => '{{manufacturer.website}}',
+                ]),
+                'placeholders'     => json_encode([
+                    '{{manufacturer.name}}'        => 'name',
+                    '{{manufacturer.slug}}'        => 'slug',
+                    '{{manufacturer.description}}' => 'description',
+                    '{{manufacturer.website}}'     => 'website',
+                ]),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+
+            // ── f) BreadcrumbList (shared) ────────────────────────────────────
             [
                 'schema_type'      => 'BreadcrumbList',
                 'label'            => 'Breadcrumb List Schema',
@@ -153,7 +176,7 @@ class JsonldTemplateSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // ── e) FAQPage (shared) ───────────────────────────────────────────
+            // ── g) FAQPage (shared) ───────────────────────────────────────────
             [
                 'schema_type'      => 'FAQPage',
                 'label'            => 'FAQ Page Schema',
@@ -168,7 +191,7 @@ class JsonldTemplateSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // ── f) WebSite (static, site-wide) ───────────────────────────────
+            // ── h) WebSite (static, site-wide) ───────────────────────────────
             [
                 'schema_type'      => 'WebSite',
                 'label'            => 'WebSite Schema',
@@ -192,7 +215,7 @@ class JsonldTemplateSeeder extends Seeder
                 'updated_at' => $now,
             ],
 
-            // ── g) Organization (static, site-wide) ──────────────────────────
+            // ── i) Organization (static, site-wide) ──────────────────────────
             [
                 'schema_type'      => 'Organization',
                 'label'            => 'Organization Schema',

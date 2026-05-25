@@ -38,7 +38,12 @@
       "Bash(curl -s http://localhost:8000/api/v1/brands/philips)",
       "Bash(python3 -m json.tool)",
       "Bash(curl -s http://127.0.0.1:8000/api/v1/brands -H \"Accept: application/json\")",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('message',''\\)\\); print\\(d.get\\('exception',''\\)\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('message',''\\)\\); print\\(d.get\\('exception',''\\)\\)\")",
+      "Bash(php -l app/Repositories/Eloquent/ManufacturerRepository.php)",
+      "Bash(php -l app/Services/Catalog/ManufacturerService.php)",
+      "Bash(php -l app/Http/Resources/Api/Catalog/ManufacturerResource.php)",
+      "Bash(php -l app/Http/Resources/Api/Catalog/ManufacturerDetailResource.php)",
+      "Bash(php -l app/Http/Controllers/Api/V1/Catalog/ManufacturerController.php)"
     ]
   }
 }

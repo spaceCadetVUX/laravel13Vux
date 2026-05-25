@@ -20,6 +20,7 @@ return [
     'prefixes' => [
         'vi' => [
             'brand'         => '/thuong-hieu/',
+            'manufacturer'  => '/nha-san-xuat/',
             'product'       => '/san-pham/',
             'category'      => '/danh-muc/',
             'blog_post'     => '/bai-viet/',
@@ -27,6 +28,7 @@ return [
         ],
         'en' => [
             'brand'         => '/en/brands/',
+            'manufacturer'  => '/en/manufacturers/',
             'product'       => '/en/products/',
             'category'      => '/en/categories/',
             'blog_post'     => '/en/blog/',
@@ -37,6 +39,7 @@ return [
     'list_labels' => [
         'vi' => [
             'brand'         => 'Thương hiệu',
+            'manufacturer'  => 'Nhà sản xuất',
             'product'       => 'Sản phẩm',
             'category'      => 'Danh mục',
             'blog_post'     => 'Bài viết',
@@ -44,6 +47,7 @@ return [
         ],
         'en' => [
             'brand'         => 'Brands',
+            'manufacturer'  => 'Manufacturers',
             'product'       => 'Products',
             'category'      => 'Categories',
             'blog_post'     => 'Blog',

@@ -15,4 +15,5 @@ enum JsonldSchemaType: string
     case Blog            = 'Blog';
     case AggregateRating = 'AggregateRating'; // embedded in Product — not standalone
     case VideoObject     = 'VideoObject';      // per product video
+    case Manufacturer    = 'Manufacturer';     // maps to @type Organization
 }

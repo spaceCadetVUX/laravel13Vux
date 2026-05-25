@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Blog\BlogTagController;
 use App\Http\Controllers\Api\V1\Cart\CartController;
 use App\Http\Controllers\Api\V1\Cart\CartItemController;
 use App\Http\Controllers\Api\V1\Catalog\BrandController;
+use App\Http\Controllers\Api\V1\Catalog\ManufacturerController;
 use App\Http\Controllers\Api\V1\Category\CategoryController;
 use App\Http\Controllers\Api\V1\Address\AddressController;
 use App\Http\Controllers\Api\V1\Order\OrderController;
@@ -66,8 +67,10 @@ Route::prefix('v1')->group(function () {
     // ── Catalog (S45–S47) ─────────────────────────────────────────────────
     Route::get('categories',        [CategoryController::class, 'index']);
     Route::get('categories/{slug}', [CategoryController::class, 'show']);
-    Route::get('brands',            [BrandController::class, 'index']);
-    Route::get('brands/{slug}',     [BrandController::class, 'show']);
+    Route::get('brands',                    [BrandController::class, 'index']);
+    Route::get('brands/{slug}',             [BrandController::class, 'show']);
+    Route::get('manufacturers',             [ManufacturerController::class, 'index']);
+    Route::get('manufacturers/{slug}',      [ManufacturerController::class, 'show']);
     Route::get('products',          [ProductController::class, 'index']);
     Route::get('products/{slug}',   [ProductController::class, 'show']);
     Route::get('search',            ProductSearchController::class);
