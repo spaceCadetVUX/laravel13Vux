@@ -35,6 +35,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Storage;
+use App\Support\LocaleUrl;
 use Illuminate\Support\Str;
 
 class ProductResource extends Resource
@@ -718,7 +719,7 @@ class ProductResource extends Resource
                                                                     if (empty($state)) {
                                                                         $slug = $livewire->record?->translation('vi')?->slug ?? $livewire->record?->slug;
                                                                         if ($slug) {
-                                                                            $set('canonical_url', url('/products/' . $slug));
+                                                                            $set('canonical_url', LocaleUrl::for('product', $slug, 'vi'));
                                                                         }
                                                                     }
                                                                 })
@@ -901,7 +902,7 @@ class ProductResource extends Resource
                                                                     if (empty($state)) {
                                                                         $slug = $livewire->record?->translation('en')?->slug ?? $livewire->record?->slug;
                                                                         if ($slug) {
-                                                                            $set('canonical_url', url('/products/' . $slug));
+                                                                            $set('canonical_url', LocaleUrl::for('product', $slug, 'en'));
                                                                         }
                                                                     }
                                                                 })

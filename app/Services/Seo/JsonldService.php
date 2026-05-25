@@ -94,7 +94,7 @@ class JsonldService
                 }
 
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
-                    $resolved = $this->buildProductBreadcrumb($model);
+                    $resolved = $this->buildProductBreadcrumb($model, $locale);
                 }
             }
 
@@ -559,11 +559,14 @@ class JsonldService
      * Breadcrumbs are built at save time as a best-effort approximation;
      * the frontend may override with a more accurate render-time breadcrumb.
      */
-    private function buildProductBreadcrumb(Model $model): array
+    private function buildProductBreadcrumb(Model $model, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
-        $name    = (string) ($model->getAttribute('name') ?? '');
-        $slug    = (string) ($model->getAttribute('slug') ?? '');
+
+        // Prefer locale-specific name and slug from translations.
+        $t    = method_exists($model, 'translation') ? $model->translation($locale) : null;
+        $name = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
+        $slug = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
         $items = [
             ['name' => 'Home', 'url' => $baseUrl],
@@ -576,14 +579,17 @@ class JsonldService
 
             if ($categories && $categories->isNotEmpty()) {
                 $cat     = $categories->first();
-                $items[] = [
-                    'name' => (string) ($cat->name ?? ''),
-                    'url'  => $baseUrl . '/categories/' . ($cat->slug ?? ''),
-                ];
+                $catSlug = (string) ($cat->slug ?? '');
+                if (filled($catSlug)) {
+                    $items[] = [
+                        'name' => (string) ($cat->name ?? ''),
+                        'url'  => LocaleUrl::for('category', $catSlug, $locale),
+                    ];
+                }
             }
         }
 
-        $items[] = ['name' => $name, 'url' => $baseUrl . '/products/' . $slug];
+        $items[] = ['name' => $name, 'url' => LocaleUrl::for('product', $slug, $locale)];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -1087,10 +1093,11 @@ class JsonldService
     private function enrichManufacturerSchema(array $payload, Model $model, string $locale): array
     {
         $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $slug    = (string) ($model->getAttribute('slug') ?? '');
 
-        if (isset($payload['url']) && ! isset($payload['@id'])) {
-            $payload['@id'] = $payload['url'];
-        }
+        // @id = canonical page URL on our site (entity disambiguation for Google).
+        // url in the template is the external manufacturer website — keep them separate.
+        $payload['@id'] = LocaleUrl::for('manufacturer', $slug, $locale);
 
         $payload['inLanguage'] = $locale;
 

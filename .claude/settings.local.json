@@ -43,7 +43,10 @@
       "Bash(php -l app/Services/Catalog/ManufacturerService.php)",
       "Bash(php -l app/Http/Resources/Api/Catalog/ManufacturerResource.php)",
       "Bash(php -l app/Http/Resources/Api/Catalog/ManufacturerDetailResource.php)",
-      "Bash(php -l app/Http/Controllers/Api/V1/Catalog/ManufacturerController.php)"
+      "Bash(php -l app/Http/Controllers/Api/V1/Catalog/ManufacturerController.php)",
+      "Bash(php -l app/Repositories/Eloquent/ProductRepository.php)",
+      "Bash(php -l app/Http/Resources/Api/Product/ProductDetailResource.php)",
+      "Bash(php -l app/Filament/Resources/ProductResource.php)"
     ]
   }
 }

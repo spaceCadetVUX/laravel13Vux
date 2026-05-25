@@ -67,7 +67,7 @@ class ProductRepository extends BaseRepository
     {
         /** @var Product|null */
         return $this->query()
-            ->with(['categories', 'images', 'videos', 'seoMetas', 'activeSchemas'])
+            ->with(['categories', 'images', 'videos', 'translations', 'seoMetas', 'activeSchemas'])
             ->where('slug', $slug)
             ->where('is_active', true)
             ->first();
