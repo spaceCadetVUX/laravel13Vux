@@ -355,107 +355,145 @@ class BlogPostResource extends Resource
                                 ->collapsed()
                                 ->collapsible(),
 
-                            Forms\Components\Repeater::make('jsonldSchemas')
-                                ->relationship()
-                                ->label('Schemas')
-                                ->schema([
+                            Tabs::make('JsonldLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('jsonldSchemasVi')
+                                                ->relationship()
+                                                ->label('Schemas (vi)')
+                                                ->schema([
+                                                    Placeholder::make('schema_header')
+                                                        ->label('')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record) { return new HtmlString(''); }
+                                                            $type  = $record->schema_type?->value ?? '—';
+                                                            $label = e($record->label ?? '');
+                                                            $auto  = $record->is_auto_generated
+                                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
+                                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+                                                            return new HtmlString("<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'><span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>" . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "{$auto}</div>");
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Placeholder::make('payload_preview')
+                                                        ->label('Payload (what Google reads)')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record || empty($record->payload)) {
+                                                                return new HtmlString('<em class="text-gray-400">No payload yet — publish the post to generate.</em>');
+                                                            }
+                                                            $json = json_encode($record->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                                            return new HtmlString('<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">' . e($json) . '</pre>');
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label('Active (inject into page <head>)')
+                                                        ->inline(false),
+                                                    Placeholder::make('schema_updated_at')
+                                                        ->label('Last generated')
+                                                        ->content(fn ($record) => $record?->updated_at
+                                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                                            : '—'
+                                                        ),
+                                                ])
+                                                ->itemLabel(fn (array $state): ?string =>
+                                                    filled($state['schema_type'] ?? '')
+                                                        ? (is_object($state['schema_type']) ? $state['schema_type']->value : (string) $state['schema_type'])
+                                                        : null
+                                                )
+                                                ->collapsed()
+                                                ->addable(false)
+                                                ->deletable(false)
+                                                ->reorderable(false)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
 
-                                    Placeholder::make('schema_header')
-                                        ->label('')
-                                        ->content(function ($record): HtmlString {
-                                            if (! $record) {
-                                                return new HtmlString('');
-                                            }
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_jsonld_vi')
+                                                    ->label('Regenerate vi')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate JSON-LD (vi)')
+                                                    ->modalDescription('Re-generate all Auto schemas for the Vietnamese locale. Manual schemas will not be affected.')
+                                                    ->action(function ($livewire): void {
+                                                        $post = $livewire->record;
+                                                        if (! $post?->exists) { return; }
+                                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($post, 'vi');
+                                                        Notification::make()->title('JSON-LD (vi) regenerated')->success()->send();
+                                                        redirect(BlogPostResource::getUrl('edit', ['record' => $post]));
+                                                    }),
+                                            ]),
+                                        ]),
 
-                                            $type  = is_object($record->schema_type)
-                                                ? $record->schema_type->value
-                                                : (string) ($record->schema_type ?? '—');
-                                            $label = e($record->label ?? '');
-                                            $auto  = $record->is_auto_generated
-                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
-                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+                                    Tab::make('🇬🇧 English')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('jsonldSchemasEn')
+                                                ->relationship()
+                                                ->label('Schemas (en)')
+                                                ->schema([
+                                                    Placeholder::make('schema_header')
+                                                        ->label('')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record) { return new HtmlString(''); }
+                                                            $type  = $record->schema_type?->value ?? '—';
+                                                            $label = e($record->label ?? '');
+                                                            $auto  = $record->is_auto_generated
+                                                                ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#fef9c3;color:#854d0e;">⚡ Auto</span>'
+                                                                : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:0.7rem;font-weight:600;background:#dcfce7;color:#166534;">✎ Manual</span>';
+                                                            return new HtmlString("<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'><span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>" . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "{$auto}</div>");
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Placeholder::make('payload_preview')
+                                                        ->label('Payload (what Google reads)')
+                                                        ->content(function ($record): HtmlString {
+                                                            if (! $record || empty($record->payload)) {
+                                                                return new HtmlString('<em class="text-gray-400">No payload yet — publish the post to generate.</em>');
+                                                            }
+                                                            $json = json_encode($record->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                                            return new HtmlString('<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">' . e($json) . '</pre>');
+                                                        })
+                                                        ->columnSpanFull(),
+                                                    Forms\Components\Toggle::make('is_active')
+                                                        ->label('Active (inject into page <head>)')
+                                                        ->inline(false),
+                                                    Placeholder::make('schema_updated_at')
+                                                        ->label('Last generated')
+                                                        ->content(fn ($record) => $record?->updated_at
+                                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
+                                                            : '—'
+                                                        ),
+                                                ])
+                                                ->itemLabel(fn (array $state): ?string =>
+                                                    filled($state['schema_type'] ?? '')
+                                                        ? (is_object($state['schema_type']) ? $state['schema_type']->value : (string) $state['schema_type'])
+                                                        : null
+                                                )
+                                                ->collapsed()
+                                                ->addable(false)
+                                                ->deletable(false)
+                                                ->reorderable(false)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
 
-                                            return new HtmlString("
-                                                <div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>
-                                                    <span style='font-weight:700;font-size:0.95rem;color:#1e293b;'>{$type}</span>
-                                                    " . (filled($label) ? "<span style='color:#64748b;font-size:0.85rem;'>— {$label}</span>" : '') . "
-                                                    {$auto}
-                                                </div>
-                                            ");
-                                        })
-                                        ->columnSpanFull(),
-
-                                    Placeholder::make('payload_preview')
-                                        ->label('Payload (what Google reads)')
-                                        ->content(function ($record): HtmlString {
-                                            if (! $record || empty($record->payload)) {
-                                                return new HtmlString('<em class="text-gray-400">No payload yet — publish the post to generate.</em>');
-                                            }
-
-                                            $json = json_encode(
-                                                $record->payload,
-                                                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                                            );
-
-                                            return new HtmlString(
-                                                '<pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;">'
-                                                . e($json)
-                                                . '</pre>'
-                                            );
-                                        })
-                                        ->columnSpanFull(),
-
-                                    Forms\Components\Toggle::make('is_active')
-                                        ->label('Active (inject into page <head>)')
-                                        ->inline(false),
-
-                                    Placeholder::make('schema_updated_at')
-                                        ->label('Last generated')
-                                        ->content(fn ($record) => $record?->updated_at
-                                            ? $record->updated_at->diffForHumans() . ' (' . $record->updated_at->format('d/m/Y H:i') . ')'
-                                            : '—'
-                                        ),
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_jsonld_en')
+                                                    ->label('Regenerate en')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate JSON-LD (en)')
+                                                    ->modalDescription('Re-generate all Auto schemas for the English locale. Manual schemas will not be affected.')
+                                                    ->action(function ($livewire): void {
+                                                        $post = $livewire->record;
+                                                        if (! $post?->exists) { return; }
+                                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($post, 'en');
+                                                        Notification::make()->title('JSON-LD (en) regenerated')->success()->send();
+                                                        redirect(BlogPostResource::getUrl('edit', ['record' => $post]));
+                                                    }),
+                                            ]),
+                                        ]),
                                 ])
-                                ->itemLabel(fn (array $state): ?string =>
-                                    filled($state['schema_type'] ?? '')
-                                        ? (is_object($state['schema_type'])
-                                            ? $state['schema_type']->value
-                                            : (string) $state['schema_type'])
-                                        : null
-                                )
-                                ->collapsed()
-                                ->addable(false)
-                                ->deletable(false)
-                                ->reorderable(false)
-                                ->defaultItems(0)
                                 ->columnSpanFull(),
-
-                            \Filament\Schemas\Components\Actions::make([
-                                \Filament\Actions\Action::make('regenerate_jsonld')
-                                    ->label('Regenerate all schemas')
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->color('gray')
-                                    ->requiresConfirmation()
-                                    ->modalHeading('Regenerate JSON-LD Schemas')
-                                    ->modalDescription('This will re-generate all Auto schemas from the current post data. Manual schemas will not be affected.')
-                                    ->action(function ($livewire): void {
-                                        $post = $livewire->record;
-
-                                        if (! $post?->exists) {
-                                            return;
-                                        }
-
-                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($post);
-
-                                        Notification::make()
-                                            ->title('JSON-LD schemas regenerated')
-                                            ->body('All auto schemas have been updated.')
-                                            ->success()
-                                            ->send();
-
-                                        redirect(BlogPostResource::getUrl('edit', ['record' => $post]));
-                                    }),
-                            ]),
                         ])
                         ->hidden(fn ($record) => $record === null),
 

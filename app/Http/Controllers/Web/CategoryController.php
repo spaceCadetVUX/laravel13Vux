@@ -38,14 +38,19 @@ class CategoryController extends Controller
             abort(404);
         }
 
-        $alternateUrls = app(SeoService::class)->alternateUrls($category, 'category.show');
-        $seoMeta       = $translation;
-        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($category, $locale)
+        $alternateUrls       = app(SeoService::class)->alternateUrls($category, 'category.show');
+        $seoMeta             = $translation;
+        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($category, $locale)
             ->pluck('payload')
             ->toArray();
+        $fallbackTitle       = $translation->name;
+        $fallbackDescription = $translation->description ?? '';
+        $fallbackImage       = null;
+        $ogType              = 'website';
 
         return view('pages.category.show', compact(
-            'category', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
+            'category', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }
 }

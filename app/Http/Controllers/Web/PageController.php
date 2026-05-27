@@ -43,16 +43,21 @@ class PageController extends Controller
             ->all();
 
         // PageTranslation carries its own meta fields; pass as $seoMeta for the layout
-        $seoMeta       = $translation;
-        $jsonldSchemas = [
+        $seoMeta             = $translation;
+        $jsonldSchemas       = [
             app(JsonldService::class)->buildBreadcrumb([
                 ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
                 ['name' => $translation->title, 'url' => url()->current()],
             ]),
         ];
+        $fallbackTitle       = $translation->title;
+        $fallbackDescription = $translation->meta_description ?? '';
+        $fallbackImage       = null;
+        $ogType              = 'website';
 
         return view('pages.page.show', compact(
-            'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
+            'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }
 }

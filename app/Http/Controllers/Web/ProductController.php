@@ -15,7 +15,7 @@ class ProductController extends Controller
     {
         $translation = ProductTranslation::where('locale', $locale)
             ->where('slug', $slug)
-            ->with('product.categories')
+            ->with(['product.categories', 'product.thumbnail'])
             ->first();
 
         if (! $translation) {
@@ -44,14 +44,21 @@ class ProductController extends Controller
             ? route('category.show', ['locale' => $locale, 'slug' => $catTranslation->slug])
             : '';
 
-        $alternateUrls = app(SeoService::class)->alternateUrls($product, 'product.show');
-        $seoMeta       = $product->seoMeta($locale);
-        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($product, $locale)
+        $alternateUrls       = app(SeoService::class)->alternateUrls($product, 'product.show');
+        $seoMeta             = $product->seoMeta($locale);
+        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($product, $locale)
             ->pluck('payload')
             ->toArray();
+        $fallbackTitle       = $translation->name;
+        $fallbackDescription = $translation->short_description ?? '';
+        $fallbackImage       = $product->thumbnail
+            ? url($product->thumbnail->url)
+            : null;
+        $ogType              = 'product';
 
         return view('pages.product.show', compact(
-            'product', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
+            'product', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }
 }
