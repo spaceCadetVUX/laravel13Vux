@@ -20,6 +20,7 @@ use App\Models\BlogCategoryTranslation;
 use App\Models\BlogPostTranslation;
 use App\Models\CategoryTranslation;
 use App\Models\ProductTranslation;
+use App\Observers\AuthorObserver;
 use App\Observers\BlogCategoryObserver;
 use App\Observers\BlogCategoryTranslationObserver;
 use App\Observers\BlogPostObserver;
@@ -91,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
         Review::observe(ReviewObserver::class);
         BlogPost::observe(BlogPostObserver::class);
         BlogCategory::observe(BlogCategoryObserver::class);
+        Author::observe(AuthorObserver::class);
         Redirect::observe(RedirectObserver::class);
         BusinessProfile::observe(BusinessProfileObserver::class);
 

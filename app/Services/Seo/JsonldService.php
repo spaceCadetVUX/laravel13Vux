@@ -468,6 +468,7 @@ class JsonldService
     {
         $currency   = (string) ($payload['offers']['priceCurrency'] ?? config('seo.currency', 'VND'));
         $productUrl = (string) ($payload['url'] ?? '');
+        $seller     = app(BusinessJsonldService::class)->publisherBlock();
 
         // ── Try to load active variants ───────────────────────────────────────
         if (method_exists($model, 'activeVariants')) {
@@ -523,6 +524,7 @@ class JsonldService
                                 : 'https://schema.org/OutOfStock',
                             'offerCount'    => $variants->count(),
                             'url'           => $productUrl,
+                            'seller'        => $seller,
                         ];
                     }
 
@@ -542,6 +544,7 @@ class JsonldService
                             ? 'https://schema.org/InStock'
                             : 'https://schema.org/OutOfStock',
                         'offers'        => $offerList,
+                        'seller'        => $seller,
                     ];
                 }
             }
@@ -553,6 +556,7 @@ class JsonldService
         if (isset($singleOffer['price'])) {
             $singleOffer['price'] = (float) $singleOffer['price'];
         }
+        $singleOffer['seller'] = $seller;
 
         return $singleOffer;
     }
@@ -972,6 +976,11 @@ class JsonldService
                 $sameAs = $author->same_as;
                 if (! empty($sameAs)) {
                     $person['sameAs'] = count($sameAs) === 1 ? $sameAs[0] : $sameAs;
+                }
+
+                $expertise = array_values(array_filter((array) ($author->expertise ?? [])));
+                if (! empty($expertise)) {
+                    $person['knowsAbout'] = $expertise;
                 }
 
                 $payload['author'] = $person;

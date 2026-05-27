@@ -71,8 +71,11 @@ class BlogPostObserver
             return;
         }
 
+        $blogPost->loadMissing('translations');
+        $loadedLocales = $blogPost->translations->pluck('locale')->all();
+
         foreach (config('app.supported_locales') as $locale) {
-            if ($blogPost->translations()->where('locale', $locale)->exists()) {
+            if (in_array($locale, $loadedLocales, true)) {
                 dispatch(new SyncJsonldSchema($blogPost, $locale))->onQueue('seo');
                 dispatch(new SyncSitemapEntry($blogPost, $locale))->onQueue('seo');
                 dispatch(new SyncLlmsEntry($blogPost, $locale))->onQueue('seo');
@@ -109,8 +112,11 @@ class BlogPostObserver
             return;
         }
 
+        $blogPost->loadMissing('translations');
+        $loadedLocales = $blogPost->translations->pluck('locale')->all();
+
         foreach (config('app.supported_locales') as $locale) {
-            if ($blogPost->translations()->where('locale', $locale)->exists()) {
+            if (in_array($locale, $loadedLocales, true)) {
                 dispatch(new SyncJsonldSchema($blogPost, $locale))->onQueue('seo');
                 dispatch(new SyncSitemapEntry($blogPost, $locale))->onQueue('seo');
                 dispatch(new SyncLlmsEntry($blogPost, $locale))->onQueue('seo');
