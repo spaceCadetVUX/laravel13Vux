@@ -9,6 +9,8 @@
         :alternate-urls="$alternateUrls ?? []"
         :fallback-title="$fallbackTitle ?? config('app.name')"
         :fallback-description="$fallbackDescription ?? ''"
+        :fallback-image="$fallbackImage ?? null"
+        :og-type="$ogType ?? 'website'"
     />
     <x-seo.jsonld :schemas="$jsonldSchemas ?? []" />
 </head>

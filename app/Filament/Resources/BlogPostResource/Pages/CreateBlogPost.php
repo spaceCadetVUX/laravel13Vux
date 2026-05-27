@@ -16,8 +16,8 @@ class CreateBlogPost extends CreateRecord
         $morphClass = $this->record->getMorphClass();
         $modelId    = $this->record->getKey();
 
-        // ── FAQ — only create row if at least one question is filled ──────────
-        $faqItems = collect($state['faq_items'] ?? [])
+        // ── FAQ (per locale) — only save if at least one question filled ────────
+        $normalizeFaq = fn (array $items): array => collect($items)
             ->filter(fn (array $item): bool => filled($item['question'] ?? null))
             ->map(fn (array $item): array => [
                 'question' => trim($item['question']),
@@ -26,12 +26,17 @@ class CreateBlogPost extends CreateRecord
             ->values()
             ->toArray();
 
-        if (! empty($faqItems)) {
-            GeoEntityProfile::create([
-                'model_type' => $morphClass,
-                'model_id'   => $modelId,
-                'faq'        => $faqItems,
-            ]);
+        foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+            $faqItems = $normalizeFaq($state[$field] ?? []);
+
+            if (! empty($faqItems)) {
+                GeoEntityProfile::create([
+                    'model_type' => $morphClass,
+                    'model_id'   => $modelId,
+                    'locale'     => $locale,
+                    'faq'        => $faqItems,
+                ]);
+            }
         }
 
         // ── Translations ──────────────────────────────────────────────────────

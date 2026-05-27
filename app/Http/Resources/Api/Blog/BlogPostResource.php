@@ -11,8 +11,8 @@ class BlogPostResource extends JsonResource
     {
         return [
             'id'             => $this->id,
-            'title'          => $this->title,
-            'slug'           => $this->slug,
+            'title'          => $this->resource->translation(app()->getLocale())?->title,
+            'slug'           => $this->resource->translation(app()->getLocale())?->slug,
             'excerpt'        => $this->resource->translation(app()->getLocale())?->excerpt,
             'featured_image' => $this->featured_image,
             'author'         => $this->whenLoaded('author', fn () => $this->author ? [

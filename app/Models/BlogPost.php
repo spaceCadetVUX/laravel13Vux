@@ -45,8 +45,6 @@ class BlogPost extends Model
     protected $fillable = [
         'author_id',
         'blog_category_id',
-        'title',
-        'slug',
         'featured_image',
         'status',
         'published_at',
@@ -87,7 +85,7 @@ class BlogPost extends Model
     {
         return [
             'id'               => $this->id,
-            'title'            => $this->title,
+            'title'            => $this->translation('vi')?->title,
             'excerpt'          => $this->translation('vi')?->excerpt,
             'author'           => $this->author?->name,
             'blog_category_id' => $this->blog_category_id,

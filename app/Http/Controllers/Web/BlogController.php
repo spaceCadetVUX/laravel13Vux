@@ -46,14 +46,19 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $alternateUrls = app(SeoService::class)->alternateUrls($blogCategory, 'blog.category');
-        $seoMeta       = $blogCategory->seoMeta($locale);
-        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($blogCategory, $locale)
+        $alternateUrls       = app(SeoService::class)->alternateUrls($blogCategory, 'blog.category');
+        $seoMeta             = $blogCategory->seoMeta($locale);
+        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($blogCategory, $locale)
             ->pluck('payload')
             ->toArray();
+        $fallbackTitle       = $translation->name;
+        $fallbackDescription = $translation->description ?? '';
+        $fallbackImage       = null;
+        $ogType              = 'website';
 
         return view('pages.blog.category', compact(
-            'blogCategory', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
+            'blogCategory', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }
 
@@ -87,14 +92,21 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $alternateUrls = app(SeoService::class)->alternateUrls($post, 'blog.show');
-        $seoMeta       = $post->seoMeta($locale);
-        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($post, $locale)
+        $alternateUrls       = app(SeoService::class)->alternateUrls($post, 'blog.show');
+        $seoMeta             = $post->seoMeta($locale);
+        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($post, $locale)
             ->pluck('payload')
             ->toArray();
+        $fallbackTitle       = $translation->title;
+        $fallbackDescription = $translation->excerpt ?? '';
+        $fallbackImage       = $post->featured_image
+            ? url('storage/' . ltrim($post->featured_image, '/'))
+            : null;
+        $ogType              = 'article';
 
         return view('pages.blog.show', compact(
-            'post', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
+            'post', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }
 }

@@ -15,7 +15,8 @@ class EditBlogPost extends EditRecord
     {
         $this->record->loadMissing('geoProfiles');
 
-        $data['faq_items'] = $this->record->geoProfile('vi')?->faq ?? [];
+        $data['faq_items_vi'] = $this->record->geoProfile('vi')?->faq ?? [];
+        $data['faq_items_en'] = $this->record->geoProfile('en')?->faq ?? [];
 
         foreach (config('app.supported_locales') as $locale) {
             $translation = $this->record->translations()->where('locale', $locale)->first();
@@ -36,8 +37,8 @@ class EditBlogPost extends EditRecord
         $morphClass = $this->record->getMorphClass();
         $modelId    = $this->record->getKey();
 
-        // ── FAQ → geo_entity_profiles.faq ────────────────────────────────────
-        $faqItems = collect($state['faq_items'] ?? [])
+        // ── FAQ → geo_entity_profiles.faq (per locale) ───────────────────────
+        $normalizeFaq = fn (array $items): array => collect($items)
             ->filter(fn (array $item): bool => filled($item['question'] ?? null))
             ->map(fn (array $item): array => [
                 'question' => trim($item['question']),
@@ -46,10 +47,12 @@ class EditBlogPost extends EditRecord
             ->values()
             ->toArray();
 
-        GeoEntityProfile::updateOrCreate(
-            ['model_type' => $morphClass, 'model_id' => $modelId, 'locale' => 'vi'],
-            ['faq' => $faqItems]
-        );
+        foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+            GeoEntityProfile::updateOrCreate(
+                ['model_type' => $morphClass, 'model_id' => $modelId, 'locale' => $locale],
+                ['faq' => $normalizeFaq($state[$field] ?? [])]
+            );
+        }
 
         $this->saveTranslations();
     }

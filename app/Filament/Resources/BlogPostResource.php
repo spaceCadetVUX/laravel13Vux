@@ -58,17 +58,6 @@ class BlogPostResource extends Resource
                                 ->preload()
                                 ->nullable(),
 
-                            Forms\Components\TextInput::make('title')
-                                ->required()
-                                ->live(debounce: 500)
-                                ->afterStateUpdated(fn (Set $set, ?string $state) =>
-                                    $set('slug', Str::slug($state ?? ''))
-                                ),
-
-                            Forms\Components\TextInput::make('slug')
-                                ->required()
-                                ->unique(table: BlogPost::class, column: 'slug', ignoreRecord: true),
-
                             MediaFileUpload::make('featured_image')
                                 ->label('Featured Image')
                                 ->image()
@@ -145,27 +134,58 @@ class BlogPostResource extends Resource
                                 ))
                                 ->columnSpanFull(),
 
-                            Forms\Components\Repeater::make('faq_items')
-                                ->label('')
-                                ->schema([
-                                    Forms\Components\TextInput::make('question')
-                                        ->label('Question')
-                                        ->required()
-                                        ->placeholder('e.g. What is KNX?')
-                                        ->columnSpanFull(),
+                            Tabs::make('FaqLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('faq_items_vi')
+                                                ->label('')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('question')
+                                                        ->label('Câu hỏi')
+                                                        ->required()
+                                                        ->placeholder('VD: KNX là gì?')
+                                                        ->columnSpanFull(),
 
-                                    Forms\Components\Textarea::make('answer')
-                                        ->label('Answer')
-                                        ->required()
-                                        ->rows(3)
-                                        ->placeholder('Provide a clear, concise answer...')
-                                        ->columnSpanFull(),
+                                                    Forms\Components\Textarea::make('answer')
+                                                        ->label('Trả lời')
+                                                        ->required()
+                                                        ->rows(3)
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->addActionLabel('Thêm câu hỏi')
+                                                ->reorderable()
+                                                ->collapsible()
+                                                ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
+                                        ]),
+
+                                    Tab::make('🇬🇧 English')
+                                        ->schema([
+                                            Forms\Components\Repeater::make('faq_items_en')
+                                                ->label('')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('question')
+                                                        ->label('Question')
+                                                        ->required()
+                                                        ->placeholder('e.g. What is KNX?')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('answer')
+                                                        ->label('Answer')
+                                                        ->required()
+                                                        ->rows(3)
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->addActionLabel('Add question')
+                                                ->reorderable()
+                                                ->collapsible()
+                                                ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+                                                ->defaultItems(0)
+                                                ->columnSpanFull(),
+                                        ]),
                                 ])
-                                ->addActionLabel('Add question')
-                                ->reorderable()
-                                ->collapsible()
-                                ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
-                                ->defaultItems(0)
                                 ->columnSpanFull(),
                         ]),
 
@@ -562,6 +582,7 @@ class BlogPostResource extends Resource
                                         ->schema([
                                             Forms\Components\TextInput::make('translations.vi.title')
                                                 ->label('Tiêu đề (vi)')
+                                                ->required()
                                                 ->live(onBlur: true)
                                                 ->afterStateUpdated(fn ($state, Set $set) =>
                                                     $set('translations.vi.slug', Str::slug($state ?? '')))
@@ -580,15 +601,6 @@ class BlogPostResource extends Resource
                                             Forms\Components\RichEditor::make('translations.vi.body')
                                                 ->label('Nội dung (vi)')
                                                 ->plugins([MediaRichEditorPlugin::make()])
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.vi.meta_title')
-                                                ->label('Meta title (vi)')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.vi.meta_description')
-                                                ->label('Meta description (vi)')
-                                                ->rows(3)
                                                 ->columnSpanFull(),
                                         ]),
 
@@ -614,15 +626,6 @@ class BlogPostResource extends Resource
                                             Forms\Components\RichEditor::make('translations.en.body')
                                                 ->label('Body (en)')
                                                 ->plugins([MediaRichEditorPlugin::make()])
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.en.meta_title')
-                                                ->label('Meta title (en)')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.en.meta_description')
-                                                ->label('Meta description (en)')
-                                                ->rows(3)
                                                 ->columnSpanFull(),
                                         ]),
                                 ])

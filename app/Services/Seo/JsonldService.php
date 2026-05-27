@@ -172,7 +172,7 @@ class JsonldService
         }
 
         // ── FAQPage — any model with geoProfile.faq data ──────────────────────
-        if (in_array($morphAlias, ['product', 'blog_post', 'category', 'brand', 'manufacturer'], true)) {
+        if (in_array($morphAlias, ['product', 'blog_post', 'category', 'blog_category', 'brand', 'manufacturer'], true)) {
             $this->syncFaqPage($model, $locale);
         }
     }
@@ -633,8 +633,9 @@ class JsonldService
 
             if ($category && filled($category->name)) {
                 $catSlug = (string) ($category->translation($locale)?->slug ?? $category->slug ?? '');
+                $catName = (string) ($category->translation($locale)?->name ?? $category->name);
                 $items[] = [
-                    'name' => (string) $category->name,
+                    'name' => $catName,
                     'url'  => route('blog.category', ['locale' => $locale, 'slug' => $catSlug]),
                 ];
             }
@@ -870,7 +871,9 @@ class JsonldService
                                 '@type'    => 'ListItem',
                                 'position' => $index + 1,
                                 'name'     => $postName,
-                                'url'      => $baseUrl . '/blog/' . $postSlug,
+                                'url'      => filled($postSlug)
+                                    ? route('blog.show', ['locale' => $locale, 'slug' => $postSlug])
+                                    : $baseUrl,
                             ];
                         })->values()->all();
 
@@ -915,8 +918,9 @@ class JsonldService
 
             if ($parent && filled($parent->name)) {
                 $parentSlug = (string) ($parent->translation($locale)?->slug ?? $parent->slug ?? '');
+                $parentName = (string) ($parent->translation($locale)?->name ?? $parent->name);
                 $items[] = [
-                    'name' => (string) $parent->name,
+                    'name' => $parentName,
                     'url'  => route('blog.category', ['locale' => $locale, 'slug' => $parentSlug]),
                 ];
             }
@@ -1030,7 +1034,8 @@ class JsonldService
         // ── articleSection — blog category name ───────────────────────────────
         if (! isset($payload['articleSection']) && method_exists($model, 'blogCategory')) {
             $model->loadMissing('blogCategory');
-            $categoryName = $model->blogCategory?->name;
+            $category     = $model->blogCategory;
+            $categoryName = $category?->translation($locale)?->name ?? $category?->name;
             if (filled($categoryName)) {
                 $payload['articleSection'] = $categoryName;
             }
@@ -1314,8 +1319,8 @@ class JsonldService
             }
         }
 
-        // ── Locale-specific field overrides for categories ────────────────────────
-        if ($morphAlias === 'category' && method_exists($model, 'translation')) {
+        // ── Locale-specific field overrides for categories and blog categories ──
+        if (in_array($morphAlias, ['category', 'blog_category'], true) && method_exists($model, 'translation')) {
             $t = $model->translation($locale);
             if ($t) {
                 if (filled($t->name))        { $map['name']        = $t->name; }
@@ -1324,6 +1329,19 @@ class JsonldService
                     $map['slug']  = $t->slug;
                     $canonicalUrl = $this->canonicalRouteFor($morphAlias, $t->slug, $locale);
                 }
+            }
+        }
+
+        // ── Locale-specific field overrides for blog posts ────────────────────
+        if ($morphAlias === 'blog_post' && method_exists($model, 'translation')) {
+            $t = $model->translation($locale);
+            if ($t) {
+                if (filled($t->title)) { $map['title'] = $t->title; }
+                if (filled($t->slug))  {
+                    $map['slug']  = $t->slug;
+                    $canonicalUrl = $this->canonicalRouteFor($morphAlias, $t->slug, $locale);
+                }
+                if (filled($t->excerpt)) { $map['excerpt'] = $t->excerpt; }
             }
         }
 
