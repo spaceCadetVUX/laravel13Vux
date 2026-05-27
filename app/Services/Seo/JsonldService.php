@@ -228,14 +228,17 @@ class JsonldService
     }
 
     /**
-     * Return all active JSON-LD schemas for a model, ordered for <head> output.
+     * Return all active JSON-LD schemas for a model and locale, ordered for <head> output.
      * Used by the API to feed the Nuxt <JsonldRenderer> component.
      */
-    public function getActiveSchemas(Model $model): Collection
+    public function getActiveSchemas(Model $model, ?string $locale = null): Collection
     {
+        $locale ??= app()->getLocale();
+
         return JsonldSchema::where('model_type', $model->getMorphClass())
             ->where('model_id', $model->getKey())
             ->where('is_active', true)
+            ->where('locale', $locale)
             ->orderBy('sort_order')
             ->get();
     }
@@ -376,17 +379,20 @@ class JsonldService
         if (method_exists($model, 'images')) {
             $model->loadMissing('images');
             $images = $model->getRelationValue('images');
-            if ($images && $images->isNotEmpty()) {
-                $urls = $images
-                    ->map(fn ($img): string => (string) ($img->url ?? ''))
-                    ->filter()
-                    ->values()
-                    ->all();
 
-                if (! empty($urls)) {
-                    // Single image → string; multiple images → array (schema.org spec)
-                    $payload['image'] = count($urls) === 1 ? $urls[0] : $urls;
-                }
+            $urls = $images
+                ? $images->map(fn ($img): string => (string) ($img->url ?? ''))
+                         ->filter()
+                         ->values()
+                         ->all()
+                : [];
+
+            if (! empty($urls)) {
+                // Single image → string; multiple images → array (schema.org spec)
+                $payload['image'] = count($urls) === 1 ? $urls[0] : $urls;
+            } else {
+                // Remove the "" left by template placeholder resolution — Google errors on empty image.
+                unset($payload['image']);
             }
         }
 
@@ -578,7 +584,7 @@ class JsonldService
             $categories = $model->getRelationValue('categories');
 
             if ($categories && $categories->isNotEmpty()) {
-                $cat     = $categories->first();
+                $cat     = $categories->sortBy('sort_order')->first();
                 $catSlug = (string) ($cat->slug ?? '');
                 if (filled($catSlug)) {
                     $items[] = [

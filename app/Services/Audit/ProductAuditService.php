@@ -59,7 +59,7 @@ class ProductAuditService
         $seo     = $product->seoMeta();
         $geo     = $product->geoProfile();
         $llms    = $product->llmsEntries->first();
-        $schemas = $product->jsonldSchemas;
+        $schemas = $product->jsonldSchemas->where('locale', app()->getLocale());
 
         return [
             'basics'     => $this->checkBasics($product),
@@ -342,7 +342,7 @@ class ProductAuditService
         $seo     = $product->seoMeta();
         $geo     = $product->geoProfile();
         $llms    = $product->llmsEntries->first();
-        $schemas = $product->jsonldSchemas;
+        $schemas = $product->jsonldSchemas->where('locale', app()->getLocale());
 
         $lines = [];
 

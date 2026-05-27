@@ -189,7 +189,14 @@ class SitemapService
             'http://www.sitemaps.org/schemas/sitemap/0.9',
             'urlset'
         );
+        $urlset->setAttributeNS(
+            'http://www.w3.org/2000/xmlns/',
+            'xmlns:xhtml',
+            'http://www.w3.org/1999/xhtml'
+        );
         $dom->appendChild($urlset);
+
+        $defaultLocale = config('app.fallback_locale', 'vi');
 
         foreach ($entries as $entry) {
             $url = $dom->createElement('url');
@@ -213,6 +220,25 @@ class SitemapService
                 $url->appendChild(
                     $dom->createElement('priority', number_format((float) $entry->priority, 1))
                 );
+            }
+
+            // ── hreflang alternate links ──────────────────────────────────────
+            $alternateUrls = (array) ($entry->alternate_urls ?? []);
+            if (! empty($alternateUrls)) {
+                foreach ($alternateUrls as $hreflang => $href) {
+                    $link = $dom->createElementNS('http://www.w3.org/1999/xhtml', 'xhtml:link');
+                    $link->setAttribute('rel', 'alternate');
+                    $link->setAttribute('hreflang', (string) $hreflang);
+                    $link->setAttribute('href', htmlspecialchars((string) $href, ENT_XML1));
+                    $url->appendChild($link);
+                }
+
+                $defaultHref = $alternateUrls[$defaultLocale] ?? reset($alternateUrls);
+                $xdefault = $dom->createElementNS('http://www.w3.org/1999/xhtml', 'xhtml:link');
+                $xdefault->setAttribute('rel', 'alternate');
+                $xdefault->setAttribute('hreflang', 'x-default');
+                $xdefault->setAttribute('href', htmlspecialchars((string) $defaultHref, ENT_XML1));
+                $url->appendChild($xdefault);
             }
         }
 

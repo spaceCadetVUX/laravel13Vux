@@ -50,8 +50,11 @@ class ProductObserver
      */
     public function saved(Product $product): void
     {
+        $product->loadMissing('translations');
+        $loadedLocales = $product->translations->pluck('locale')->all();
+
         foreach (config('app.supported_locales') as $locale) {
-            if ($product->translations()->where('locale', $locale)->exists()) {
+            if (in_array($locale, $loadedLocales, true)) {
                 dispatch(new SyncJsonldSchema($product, $locale))->onQueue('seo');
                 dispatch(new SyncSitemapEntry($product, $locale))->onQueue('seo');
                 dispatch(new SyncLlmsEntry($product, $locale))->onQueue('seo');
@@ -82,8 +85,11 @@ class ProductObserver
 
     public function restored(Product $product): void
     {
+        $product->loadMissing('translations');
+        $loadedLocales = $product->translations->pluck('locale')->all();
+
         foreach (config('app.supported_locales') as $locale) {
-            if ($product->translations()->where('locale', $locale)->exists()) {
+            if (in_array($locale, $loadedLocales, true)) {
                 dispatch(new SyncJsonldSchema($product, $locale))->onQueue('seo');
                 dispatch(new SyncSitemapEntry($product, $locale))->onQueue('seo');
                 dispatch(new SyncLlmsEntry($product, $locale))->onQueue('seo');
