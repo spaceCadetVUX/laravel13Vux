@@ -47,8 +47,6 @@ class BlogPost extends Model
         'blog_category_id',
         'title',
         'slug',
-        'excerpt',
-        'content',
         'featured_image',
         'status',
         'published_at',
@@ -90,7 +88,7 @@ class BlogPost extends Model
         return [
             'id'               => $this->id,
             'title'            => $this->title,
-            'excerpt'          => $this->excerpt,
+            'excerpt'          => $this->translation('vi')?->excerpt,
             'author'           => $this->author?->name,
             'blog_category_id' => $this->blog_category_id,
             'category'         => $this->blogCategory?->name,

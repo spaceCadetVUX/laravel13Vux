@@ -46,14 +46,9 @@ class ProductController extends Controller
 
         $alternateUrls = app(SeoService::class)->alternateUrls($product, 'product.show');
         $seoMeta       = $product->seoMeta($locale);
-        $jsonldSchemas = [
-            app(JsonldService::class)->buildProductSchema($product, $locale),
-            app(JsonldService::class)->buildBreadcrumb([
-                ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
-                ['name' => $catTranslation?->name ?? '', 'url' => $catUrl],
-                ['name' => $translation->name, 'url' => url()->current()],
-            ]),
-        ];
+        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($product, $locale)
+            ->pluck('payload')
+            ->toArray();
 
         return view('pages.product.show', compact(
             'product', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'

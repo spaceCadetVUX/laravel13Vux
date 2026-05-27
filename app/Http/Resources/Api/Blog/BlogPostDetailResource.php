@@ -9,7 +9,7 @@ class BlogPostDetailResource extends BlogPostResource
     public function toArray(Request $request): array
     {
         return array_merge(parent::toArray($request), [
-            'content'        => $this->content,
+            'content'        => $this->resource->translation(app()->getLocale())?->body,
             'seo'            => $this->whenLoaded('seoMetas', function () {
                 $seo = $this->resource->seoMeta();
                 return [

@@ -24,7 +24,7 @@ class CreateBlogCategory extends CreateRecord
             $record->translations()->updateOrCreate(
                 ['locale' => $locale],
                 collect($localeData)
-                    ->only(['name', 'slug', 'description', 'meta_title', 'meta_description'])
+                    ->only(['name', 'slug', 'description'])
                     ->filter(fn ($v) => $v !== null && $v !== '')
                     ->toArray()
             );

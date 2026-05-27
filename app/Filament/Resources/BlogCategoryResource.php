@@ -4,9 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BlogCategoryResource\Pages;
 use App\Models\BlogCategory;
+use App\Forms\Components\MediaFileUpload;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -87,15 +89,6 @@ class BlogCategoryResource extends Resource
                                         ->label('Mô tả (vi)')
                                         ->rows(3)
                                         ->columnSpanFull(),
-
-                                    Forms\Components\TextInput::make('translations.vi.meta_title')
-                                        ->label('Meta title (vi)')
-                                        ->columnSpanFull(),
-
-                                    Forms\Components\Textarea::make('translations.vi.meta_description')
-                                        ->label('Meta description (vi)')
-                                        ->rows(3)
-                                        ->columnSpanFull(),
                                 ]),
 
                             Tab::make('🇬🇧 English (en)')
@@ -116,18 +109,103 @@ class BlogCategoryResource extends Resource
                                         ->label('Description (en)')
                                         ->rows(3)
                                         ->columnSpanFull(),
-
-                                    Forms\Components\TextInput::make('translations.en.meta_title')
-                                        ->label('Meta title (en)')
-                                        ->columnSpanFull(),
-
-                                    Forms\Components\Textarea::make('translations.en.meta_description')
-                                        ->label('Meta description (en)')
-                                        ->rows(3)
-                                        ->columnSpanFull(),
                                 ]),
                         ])
                         ->columnSpanFull(),
+                ])
+                ->collapsible()
+                ->columnSpanFull(),
+
+            // ── SEO ───────────────────────────────────────────────────────────
+            Section::make('SEO')
+                ->icon('heroicon-o-magnifying-glass')
+                ->schema([
+                    Tabs::make('SeoLocaleTabs')
+                        ->tabs([
+                            Tabs\Tab::make('🇻🇳 Tiếng Việt')
+                                ->schema([
+                                    Group::make()
+                                        ->relationship('seoMetaVi')
+                                        ->mutateRelationshipDataBeforeCreateUsing(
+                                            fn (array $data) => ['locale' => 'vi', ...$data]
+                                        )
+                                        ->schema([
+                                            Forms\Components\TextInput::make('meta_title')
+                                                ->label('Meta Title (vi)')
+                                                ->placeholder('Tự điền từ tên danh mục')
+                                                ->helperText('Tối ưu: 50–60 ký tự.')
+                                                ->maxLength(70)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('meta_description')
+                                                ->label('Meta Description (vi)')
+                                                ->placeholder('Mô tả ngắn hiển thị trên Google')
+                                                ->helperText('Tối ưu: 120–160 ký tự.')
+                                                ->rows(3)
+                                                ->maxLength(320)
+                                                ->columnSpanFull(),
+
+                                            MediaFileUpload::make('og_image')
+                                                ->label('OG Image (vi)')
+                                                ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
+                                                ->image()
+                                                ->nullable()
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Select::make('robots')
+                                                ->label('Robots (vi)')
+                                                ->options([
+                                                    'index,follow'     => 'index, follow — Default',
+                                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
+                                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
+                                                ])
+                                                ->default('index,follow')
+                                                ->native(false),
+                                        ]),
+                                ]),
+
+                            Tabs\Tab::make('🇬🇧 English')
+                                ->schema([
+                                    Group::make()
+                                        ->relationship('seoMetaEn')
+                                        ->mutateRelationshipDataBeforeCreateUsing(
+                                            fn (array $data) => ['locale' => 'en', ...$data]
+                                        )
+                                        ->schema([
+                                            Forms\Components\TextInput::make('meta_title')
+                                                ->label('Meta Title (en)')
+                                                ->placeholder('Auto-filled from category name')
+                                                ->helperText('Optimal: 50–60 characters.')
+                                                ->maxLength(70)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('meta_description')
+                                                ->label('Meta Description (en)')
+                                                ->placeholder('Short description shown in Google results')
+                                                ->helperText('Optimal: 120–160 characters.')
+                                                ->rows(3)
+                                                ->maxLength(320)
+                                                ->columnSpanFull(),
+
+                                            MediaFileUpload::make('og_image')
+                                                ->label('OG Image (en)')
+                                                ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
+                                                ->image()
+                                                ->nullable()
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Select::make('robots')
+                                                ->label('Robots (en)')
+                                                ->options([
+                                                    'index,follow'     => 'index, follow — Default',
+                                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
+                                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
+                                                ])
+                                                ->default('index,follow')
+                                                ->native(false),
+                                        ]),
+                                ]),
+                        ]),
                 ])
                 ->collapsible()
                 ->columnSpanFull(),

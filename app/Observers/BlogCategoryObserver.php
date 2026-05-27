@@ -65,8 +65,11 @@ class BlogCategoryObserver
             return;
         }
 
+        $blogCategory->loadMissing('translations');
+        $loadedLocales = $blogCategory->translations->pluck('locale')->all();
+
         foreach (config('app.supported_locales') as $locale) {
-            if ($blogCategory->translations()->where('locale', $locale)->exists()) {
+            if (in_array($locale, $loadedLocales, true)) {
                 dispatch(new SyncJsonldSchema($blogCategory, $locale))->onQueue('seo');
                 dispatch(new SyncSitemapEntry($blogCategory, $locale))->onQueue('seo');
                 dispatch(new SyncLlmsEntry($blogCategory, $locale))->onQueue('seo');

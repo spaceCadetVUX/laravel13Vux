@@ -24,8 +24,7 @@ class BlogCategory extends Model
 
     // ── PK config (bigint auto-increment) ─────────────────────────────────────
 
-    protected $keyType    = 'string';
-    public    $incrementing = true;
+    public $incrementing = true;
 
     // ── Mass assignment ───────────────────────────────────────────────────────
 

@@ -39,7 +39,7 @@ class CreateProduct extends CreateRecord
             $record->translations()->updateOrCreate(
                 ['locale' => $locale],
                 collect($localeData)
-                    ->only(['name', 'slug', 'short_description', 'description', 'price', 'currency', 'meta_title', 'meta_description'])
+                    ->only(['name', 'slug', 'short_description', 'description', 'price', 'currency'])
                     ->filter(fn ($v) => $v !== null && $v !== '')
                     ->toArray()
             );

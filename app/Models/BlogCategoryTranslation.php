@@ -13,8 +13,6 @@ class BlogCategoryTranslation extends Model
         'name',
         'slug',
         'description',
-        'meta_title',
-        'meta_description',
     ];
 
     public function blogCategory(): BelongsTo

@@ -13,7 +13,7 @@ class BlogPostResource extends JsonResource
             'id'             => $this->id,
             'title'          => $this->title,
             'slug'           => $this->slug,
-            'excerpt'        => $this->excerpt,
+            'excerpt'        => $this->resource->translation(app()->getLocale())?->excerpt,
             'featured_image' => $this->featured_image,
             'author'         => $this->whenLoaded('author', fn () => $this->author ? [
                 'id'     => $this->author->id,

@@ -8,12 +8,12 @@ use App\Forms\Components\MediaFileUpload;
 use App\Forms\Plugins\MediaRichEditorPlugin;
 use App\Models\Author;
 use App\Models\BlogPost;
-use App\Models\Seo\SeoMeta;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -48,8 +48,8 @@ class BlogPostResource extends Resource
             Tabs::make('Tabs')
                 ->tabs([
 
-                    // ── Tab 1: Content ────────────────────────────────────────
-                    Tab::make('Content')
+                    // ── Tab 1: General ────────────────────────────────────────
+                    Tab::make('General')
                         ->schema([
                             Forms\Components\Select::make('blog_category_id')
                                 ->label('Category')
@@ -68,14 +68,6 @@ class BlogPostResource extends Resource
                             Forms\Components\TextInput::make('slug')
                                 ->required()
                                 ->unique(table: BlogPost::class, column: 'slug', ignoreRecord: true),
-
-                            Forms\Components\Textarea::make('excerpt')
-                                ->rows(3)
-                                ->columnSpanFull(),
-
-                            Forms\Components\RichEditor::make('content')
-                                ->plugins([MediaRichEditorPlugin::make()])
-                                ->columnSpanFull(),
 
                             MediaFileUpload::make('featured_image')
                                 ->label('Featured Image')
@@ -177,49 +169,148 @@ class BlogPostResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                    // ── Tab 4: SEO Meta ───────────────────────────────────────
+                    // ── Tab 4: SEO ───────────────────────────────────────────
                     Tab::make('SEO')
                         ->icon('heroicon-o-magnifying-glass')
                         ->schema([
-                            Forms\Components\TextInput::make('seo_meta_title')
-                                ->label('Meta Title')
-                                ->placeholder('Leave blank to use the post title')
-                                ->helperText('Recommended: 50–60 characters. Leave blank and Google will use the post title.')
-                                ->maxLength(60)
-                                ->columnSpanFull(),
+                            Tabs::make('SeoLocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt')
+                                        ->schema([
+                                            Group::make()
+                                                ->relationship('seoMetaVi')
+                                                ->mutateRelationshipDataBeforeCreateUsing(
+                                                    fn (array $data) => ['locale' => 'vi', ...$data]
+                                                )
+                                                ->schema([
+                                                    Section::make('Meta Tags')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('meta_title')
+                                                                ->label('Meta Title (vi)')
+                                                                ->placeholder('Tự điền từ tiêu đề bài viết')
+                                                                ->helperText('Tối ưu: 50–60 ký tự.')
+                                                                ->maxLength(70)
+                                                                ->columnSpanFull(),
 
-                            Forms\Components\Textarea::make('seo_meta_description')
-                                ->label('Meta Description')
-                                ->placeholder('Short description shown in Google search results')
-                                ->helperText('Recommended: 120–160 characters.')
-                                ->rows(3)
-                                ->maxLength(160)
-                                ->columnSpanFull(),
+                                                            Forms\Components\Textarea::make('meta_description')
+                                                                ->label('Meta Description (vi)')
+                                                                ->placeholder('Mô tả ngắn hiển thị trên Google')
+                                                                ->helperText('Tối ưu: 120–160 ký tự.')
+                                                                ->rows(3)
+                                                                ->maxLength(320)
+                                                                ->columnSpanFull(),
 
-                            MediaFileUpload::make('seo_og_image')
-                                ->label('OG Image')
-                                ->helperText('Used when sharing on Facebook, Twitter, Zalo. Recommended size: 1200 × 630px. Defaults to the featured image if left blank.')
-                                ->image()
-                                ->nullable()
-                                ->columnSpanFull(),
+                                                            Forms\Components\TextInput::make('canonical_url')
+                                                                ->label('Canonical URL (vi)')
+                                                                ->url()
+                                                                ->placeholder('Tự tạo từ slug — chỉ điền nếu syndicated')
+                                                                ->columnSpanFull(),
 
-                            Forms\Components\TextInput::make('seo_canonical_url')
-                                ->label('Canonical URL')
-                                ->url()
-                                ->placeholder('Leave blank to use the post URL automatically')
-                                ->helperText('Only set this if the post is syndicated from another source.')
-                                ->columnSpanFull(),
+                                                            Forms\Components\Select::make('robots')
+                                                                ->label('Robots (vi)')
+                                                                ->options([
+                                                                    'index,follow'     => 'index, follow — Default',
+                                                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
+                                                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
+                                                                ])
+                                                                ->default('index,follow')
+                                                                ->native(false),
+                                                        ])
+                                                        ->columns(2),
 
-                            Forms\Components\Select::make('seo_robots')
-                                ->label('Robots')
-                                ->options([
-                                    'index,follow'     => 'index, follow — Default (Google indexes this page)',
-                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
-                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
-                                ])
-                                ->default('index,follow')
-                                ->native(false)
-                                ->columnSpanFull(),
+                                                    Section::make('Open Graph (vi)')
+                                                        ->schema([
+                                                            MediaFileUpload::make('og_image')
+                                                                ->label('OG Image (vi)')
+                                                                ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
+                                                                ->image()
+                                                                ->nullable()
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\TextInput::make('og_title')
+                                                                ->label('OG Title (vi)')
+                                                                ->placeholder('Tự điền từ Meta Title')
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('og_description')
+                                                                ->label('OG Description (vi)')
+                                                                ->rows(2)
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->collapsible()
+                                                        ->collapsed(),
+                                                ]),
+                                        ]),
+
+                                    Tab::make('🇬🇧 English')
+                                        ->schema([
+                                            Group::make()
+                                                ->relationship('seoMetaEn')
+                                                ->mutateRelationshipDataBeforeCreateUsing(
+                                                    fn (array $data) => ['locale' => 'en', ...$data]
+                                                )
+                                                ->schema([
+                                                    Section::make('Meta Tags')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('meta_title')
+                                                                ->label('Meta Title (en)')
+                                                                ->placeholder('Auto-filled from post title')
+                                                                ->helperText('Optimal: 50–60 characters.')
+                                                                ->maxLength(70)
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('meta_description')
+                                                                ->label('Meta Description (en)')
+                                                                ->placeholder('Short description shown in Google results')
+                                                                ->helperText('Optimal: 120–160 characters.')
+                                                                ->rows(3)
+                                                                ->maxLength(320)
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\TextInput::make('canonical_url')
+                                                                ->label('Canonical URL (en)')
+                                                                ->url()
+                                                                ->placeholder('Auto-generated from slug — only set if syndicated')
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Select::make('robots')
+                                                                ->label('Robots (en)')
+                                                                ->options([
+                                                                    'index,follow'     => 'index, follow — Default',
+                                                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
+                                                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
+                                                                ])
+                                                                ->default('index,follow')
+                                                                ->native(false),
+                                                        ])
+                                                        ->columns(2),
+
+                                                    Section::make('Open Graph (en)')
+                                                        ->schema([
+                                                            MediaFileUpload::make('og_image')
+                                                                ->label('OG Image (en)')
+                                                                ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
+                                                                ->image()
+                                                                ->nullable()
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\TextInput::make('og_title')
+                                                                ->label('OG Title (en)')
+                                                                ->placeholder('Auto-filled from Meta Title')
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('og_description')
+                                                                ->label('OG Description (en)')
+                                                                ->rows(2)
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->collapsible()
+                                                        ->collapsed(),
+                                                ]),
+                                        ]),
+                                ]),
                         ]),
 
                     // ── Tab 5: JSON-LD ────────────────────────────────────────

@@ -18,8 +18,6 @@ class ProductTranslation extends Model
         'price',
         'sale_price',
         'currency',
-        'meta_title',
-        'meta_description',
     ];
 
     protected function casts(): array

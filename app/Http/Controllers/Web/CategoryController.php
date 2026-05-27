@@ -40,12 +40,9 @@ class CategoryController extends Controller
 
         $alternateUrls = app(SeoService::class)->alternateUrls($category, 'category.show');
         $seoMeta       = $translation;
-        $jsonldSchemas = [
-            app(JsonldService::class)->buildBreadcrumb([
-                ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
-                ['name' => $translation->name, 'url' => url()->current()],
-            ]),
-        ];
+        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($category, $locale)
+            ->pluck('payload')
+            ->toArray();
 
         return view('pages.category.show', compact(
             'category', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'

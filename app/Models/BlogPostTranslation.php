@@ -14,8 +14,6 @@ class BlogPostTranslation extends Model
         'slug',
         'excerpt',
         'body',
-        'meta_title',
-        'meta_description',
     ];
 
     public function blogPost(): BelongsTo

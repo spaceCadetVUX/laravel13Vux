@@ -187,7 +187,7 @@ class LlmsGeneratorService
 
         $aiSummary        = trim((string) ($geoProfile?->ai_summary ?? ''));
         $shortDescription = trim((string) ($translation?->short_description ?? $model->getAttribute('short_description') ?? ''));
-        $excerpt          = trim((string) ($translation?->excerpt ?? $model->getAttribute('excerpt') ?? ''));
+        $excerpt          = trim((string) ($translation?->excerpt ?? ''));
 
         // Blog posts use `excerpt`, not `short_description` — fall through both.
         $baseSummary = filled($aiSummary) ? $aiSummary

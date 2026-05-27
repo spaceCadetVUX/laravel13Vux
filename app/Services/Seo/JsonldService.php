@@ -100,11 +100,11 @@ class JsonldService
 
             if ($morphAlias === 'blog_post') {
                 if ($schemaType === JsonldSchemaType::Article) {
-                    $resolved = $this->enrichArticleSchema($resolved, $model);
+                    $resolved = $this->enrichArticleSchema($resolved, $model, $locale);
                 }
 
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
-                    $resolved = $this->buildBlogPostBreadcrumb($model);
+                    $resolved = $this->buildBlogPostBreadcrumb($model, $locale);
                 }
             }
 
@@ -119,8 +119,12 @@ class JsonldService
             }
 
             if ($morphAlias === 'blog_category') {
+                if ($schemaType === JsonldSchemaType::CollectionPage) {
+                    $resolved = $this->enrichBlogCategorySchema($resolved, $model, $locale);
+                }
+
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
-                    $resolved = $this->buildBlogCategoryBreadcrumb($model);
+                    $resolved = $this->buildBlogCategoryBreadcrumb($model, $locale);
                 }
             }
 
@@ -593,13 +597,13 @@ class JsonldService
                 if (filled($catSlug)) {
                     $items[] = [
                         'name' => (string) ($cat->name ?? ''),
-                        'url'  => LocaleUrl::for('category', $catSlug, $locale),
+                        'url'  => route('category.show', ['locale' => $locale, 'slug' => $catSlug]),
                     ];
                 }
             }
         }
 
-        $items[] = ['name' => $name, 'url' => LocaleUrl::for('product', $slug, $locale)];
+        $items[] = ['name' => $name, 'url' => route('product.show', ['locale' => $locale, 'slug' => $slug])];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -611,31 +615,32 @@ class JsonldService
      * The category level is included only when a blogCategory is assigned.
      * Falls back to Home → Blog → Post.
      */
-    private function buildBlogPostBreadcrumb(Model $model): array
+    private function buildBlogPostBreadcrumb(Model $model, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
-        $title   = (string) ($model->getAttribute('title') ?? '');
-        $slug    = (string) ($model->getAttribute('slug') ?? '');
+        $t       = method_exists($model, 'translation') ? $model->translation($locale) : null;
+        $title   = (string) ($t?->title ?? $model->getAttribute('title') ?? '');
+        $slug    = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
         $items = [
             ['name' => 'Home', 'url' => $baseUrl],
-            ['name' => 'Blog', 'url' => $baseUrl . '/blog'],
+            ['name' => 'Blog', 'url' => route('blog.index', ['locale' => $locale])],
         ];
 
-        // Include category as a middle level when assigned.
         if (method_exists($model, 'blogCategory')) {
             $model->loadMissing('blogCategory');
             $category = $model->getRelationValue('blogCategory');
 
             if ($category && filled($category->name)) {
+                $catSlug = (string) ($category->translation($locale)?->slug ?? $category->slug ?? '');
                 $items[] = [
                     'name' => (string) $category->name,
-                    'url'  => $baseUrl . '/blog/category/' . ($category->slug ?? ''),
+                    'url'  => route('blog.category', ['locale' => $locale, 'slug' => $catSlug]),
                 ];
             }
         }
 
-        $items[] = ['name' => $title, 'url' => $baseUrl . '/blog/' . $slug];
+        $items[] = ['name' => $title, 'url' => route('blog.show', ['locale' => $locale, 'slug' => $slug])];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -689,7 +694,7 @@ class JsonldService
             if (filled($name)) {
                 $items[] = [
                     'name' => $name,
-                    'url'  => LocaleUrl::for('category', $slug, $locale),
+                    'url'  => route('category.show', ['locale' => $locale, 'slug' => $slug]),
                 ];
             }
         }
@@ -699,7 +704,7 @@ class JsonldService
         $name = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
         $slug = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
-        $items[] = ['name' => $name, 'url' => LocaleUrl::for('category', $slug, $locale)];
+        $items[] = ['name' => $name, 'url' => route('category.show', ['locale' => $locale, 'slug' => $slug])];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -816,37 +821,108 @@ class JsonldService
     }
 
     /**
+     * Enrich a CollectionPage payload for a blog category.
+     * Adds @id, inLanguage, image, publisher, numberOfItems, and a
+     * mainEntity ItemList of the top published posts in this category.
+     */
+    private function enrichBlogCategorySchema(array $payload, Model $model, string $locale): array
+    {
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+
+        if (isset($payload['url']) && ! isset($payload['@id'])) {
+            $payload['@id'] = $payload['url'];
+        }
+
+        $payload['inLanguage'] = $locale;
+
+        $imagePath = (string) ($model->getAttribute('image_path') ?? '');
+        if (filled($imagePath)) {
+            $payload['image'] = $baseUrl . '/storage/' . ltrim($imagePath, '/');
+        }
+
+        if (! isset($payload['publisher'])) {
+            $payload['publisher'] = app(BusinessJsonldService::class)->publisherBlock();
+        }
+
+        if (method_exists($model, 'posts')) {
+            try {
+                $postCount             = $model->posts()->where('status', \App\Enums\BlogPostStatus::Published)->count();
+                $payload['numberOfItems'] = $postCount;
+
+                if ($postCount > 0) {
+                    $fallbackLocale = config('app.fallback_locale', 'vi');
+                    $locales        = array_unique([$locale, $fallbackLocale]);
+
+                    $topPosts = $model->posts()
+                        ->where('status', \App\Enums\BlogPostStatus::Published)
+                        ->with(['translations' => fn ($q) => $q->whereIn('locale', $locales)])
+                        ->orderBy('published_at', 'desc')
+                        ->limit(20)
+                        ->get();
+
+                    if ($topPosts->isNotEmpty()) {
+                        $listItems = $topPosts->map(function ($post, int $index) use ($baseUrl, $locale): array {
+                            $t        = method_exists($post, 'translation') ? $post->translation($locale) : null;
+                            $postName = (string) ($t?->title ?? $post->getAttribute('title') ?? '');
+                            $postSlug = (string) ($t?->slug ?? $post->getAttribute('slug') ?? '');
+
+                            return [
+                                '@type'    => 'ListItem',
+                                'position' => $index + 1,
+                                'name'     => $postName,
+                                'url'      => $baseUrl . '/blog/' . $postSlug,
+                            ];
+                        })->values()->all();
+
+                        $payload['mainEntity'] = [
+                            '@type'           => 'ItemList',
+                            'name'            => $payload['name'] ?? '',
+                            'numberOfItems'   => $postCount,
+                            'itemListElement' => $listItems,
+                        ];
+                    }
+                }
+            } catch (\Throwable) {
+                // Silently skip — posts relationship may be unavailable in test/seeder context.
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
      * Build a BreadcrumbList payload for a blog category page.
      * Structure: Home → Blog → [{Parent category} →] {Category}
      *
      * The parent level is included only when a parent_id is assigned.
      * Falls back to Home → Blog → Category.
      */
-    private function buildBlogCategoryBreadcrumb(Model $model): array
+    private function buildBlogCategoryBreadcrumb(Model $model, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
-        $name    = (string) ($model->getAttribute('name') ?? '');
-        $slug    = (string) ($model->getAttribute('slug') ?? '');
+        $t       = method_exists($model, 'translation') ? $model->translation($locale) : null;
+        $name    = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
+        $slug    = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
         $items = [
             ['name' => 'Home', 'url' => $baseUrl],
-            ['name' => 'Blog', 'url' => $baseUrl . '/blog'],
+            ['name' => 'Blog', 'url' => route('blog.index', ['locale' => $locale])],
         ];
 
-        // Include parent category as a middle level when assigned.
         if (method_exists($model, 'parent')) {
             $model->loadMissing('parent');
             $parent = $model->getRelationValue('parent');
 
             if ($parent && filled($parent->name)) {
+                $parentSlug = (string) ($parent->translation($locale)?->slug ?? $parent->slug ?? '');
                 $items[] = [
                     'name' => (string) $parent->name,
-                    'url'  => $baseUrl . '/blog/category/' . ($parent->slug ?? ''),
+                    'url'  => route('blog.category', ['locale' => $locale, 'slug' => $parentSlug]),
                 ];
             }
         }
 
-        $items[] = ['name' => $name, 'url' => $baseUrl . '/blog/category/' . $slug];
+        $items[] = ['name' => $name, 'url' => route('blog.category', ['locale' => $locale, 'slug' => $slug])];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -928,13 +1004,18 @@ class JsonldService
      * Falls back to the simple { @type: Person, name: "..." } when no author
      * profile is assigned.
      */
-    private function enrichArticleSchema(array $payload, Model $model): array
+    private function enrichArticleSchema(array $payload, Model $model, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
 
         // ── @id — canonical entity identifier ────────────────────────────────
         if (isset($payload['url']) && ! isset($payload['@id'])) {
             $payload['@id'] = $payload['url'];
+        }
+
+        // ── inLanguage — required for multilingual indexing ───────────────────
+        if (! isset($payload['inLanguage'])) {
+            $payload['inLanguage'] = $locale;
         }
 
         // ── mainEntityOfPage — ties the Article to its canonical WebPage ─────
@@ -944,6 +1025,15 @@ class JsonldService
                 '@type' => 'WebPage',
                 '@id'   => $payload['url'],
             ];
+        }
+
+        // ── articleSection — blog category name ───────────────────────────────
+        if (! isset($payload['articleSection']) && method_exists($model, 'blogCategory')) {
+            $model->loadMissing('blogCategory');
+            $categoryName = $model->blogCategory?->name;
+            if (filled($categoryName)) {
+                $payload['articleSection'] = $categoryName;
+            }
         }
 
         // ── Author — full Person schema ───────────────────────────────────────
@@ -956,6 +1046,10 @@ class JsonldService
                     '@type' => 'Person',
                     'name'  => (string) $author->name,
                 ];
+
+                if (filled($author->slug)) {
+                    $person['@id'] = $baseUrl . '/authors/' . $author->slug . '#person';
+                }
 
                 if (filled($author->title)) {
                     $person['jobTitle'] = $author->title;
@@ -1171,12 +1265,34 @@ class JsonldService
      * Build a flat field→value map covering DB attributes and computed values
      * that templates reference but that don't exist as raw DB columns.
      */
+    /**
+     * Build a route-based canonical URL for a model.
+     * Falls back to LocaleUrl for models without a dedicated web route (brand, manufacturer).
+     */
+    private function canonicalRouteFor(string $morphAlias, string $slug, string $locale): string
+    {
+        static $routeMap = [
+            'product'       => 'product.show',
+            'category'      => 'category.show',
+            'blog_post'     => 'blog.show',
+            'blog_category' => 'blog.category',
+        ];
+
+        $routeName = $routeMap[$morphAlias] ?? null;
+
+        if ($routeName && filled($slug)) {
+            return route($routeName, ['locale' => $locale, 'slug' => $slug]);
+        }
+
+        return LocaleUrl::for($morphAlias, $slug, $locale);
+    }
+
     private function buildValueMap(Model $model, string $locale = 'vi'): array
     {
         $morphAlias   = $model->getMorphClass();
         $baseUrl      = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
         $slug         = (string) ($model->getAttribute('slug') ?? '');
-        $canonicalUrl = LocaleUrl::for($morphAlias, $slug, $locale);
+        $canonicalUrl = $this->canonicalRouteFor($morphAlias, $slug, $locale);
 
         // Seed with all raw DB attributes (name, slug, sku, price, etc.)
         $map = $model->getAttributes();
@@ -1193,7 +1309,7 @@ class JsonldService
                 if (filled($t->name))       { $map['name']        = $t->name; }
                 if (filled($t->slug))       {
                     $map['slug']  = $t->slug;
-                    $canonicalUrl = LocaleUrl::for($morphAlias, $t->slug, $locale);
+                    $canonicalUrl = $this->canonicalRouteFor($morphAlias, $t->slug, $locale);
                 }
             }
         }
@@ -1206,7 +1322,7 @@ class JsonldService
                 if (filled($t->description)) { $map['description'] = $t->description; }
                 if (filled($t->slug))        {
                     $map['slug']  = $t->slug;
-                    $canonicalUrl = LocaleUrl::for($morphAlias, $t->slug, $locale);
+                    $canonicalUrl = $this->canonicalRouteFor($morphAlias, $t->slug, $locale);
                 }
             }
         }

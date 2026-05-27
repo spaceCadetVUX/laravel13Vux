@@ -48,13 +48,9 @@ class BlogController extends Controller
 
         $alternateUrls = app(SeoService::class)->alternateUrls($blogCategory, 'blog.category');
         $seoMeta       = $blogCategory->seoMeta($locale);
-        $jsonldSchemas = [
-            app(JsonldService::class)->buildBreadcrumb([
-                ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
-                ['name' => __('common.blog', [], $locale), 'url' => route('blog.index', ['locale' => $locale])],
-                ['name' => $translation->name, 'url' => url()->current()],
-            ]),
-        ];
+        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($blogCategory, $locale)
+            ->pluck('payload')
+            ->toArray();
 
         return view('pages.blog.category', compact(
             'blogCategory', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
@@ -93,13 +89,9 @@ class BlogController extends Controller
 
         $alternateUrls = app(SeoService::class)->alternateUrls($post, 'blog.show');
         $seoMeta       = $post->seoMeta($locale);
-        $jsonldSchemas = [
-            app(JsonldService::class)->buildBreadcrumb([
-                ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
-                ['name' => __('common.blog', [], $locale), 'url' => route('blog.index', ['locale' => $locale])],
-                ['name' => $translation->title, 'url' => url()->current()],
-            ]),
-        ];
+        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($post, $locale)
+            ->pluck('payload')
+            ->toArray();
 
         return view('pages.blog.show', compact(
             'post', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale'
