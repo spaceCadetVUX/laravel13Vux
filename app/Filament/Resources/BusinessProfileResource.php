@@ -228,14 +228,19 @@ class BusinessProfileResource extends Resource
                                         ->content(function (): HtmlString {
                                             $doc = LlmsDocument::where('slug', 'business-vi')->first();
                                             if (! $doc) {
-                                                return new HtmlString('<em class="text-gray-400">Document not found (slug: business-vi).</em>');
+                                                return new HtmlString('<em class="text-gray-400">Document not found.</em>');
                                             }
-                                            $content = htmlspecialchars($doc->content ?? '');
-                                            $updated = $doc->updated_at?->format('d/m/Y H:i') ?? '—';
+                                            $file    = 'llms/' . $doc->slug . '.txt';
+                                            $content = \Illuminate\Support\Facades\Storage::disk('public')->exists($file)
+                                                ? htmlspecialchars(\Illuminate\Support\Facades\Storage::disk('public')->get($file))
+                                                : '';
+                                            $updated = $doc->last_generated_at
+                                                ? \Carbon\Carbon::parse($doc->last_generated_at)->format('d/m/Y H:i')
+                                                : '—';
                                             return new HtmlString(
-                                                "<div style='font-size:0.75rem;color:#64748b;margin-bottom:6px;'>Updated: {$updated}</div>"
+                                                "<div style='font-size:0.75rem;color:#64748b;margin-bottom:6px;'>Last generated: {$updated}</div>"
                                                 . "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;max-height:320px;'>"
-                                                . ($content ?: '<em style="color:#94a3b8;">(empty)</em>')
+                                                . ($content ?: '<em style="color:#94a3b8;">(empty — nhấn Regenerate để tạo)</em>')
                                                 . '</pre>'
                                             );
                                         })
@@ -246,19 +251,46 @@ class BusinessProfileResource extends Resource
                                         ->content(function (): HtmlString {
                                             $doc = LlmsDocument::where('slug', 'business-en')->first();
                                             if (! $doc) {
-                                                return new HtmlString('<em class="text-gray-400">Document not found (slug: business-en).</em>');
+                                                return new HtmlString('<em class="text-gray-400">Document not found.</em>');
                                             }
-                                            $content = htmlspecialchars($doc->content ?? '');
-                                            $updated = $doc->updated_at?->format('d/m/Y H:i') ?? '—';
+                                            $file    = 'llms/' . $doc->slug . '.txt';
+                                            $content = \Illuminate\Support\Facades\Storage::disk('public')->exists($file)
+                                                ? htmlspecialchars(\Illuminate\Support\Facades\Storage::disk('public')->get($file))
+                                                : '';
+                                            $updated = $doc->last_generated_at
+                                                ? \Carbon\Carbon::parse($doc->last_generated_at)->format('d/m/Y H:i')
+                                                : '—';
                                             return new HtmlString(
-                                                "<div style='font-size:0.75rem;color:#64748b;margin-bottom:6px;'>Updated: {$updated}</div>"
+                                                "<div style='font-size:0.75rem;color:#64748b;margin-bottom:6px;'>Last generated: {$updated}</div>"
                                                 . "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;max-height:320px;'>"
-                                                . ($content ?: '<em style="color:#94a3b8;">(empty)</em>')
+                                                . ($content ?: '<em style="color:#94a3b8;">(empty — nhấn Regenerate để tạo)</em>')
                                                 . '</pre>'
                                             );
                                         })
                                         ->columnSpanFull(),
                                 ]),
+
+                            \Filament\Schemas\Components\Actions::make([
+                                \Filament\Actions\Action::make('regenerate_llms')
+                                    ->label('Regenerate LLMs')
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('gray')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Regenerate Business LLMs Documents')
+                                    ->modalDescription('Generate lại business-vi.txt và business-en.txt từ dữ liệu BusinessProfile hiện tại.')
+                                    ->action(function (): void {
+                                        $service = app(\App\Services\Seo\LlmsGeneratorService::class);
+                                        $docs = LlmsDocument::where('is_active', true)
+                                            ->where(fn ($q) => $q->where('slug', 'business')
+                                                ->orWhere('slug', 'like', 'business-%'))
+                                            ->get();
+                                        foreach ($docs as $doc) {
+                                            $service->generateDocument($doc);
+                                        }
+                                        Notification::make()->title('LLMs documents regenerated')->success()->send();
+                                        redirect(BusinessProfileResource::getUrl());
+                                    }),
+                            ]),
                         ]),
 
                 ])

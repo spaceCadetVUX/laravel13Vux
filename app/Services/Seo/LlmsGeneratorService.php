@@ -80,7 +80,7 @@ class LlmsGeneratorService
     public function generateDocument(LlmsDocument $document): void
     {
         // Business document has no llms_entries — generated directly from BusinessProfile.
-        if ($document->slug === 'business') {
+        if ($document->slug === 'business' || str_starts_with($document->slug, 'business-')) {
             $this->generateBusinessDocument($document);
             return;
         }
@@ -363,6 +363,8 @@ class LlmsGeneratorService
     private function generateBusinessDocument(LlmsDocument $document): void
     {
         $profile = BusinessProfile::instance();
+        $locale  = $document->locale ?? 'vi';
+        $vi      = $locale === 'vi';
         $lines   = [];
 
         $lines[] = '# ' . $profile->name;
@@ -381,7 +383,7 @@ class LlmsGeneratorService
             $contactLines[] = '- Email: ' . $profile->email;
         }
         if (filled($profile->phone)) {
-            $contactLines[] = '- Phone: ' . $profile->phone;
+            $contactLines[] = ($vi ? '- Điện thoại: ' : '- Phone: ') . $profile->phone;
         }
 
         $addressParts = array_filter([
@@ -391,27 +393,41 @@ class LlmsGeneratorService
             $profile->country,
         ]);
         if (! empty($addressParts)) {
-            $contactLines[] = '- Address: ' . implode(', ', $addressParts);
+            $contactLines[] = ($vi ? '- Địa chỉ: ' : '- Address: ') . implode(', ', $addressParts);
         }
 
         if (! empty($contactLines)) {
-            $lines[] = '## Contact';
+            $lines[] = $vi ? '## Liên hệ' : '## Contact';
             array_push($lines, ...$contactLines);
             $lines[] = '';
         }
 
         // Business Hours
-        if (! empty($profile->business_hours)) {
-            $lines[] = '## Business Hours';
-            foreach ((array) $profile->business_hours as $day => $hours) {
-                $lines[] = "- {$day}: {$hours}";
+        $rawHours = (array) ($profile->business_hours ?? []);
+        if (! empty($rawHours)) {
+            $lines[] = $vi ? '## Giờ làm việc' : '## Business Hours';
+            if (array_is_list($rawHours)) {
+                foreach ($rawHours as $h) {
+                    if (! is_array($h) || empty($h['day'])) { continue; }
+                    $slot = trim(($h['open'] ?? '') . '–' . ($h['close'] ?? ''), '–');
+                    if (! filled($slot)) { continue; }
+                    $lines[] = '- ' . ucfirst(strtolower($h['day'])) . ': ' . $slot;
+                }
+            } else {
+                foreach ($rawHours as $day => $h) {
+                    $slot = is_array($h)
+                        ? trim(($h['open'] ?? '') . '–' . ($h['close'] ?? ''), '–')
+                        : (string) ($h ?? '');
+                    if (! filled($slot)) { continue; }
+                    $lines[] = '- ' . ucfirst(strtolower($day)) . ': ' . $slot;
+                }
             }
             $lines[] = '';
         }
 
         // Social Links
         if (! empty($profile->social_links)) {
-            $lines[] = '## Online';
+            $lines[] = $vi ? '## Mạng xã hội' : '## Online';
             foreach ((array) $profile->social_links as $platform => $url) {
                 $lines[] = "- {$platform}: {$url}";
             }
@@ -421,21 +437,45 @@ class LlmsGeneratorService
         // Business Details
         $detailLines = [];
         if (filled($profile->founded_year)) {
-            $detailLines[] = '- Founded: ' . $profile->founded_year;
+            $detailLines[] = ($vi ? '- Năm thành lập: ' : '- Founded: ') . $profile->founded_year;
         }
         if (filled($profile->currency)) {
-            $detailLines[] = '- Currency: ' . $profile->currency;
+            $detailLines[] = ($vi ? '- Tiền tệ: ' : '- Currency: ') . $profile->currency;
         }
         if (filled($profile->vat_number)) {
-            $detailLines[] = '- VAT Number: ' . $profile->vat_number;
+            $detailLines[] = ($vi ? '- Mã số thuế: ' : '- VAT Number: ') . $profile->vat_number;
         }
+
         foreach ((array) ($profile->extra ?? []) as $key => $value) {
-            $detailLines[] = "- {$key}: {$value}";
+            if ($key === 'faq') { continue; }
+            $label = ucfirst($key);
+            if (is_array($value)) {
+                // Serialize flat string arrays as comma-separated
+                $flat = array_filter($value, fn ($v) => ! is_array($v));
+                if (! empty($flat)) {
+                    $detailLines[] = "- {$label}: " . implode(', ', $flat);
+                }
+            } else {
+                $detailLines[] = "- {$label}: {$value}";
+            }
         }
 
         if (! empty($detailLines)) {
-            $lines[] = '## Business Details';
+            $lines[] = $vi ? '## Thông tin doanh nghiệp' : '## Business Details';
             array_push($lines, ...$detailLines);
+            $lines[] = '';
+        }
+
+        // FAQ
+        $faq = (array) ($profile->extra['faq'] ?? []);
+        if (! empty($faq)) {
+            $lines[] = $vi ? '## Câu hỏi thường gặp' : '## FAQ';
+            foreach ($faq as $item) {
+                if (! is_array($item) || empty($item['question'])) { continue; }
+                $lines[] = '';
+                $lines[] = '**Q: ' . $item['question'] . '**';
+                $lines[] = 'A: ' . ($item['answer'] ?? '');
+            }
             $lines[] = '';
         }
 

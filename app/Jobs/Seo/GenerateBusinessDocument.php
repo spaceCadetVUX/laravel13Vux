@@ -13,12 +13,13 @@ class GenerateBusinessDocument implements ShouldQueue
 
     public function handle(LlmsGeneratorService $service): void
     {
-        $document = LlmsDocument::where('slug', 'business')->where('is_active', true)->first();
+        $documents = LlmsDocument::where('is_active', true)
+            ->where(fn ($q) => $q->where('slug', 'business')
+                ->orWhere('slug', 'like', 'business-%'))
+            ->get();
 
-        if ($document === null) {
-            return;
+        foreach ($documents as $document) {
+            $service->generateDocument($document);
         }
-
-        $service->generateDocument($document);
     }
 }
