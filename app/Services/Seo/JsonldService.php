@@ -1093,6 +1093,38 @@ class JsonldService
             $payload['publisher'] = app(BusinessJsonldService::class)->publisherBlock();
         }
 
+        // ── image → ImageObject ───────────────────────────────────────────────
+        // Google requires ImageObject with url+width+height for Article rich results.
+        // Plain URL string disqualifies the schema from rich snippets.
+        if (isset($payload['image']) && is_string($payload['image']) && filled($payload['image'])) {
+            $imageObj = ['@type' => 'ImageObject', 'url' => $payload['image']];
+
+            $relativePath = $model->getAttribute('featured_image');
+            if (filled($relativePath)) {
+                $fullPath = storage_path('app/public/' . ltrim($relativePath, '/'));
+                if (file_exists($fullPath)) {
+                    [$w, $h] = @getimagesize($fullPath) ?: [null, null];
+                    if ($w && $h) {
+                        $imageObj['width']  = $w;
+                        $imageObj['height'] = $h;
+                    }
+                }
+            }
+
+            $payload['image'] = $imageObj;
+        }
+
+        // ── wordCount — computed from locale body, stripped of HTML ──────────
+        if (! isset($payload['wordCount']) && method_exists($model, 'translation')) {
+            $body = $model->translation($locale)?->body ?? '';
+            if (filled($body)) {
+                $text = trim(strip_tags($body));
+                $payload['wordCount'] = count(
+                    preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY)
+                );
+            }
+        }
+
         return $payload;
     }
 
@@ -1301,6 +1333,23 @@ class JsonldService
 
         // Seed with all raw DB attributes (name, slug, sku, price, etc.)
         $map = $model->getAttributes();
+
+        // Re-cast datetime fields so the ISO 8601 normalizer loop below can
+        // convert them correctly — getAttributes() returns raw DB strings.
+        // Also covers created_at/updated_at which Laravel handles outside getCasts().
+        $dateFields = array_keys(array_filter(
+            $model->getCasts(),
+            fn (string $c) => str_contains($c, 'datetime') || str_contains($c, 'date') || $c === 'timestamp'
+        ));
+        if ($model->usesTimestamps()) {
+            $dateFields[] = $model->getCreatedAtColumn();
+            $dateFields[] = $model->getUpdatedAtColumn();
+        }
+        foreach ($dateFields as $field) {
+            if (array_key_exists($field, $map) && filled($map[$field])) {
+                $map[$field] = $model->getAttribute($field);
+            }
+        }
 
         // ── Locale-specific price / currency overrides (products only) ────────
         // translation(locale) returns the row for the requested locale, falling

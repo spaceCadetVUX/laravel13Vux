@@ -23,8 +23,12 @@ class BlogCategory extends Model
     use HasLlmsEntry;
 
     // ── PK config (bigint auto-increment) ─────────────────────────────────────
+    // keyType must be 'string' so Eloquent binds the PK as a quoted string in
+    // PostgreSQL polymorphic queries (geo_entity_profiles.model_id is varchar(36)).
 
     public $incrementing = true;
+
+    protected $keyType = 'string';
 
     // ── Mass assignment ───────────────────────────────────────────────────────
 

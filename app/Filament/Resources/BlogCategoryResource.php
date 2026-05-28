@@ -22,7 +22,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Placeholder;
+use Filament\Forms\Components\Placeholder;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -136,16 +136,20 @@ class BlogCategoryResource extends Resource
                                             Forms\Components\TextInput::make('meta_title')
                                                 ->label('Meta Title (vi)')
                                                 ->placeholder('Tự điền từ tên danh mục')
-                                                ->helperText('Tối ưu: 50–60 ký tự.')
-                                                ->maxLength(70)
+                                                ->helperText('Tối ưu: 50–60 ký tự. Google cắt bớt nếu quá dài.')
+                                                ->live(debounce: 500)
+                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/60')
+                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 60 ? 'warning' : 'success')
                                                 ->columnSpanFull(),
 
                                             Forms\Components\Textarea::make('meta_description')
                                                 ->label('Meta Description (vi)')
                                                 ->placeholder('Mô tả ngắn hiển thị trên Google')
-                                                ->helperText('Tối ưu: 120–160 ký tự.')
+                                                ->helperText('Tối ưu: 120–155 ký tự. Google cắt bớt nếu quá dài.')
                                                 ->rows(3)
-                                                ->maxLength(320)
+                                                ->live(debounce: 500)
+                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/155')
+                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 155 ? 'warning' : 'success')
                                                 ->columnSpanFull(),
 
                                             MediaFileUpload::make('og_image')
@@ -158,11 +162,11 @@ class BlogCategoryResource extends Resource
                                             Forms\Components\Select::make('robots')
                                                 ->label('Robots (vi)')
                                                 ->options([
-                                                    'index,follow'     => 'index, follow — Default',
-                                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
-                                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
+                                                    'index, follow'     => 'index, follow — Default',
+                                                    'noindex, follow'   => 'noindex, follow — Exclude from index',
+                                                    'noindex, nofollow' => 'noindex, nofollow — Block completely',
                                                 ])
-                                                ->default('index,follow')
+                                                ->default('index, follow')
                                                 ->native(false),
                                         ]),
                                 ]),
@@ -178,16 +182,20 @@ class BlogCategoryResource extends Resource
                                             Forms\Components\TextInput::make('meta_title')
                                                 ->label('Meta Title (en)')
                                                 ->placeholder('Auto-filled from category name')
-                                                ->helperText('Optimal: 50–60 characters.')
-                                                ->maxLength(70)
+                                                ->helperText('Optimal: 50–60 characters. Google truncates if too long.')
+                                                ->live(debounce: 500)
+                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/60')
+                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 60 ? 'warning' : 'success')
                                                 ->columnSpanFull(),
 
                                             Forms\Components\Textarea::make('meta_description')
                                                 ->label('Meta Description (en)')
                                                 ->placeholder('Short description shown in Google results')
-                                                ->helperText('Optimal: 120–160 characters.')
+                                                ->helperText('Optimal: 120–155 characters. Google truncates if too long.')
                                                 ->rows(3)
-                                                ->maxLength(320)
+                                                ->live(debounce: 500)
+                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/155')
+                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 155 ? 'warning' : 'success')
                                                 ->columnSpanFull(),
 
                                             MediaFileUpload::make('og_image')
@@ -200,11 +208,11 @@ class BlogCategoryResource extends Resource
                                             Forms\Components\Select::make('robots')
                                                 ->label('Robots (en)')
                                                 ->options([
-                                                    'index,follow'     => 'index, follow — Default',
-                                                    'noindex,follow'   => 'noindex, follow — Exclude from index',
-                                                    'noindex,nofollow' => 'noindex, nofollow — Block completely',
+                                                    'index, follow'     => 'index, follow — Default',
+                                                    'noindex, follow'   => 'noindex, follow — Exclude from index',
+                                                    'noindex, nofollow' => 'noindex, nofollow — Block completely',
                                                 ])
-                                                ->default('index,follow')
+                                                ->default('index, follow')
                                                 ->native(false),
                                         ]),
                                 ]),

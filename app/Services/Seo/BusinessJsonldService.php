@@ -77,6 +77,11 @@ class BusinessJsonldService
             $schemas[] = $this->localBusiness($profile);
         }
 
+        $faq = (array) ($profile->extra['faq'] ?? []);
+        if (! empty($faq)) {
+            $schemas[] = $this->faqPage($faq);
+        }
+
         return $schemas;
     }
 
@@ -180,7 +185,12 @@ class BusinessJsonldService
         ];
 
         $hours = collect((array) ($p->business_hours ?? []))
-            ->map(fn ($h, string $d): string => ($dayMap[$d] ?? $d) . ' ' . trim((string) ($h ?? '')))
+            ->map(fn ($h, string $d): string => ($dayMap[ucfirst(strtolower($d))] ?? $d) . ' ' . (
+                is_array($h)
+                    ? trim(($h['open'] ?? '') . '-' . ($h['close'] ?? ''), '-')
+                    : trim((string) ($h ?? ''))
+            ))
+            ->filter(fn (string $entry): bool => filled(trim(explode(' ', $entry, 2)[1] ?? '')))
             ->values()
             ->all();
 
@@ -201,5 +211,23 @@ class BusinessJsonldService
         if (filled($p->postal_code))  $address['postalCode']      = $p->postal_code;
 
         return $address;
+    }
+
+    private function faqPage(array $faq): array
+    {
+        $entities = array_map(fn (array $item): array => [
+            '@type'          => 'Question',
+            'name'           => $item['question'] ?? '',
+            'acceptedAnswer' => [
+                '@type' => 'Answer',
+                'text'  => $item['answer'] ?? '',
+            ],
+        ], $faq);
+
+        return [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'FAQPage',
+            'mainEntity' => $entities,
+        ];
     }
 }
