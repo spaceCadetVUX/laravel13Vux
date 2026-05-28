@@ -184,15 +184,27 @@ class BusinessJsonldService
             'Thursday' => 'Th', 'Friday' => 'Fr', 'Saturday' => 'Sa', 'Sunday' => 'Su',
         ];
 
-        $hours = collect((array) ($p->business_hours ?? []))
-            ->map(fn ($h, string $d): string => ($dayMap[ucfirst(strtolower($d))] ?? $d) . ' ' . (
-                is_array($h)
-                    ? trim(($h['open'] ?? '') . '-' . ($h['close'] ?? ''), '-')
-                    : trim((string) ($h ?? ''))
-            ))
-            ->filter(fn (string $entry): bool => filled(trim(explode(' ', $entry, 2)[1] ?? '')))
-            ->values()
-            ->all();
+        $raw = (array) ($p->business_hours ?? []);
+
+        // Support both array format [{day,open,close}] and legacy keyed format {Monday:{open,close}}
+        if (array_is_list($raw)) {
+            $hours = collect($raw)
+                ->map(fn (array $h): string => ($dayMap[ucfirst(strtolower($h['day'] ?? ''))] ?? ($h['day'] ?? '')) . ' '
+                    . trim(($h['open'] ?? '') . '-' . ($h['close'] ?? ''), '-'))
+                ->filter(fn (string $entry): bool => filled(trim(explode(' ', $entry, 2)[1] ?? '')))
+                ->values()
+                ->all();
+        } else {
+            $hours = collect($raw)
+                ->map(fn ($h, string $d): string => ($dayMap[ucfirst(strtolower($d))] ?? $d) . ' ' . (
+                    is_array($h)
+                        ? trim(($h['open'] ?? '') . '-' . ($h['close'] ?? ''), '-')
+                        : trim((string) ($h ?? ''))
+                ))
+                ->filter(fn (string $entry): bool => filled(trim(explode(' ', $entry, 2)[1] ?? '')))
+                ->values()
+                ->all();
+        }
 
         if (! empty($hours)) {
             $schema['openingHours'] = $hours;

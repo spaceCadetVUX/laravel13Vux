@@ -4,13 +4,19 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BusinessProfileResource\Pages;
 use App\Models\BusinessProfile;
+use App\Models\Seo\LlmsDocument;
+use App\Services\Seo\BusinessJsonldService;
 use BackedEnum;
 use Filament\Forms;
+use Filament\Forms\Components\Placeholder;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 
 class BusinessProfileResource extends Resource
 {
@@ -122,22 +128,137 @@ class BusinessProfileResource extends Resource
                                 ->reorderable()
                                 ->columnSpanFull(),
 
-                            Forms\Components\KeyValue::make('business_hours')
+                            Forms\Components\Repeater::make('business_hours')
                                 ->label('Business Hours')
-                                ->keyLabel('Day')
-                                ->valueLabel('Hours')
-                                ->keyPlaceholder('Monday')
-                                ->valuePlaceholder('09:00 – 18:00')
+                                ->helperText('Giờ mở cửa theo ngày — tự động đưa vào JSON-LD openingHours.')
+                                ->schema([
+                                    Forms\Components\Select::make('day')
+                                        ->label('Day')
+                                        ->options([
+                                            'Monday'    => 'Monday',
+                                            'Tuesday'   => 'Tuesday',
+                                            'Wednesday' => 'Wednesday',
+                                            'Thursday'  => 'Thursday',
+                                            'Friday'    => 'Friday',
+                                            'Saturday'  => 'Saturday',
+                                            'Sunday'    => 'Sunday',
+                                        ])
+                                        ->required()
+                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('open')
+                                        ->label('Open')
+                                        ->placeholder('08:00')
+                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('close')
+                                        ->label('Close')
+                                        ->placeholder('17:30')
+                                        ->columnSpan(1),
+                                ])
+                                ->columns(3)
                                 ->reorderable()
+                                ->addActionLabel('Thêm ngày')
                                 ->columnSpanFull(),
 
-                            Forms\Components\KeyValue::make('extra')
-                                ->label('Extra Info')
-                                ->keyLabel('Key')
-                                ->valueLabel('Value')
+                            Forms\Components\Repeater::make('extra.faq')
+                                ->label('FAQ (schema.org FAQPage)')
+                                ->helperText('Câu hỏi thường gặp — tự động inject JSON-LD FAQPage vào trang chủ.')
+                                ->schema([
+                                    Forms\Components\TextInput::make('question')
+                                        ->label('Question')
+                                        ->required()
+                                        ->columnSpanFull(),
+                                    Forms\Components\Textarea::make('answer')
+                                        ->label('Answer')
+                                        ->required()
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+                                ])
                                 ->reorderable()
-                                ->helperText('Any additional info (e.g. registration number, certifications).')
+                                ->addActionLabel('Thêm câu hỏi')
                                 ->columnSpanFull(),
+                        ]),
+
+                    // ── JSON-LD ───────────────────────────────────────────────
+                    Tab::make('JSON-LD')
+                        ->icon('heroicon-o-code-bracket')
+                        ->schema([
+                            Section::make('Live Schemas')
+                                ->description('Auto-generated từ BusinessProfile data. Cache 24h Redis.')
+                                ->schema([
+                                    Placeholder::make('jsonld_preview')
+                                        ->label('')
+                                        ->content(function (): HtmlString {
+                                            $schemas = app(BusinessJsonldService::class)->getSchemas();
+                                            $html = '';
+                                            foreach ($schemas as $schema) {
+                                                $type = htmlspecialchars($schema['@type'] ?? 'Unknown');
+                                                $json = htmlspecialchars(json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                                                $html .= "<p style='font-weight:600;font-size:0.85rem;color:#1e293b;margin:16px 0 4px;'>{$type}</p>";
+                                                $html .= "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;'>{$json}</pre>";
+                                            }
+                                            return new HtmlString($html ?: '<em>No schemas generated.</em>');
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
+
+                            \Filament\Schemas\Components\Actions::make([
+                                \Filament\Actions\Action::make('flush_jsonld_cache')
+                                    ->label('Flush Cache')
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('warning')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Flush JSON-LD Cache')
+                                    ->modalDescription('Xoá Redis cache của Business schemas. Request tiếp theo sẽ rebuild từ DB.')
+                                    ->action(function (): void {
+                                        app(BusinessJsonldService::class)->flushCache();
+                                        Notification::make()->title('JSON-LD cache flushed')->success()->send();
+                                    }),
+                            ]),
+                        ]),
+
+                    // ── LLMs ──────────────────────────────────────────────────
+                    Tab::make('LLMs')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Section::make('LLMs Documents')
+                                ->description('Nội dung tổng hợp dùng cho llms.txt — AI context documents.')
+                                ->schema([
+                                    Placeholder::make('llms_vi')
+                                        ->label('🇻🇳 business-vi')
+                                        ->content(function (): HtmlString {
+                                            $doc = LlmsDocument::where('slug', 'business-vi')->first();
+                                            if (! $doc) {
+                                                return new HtmlString('<em class="text-gray-400">Document not found (slug: business-vi).</em>');
+                                            }
+                                            $content = htmlspecialchars($doc->content ?? '');
+                                            $updated = $doc->updated_at?->format('d/m/Y H:i') ?? '—';
+                                            return new HtmlString(
+                                                "<div style='font-size:0.75rem;color:#64748b;margin-bottom:6px;'>Updated: {$updated}</div>"
+                                                . "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;max-height:320px;'>"
+                                                . ($content ?: '<em style="color:#94a3b8;">(empty)</em>')
+                                                . '</pre>'
+                                            );
+                                        })
+                                        ->columnSpanFull(),
+
+                                    Placeholder::make('llms_en')
+                                        ->label('🇬🇧 business-en')
+                                        ->content(function (): HtmlString {
+                                            $doc = LlmsDocument::where('slug', 'business-en')->first();
+                                            if (! $doc) {
+                                                return new HtmlString('<em class="text-gray-400">Document not found (slug: business-en).</em>');
+                                            }
+                                            $content = htmlspecialchars($doc->content ?? '');
+                                            $updated = $doc->updated_at?->format('d/m/Y H:i') ?? '—';
+                                            return new HtmlString(
+                                                "<div style='font-size:0.75rem;color:#64748b;margin-bottom:6px;'>Updated: {$updated}</div>"
+                                                . "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;max-height:320px;'>"
+                                                . ($content ?: '<em style="color:#94a3b8;">(empty)</em>')
+                                                . '</pre>'
+                                            );
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
                         ]),
 
                 ])
