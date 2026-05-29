@@ -1614,6 +1614,9 @@ class ProductResource extends Resource
 
     private static function charCounterColor(?string $state, int $min, int $max): string
     {
-        return 'gray';
+        $len = mb_strlen($state ?? '');
+        if ($len === 0) return 'gray';
+        if ($len < $min || $len > $max) return 'warning';
+        return 'success';
     }
 }

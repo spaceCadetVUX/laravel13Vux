@@ -37,8 +37,6 @@ class Brand extends Model
             ->dontLogEmptyChanges();
     }
 
-    protected $keyType = 'string';
-
     protected $fillable = [
         'name',
         'slug',

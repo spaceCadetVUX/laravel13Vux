@@ -794,7 +794,7 @@ class BrandResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('website')
-                    ->url(fn (Brand $record): string => $record->website ?? '#')
+                    ->url(fn (Brand $record): ?string => $record->website ?: null)
                     ->openUrlInNewTab()
                     ->color('primary')
                     ->placeholder('—'),
@@ -850,6 +850,9 @@ class BrandResource extends Resource
 
     private static function charCounterColor(?string $state, int $min, int $max): string
     {
-        return 'gray';
+        $len = mb_strlen($state ?? '');
+        if ($len === 0) return 'gray';
+        if ($len < $min || $len > $max) return 'warning';
+        return 'success';
     }
 }

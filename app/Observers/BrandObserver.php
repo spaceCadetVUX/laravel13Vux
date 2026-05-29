@@ -19,6 +19,24 @@ class BrandObserver
     {
         app(BrandService::class)->bustListCache();
 
+        if (! $brand->is_active) {
+            $morphClass = $brand->getMorphClass();
+
+            SitemapEntry::where('model_type', $morphClass)
+                ->where('model_id', $brand->getKey())
+                ->update(['is_active' => false]);
+
+            LlmsEntry::where('model_type', $morphClass)
+                ->where('model_id', $brand->getKey())
+                ->update(['is_active' => false]);
+
+            JsonldSchema::where('model_type', $morphClass)
+                ->where('model_id', $brand->getKey())
+                ->update(['is_active' => false]);
+
+            return;
+        }
+
         foreach (config('app.supported_locales', ['vi', 'en']) as $locale) {
             dispatch(new SyncJsonldSchema($brand, $locale))->onQueue('seo');
             dispatch(new SyncSitemapEntry($brand, $locale))->onQueue('seo');
@@ -26,27 +44,21 @@ class BrandObserver
         }
     }
 
+    /**
+     * Brand has no SoftDeletes — this is a hard delete.
+     * Clean up all polymorphic SEO rows from DB.
+     */
     public function deleted(Brand $brand): void
     {
         $morphClass = $brand->getMorphClass();
+        $modelId    = $brand->getKey();
 
-        SitemapEntry::where('model_type', $morphClass)
-            ->where('model_id', $brand->getKey())
-            ->update(['is_active' => false]);
+        SeoMeta::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        GeoEntityProfile::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        JsonldSchema::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        SitemapEntry::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        LlmsEntry::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
 
-        LlmsEntry::where('model_type', $morphClass)
-            ->where('model_id', $brand->getKey())
-            ->update(['is_active' => false]);
-    }
-
-    public function forceDeleting(Brand $brand): void
-    {
-        $morphClass = $brand->getMorphClass();
-
-        SeoMeta::where('model_type', $morphClass)->where('model_id', $brand->getKey())->delete();
-        GeoEntityProfile::where('model_type', $morphClass)->where('model_id', $brand->getKey())->delete();
-        JsonldSchema::where('model_type', $morphClass)->where('model_id', $brand->getKey())->delete();
-        SitemapEntry::where('model_type', $morphClass)->where('model_id', $brand->getKey())->delete();
-        LlmsEntry::where('model_type', $morphClass)->where('model_id', $brand->getKey())->delete();
+        app(BrandService::class)->bustListCache();
     }
 }

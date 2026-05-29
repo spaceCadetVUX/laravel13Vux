@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ManufacturerResource\Pages;
 use App\Models\Manufacturer;
+use App\Support\LocaleUrl;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -141,7 +142,7 @@ class ManufacturerResource extends Resource
                                 ->hintColor('info')
                                 ->afterStateHydrated(function ($state, $set, $livewire): void {
                                     if (empty($state) && $livewire->record?->slug) {
-                                        $set('canonical_url', url('/manufacturers/' . $livewire->record->slug));
+                                        $set('canonical_url', LocaleUrl::for('manufacturer', $livewire->record->slug, 'vi'));
                                     }
                                 })
                                 ->columnSpanFull(),
@@ -184,7 +185,7 @@ class ManufacturerResource extends Resource
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('website')
-                    ->url(fn (Manufacturer $record): string => $record->website ?? '#')
+                    ->url(fn (Manufacturer $record): ?string => $record->website ?: null)
                     ->openUrlInNewTab()
                     ->color('primary')
                     ->placeholder('—'),

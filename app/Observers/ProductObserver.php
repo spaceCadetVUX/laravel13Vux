@@ -50,6 +50,24 @@ class ProductObserver
      */
     public function saved(Product $product): void
     {
+        if (! $product->is_active) {
+            $morphClass = $product->getMorphClass();
+
+            SitemapEntry::where('model_type', $morphClass)
+                ->where('model_id', $product->getKey())
+                ->update(['is_active' => false]);
+
+            LlmsEntry::where('model_type', $morphClass)
+                ->where('model_id', $product->getKey())
+                ->update(['is_active' => false]);
+
+            JsonldSchema::where('model_type', $morphClass)
+                ->where('model_id', $product->getKey())
+                ->update(['is_active' => false]);
+
+            return;
+        }
+
         $product->loadMissing('translations');
         $loadedLocales = $product->translations->pluck('locale')->all();
 

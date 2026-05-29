@@ -86,8 +86,8 @@ class EditProduct extends EditRecord
             $record->translations()->updateOrCreate(
                 ['locale' => $locale],
                 collect($localeData)
-                    ->only(['name', 'slug', 'short_description', 'description', 'price', 'currency'])
-                    ->filter(fn ($v) => $v !== null && $v !== '')
+                    ->only(['name', 'slug', 'short_description', 'description', 'price', 'sale_price', 'currency'])
+                    ->filter(fn ($v) => $v !== null)
                     ->toArray()
             );
         }

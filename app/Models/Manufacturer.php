@@ -37,9 +37,6 @@ class Manufacturer extends Model
             ->dontLogEmptyChanges();
     }
 
-    protected $keyType    = 'string';
-    public    $incrementing = true;
-
     protected $fillable = [
         'name',
         'slug',

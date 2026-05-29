@@ -14,7 +14,12 @@ class ProductTranslationObserver
     public function saved(ProductTranslation $translation): void
     {
         $product = $translation->product;
-        $locale  = $translation->locale;
+
+        if (! $product->is_active) {
+            return;
+        }
+
+        $locale = $translation->locale;
 
         dispatch(new SyncJsonldSchema($product, $locale))->onQueue('seo');
         dispatch(new SyncSitemapEntry($product, $locale))->onQueue('seo');
