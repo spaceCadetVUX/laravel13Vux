@@ -10,6 +10,7 @@ use App\Models\BlogPost;
 use App\Models\BlogTag;
 use App\Models\Brand;
 use App\Models\BusinessProfile;
+use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Manufacturer;
 use App\Models\Product;
@@ -27,6 +28,7 @@ use App\Observers\BlogPostObserver;
 use App\Observers\BlogPostTranslationObserver;
 use App\Observers\BrandObserver;
 use App\Observers\BusinessProfileObserver;
+use App\Observers\CartObserver;
 use App\Observers\CategoryObserver;
 use App\Observers\CategoryTranslationObserver;
 use App\Observers\ManufacturerObserver;
@@ -100,6 +102,7 @@ class AppServiceProvider extends ServiceProvider
         CategoryTranslation::observe(CategoryTranslationObserver::class);
         BlogPostTranslation::observe(BlogPostTranslationObserver::class);
         BlogCategoryTranslation::observe(BlogCategoryTranslationObserver::class);
+        Cart::observe(CartObserver::class);
     }
 
     private function registerMorphMap(): void

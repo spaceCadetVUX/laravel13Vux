@@ -32,11 +32,6 @@ class Category extends Model
     use HasActivityLog;
     use LogsActivity;
 
-    // ── PK config (bigint auto-increment — explicit for clarity) ─────────────
-
-    protected $keyType    = 'string';
-    public    $incrementing = true;
-
     // ── Mass assignment ───────────────────────────────────────────────────────
 
     protected $fillable = [

@@ -14,7 +14,12 @@ class CategoryTranslationObserver
     public function saved(CategoryTranslation $translation): void
     {
         $category = $translation->category;
-        $locale   = $translation->locale;
+
+        if (! $category->is_active) {
+            return;
+        }
+
+        $locale = $translation->locale;
 
         dispatch(new SyncJsonldSchema($category, $locale))->onQueue('seo');
         dispatch(new SyncSitemapEntry($category, $locale))->onQueue('seo');

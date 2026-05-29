@@ -35,7 +35,7 @@ class CreateCategory extends CreateRecord
                         'og_title', 'og_description',
                         'twitter_title', 'twitter_description',
                     ])
-                    ->filter(fn ($v) => $v !== null && $v !== '')
+                    ->filter(fn ($v) => $v !== null)
                     ->toArray()
             );
         }

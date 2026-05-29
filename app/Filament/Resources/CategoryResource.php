@@ -253,7 +253,7 @@ class CategoryResource extends Resource
                                                                     if (empty($state)) {
                                                                         $slug = $livewire->record?->translation('vi')?->slug ?? $livewire->record?->slug;
                                                                         if ($slug) {
-                                                                            $set('canonical_url', url('/categories/' . $slug));
+                                                                            $set('canonical_url', url('/vi/categories/' . $slug));
                                                                         }
                                                                     }
                                                                 })
@@ -433,7 +433,7 @@ class CategoryResource extends Resource
                                                                     if (empty($state)) {
                                                                         $slug = $livewire->record?->translation('en')?->slug ?? $livewire->record?->slug;
                                                                         if ($slug) {
-                                                                            $set('canonical_url', url('/categories/' . $slug));
+                                                                            $set('canonical_url', url('/en/categories/' . $slug));
                                                                         }
                                                                     }
                                                                 })
@@ -968,6 +968,9 @@ class CategoryResource extends Resource
 
     private static function charCounterColor(?string $state, int $min, int $max): string
     {
-        return 'gray';
+        $len = mb_strlen($state ?? '');
+        if ($len === 0) return 'gray';
+        if ($len < $min || $len > $max) return 'warning';
+        return 'success';
     }
 }
