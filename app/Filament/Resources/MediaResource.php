@@ -42,6 +42,7 @@ class MediaResource extends Resource
             ->defaultPaginationPageOption(30)
             ->paginationPageOptions([30, 60, 120])
             ->modifyQueryUsing(fn (Builder $query) => $query->latest())
+            ->recordClasses('rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800')
             ->columns([
                 Stack::make([
                     ImageColumn::make('thumb_path')
@@ -81,7 +82,7 @@ class MediaResource extends Resource
                             ->alignment(\Filament\Support\Enums\Alignment::Center)
                             ->color('gray'),
                     ])->extraAttributes(['class' => 'px-3 py-2 space-y-0.5 text-center overflow-hidden']),
-                ])->extraAttributes(['class' => 'rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-800 h-full']),
+                ])->extraAttributes(['class' => 'h-full']),
             ])
             ->filters([
                 SelectFilter::make('type')
@@ -240,6 +241,7 @@ class MediaResource extends Resource
         $path = $record->path;
 
         return \App\Models\BlogPostTranslation::where('body', 'like', "%{$path}%")->exists()
-            || \App\Models\CategoryTranslation::where('rich_content', 'like', "%{$path}%")->exists();
+            || \App\Models\CategoryTranslation::where('rich_content', 'like', "%{$path}%")->exists()
+            || \App\Models\ProductTranslation::where('description', 'like', "%{$path}%")->exists();
     }
 }
