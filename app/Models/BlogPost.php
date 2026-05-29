@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\BlogPostStatus;
 use App\Traits\HasActivityLog;
 use App\Traits\HasGeoProfile;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use App\Traits\HasJsonldSchemas;
 use App\Traits\HasLlmsEntry;
 use App\Traits\HasMedia;
@@ -34,6 +36,18 @@ class BlogPost extends Model
     use HasLlmsEntry;
     use HasMedia;
     use HasActivityLog;
+    use LogsActivity;
+
+    // ── Activity log ──────────────────────────────────────────────────────────
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('blog_post')
+            ->logOnly(['status', 'published_at', 'author_id', 'blog_category_id'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     // ── PK config ─────────────────────────────────────────────────────────────
 

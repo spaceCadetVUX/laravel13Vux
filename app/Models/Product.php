@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Traits\HasActivityLog;
 use App\Traits\HasGeoProfile;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use App\Traits\HasJsonldSchemas;
 use App\Traits\HasLlmsEntry;
 use App\Traits\HasMedia;
@@ -33,6 +35,7 @@ class Product extends Model
     use HasLlmsEntry;
     use HasMedia;
     use HasActivityLog;
+    use LogsActivity;
 
     // ── PK config ─────────────────────────────────────────────────────────────
 
@@ -55,6 +58,17 @@ class Product extends Model
         'stock_quantity',
         'is_active',
     ];
+
+    // ── Activity log ──────────────────────────────────────────────────────────
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('product')
+            ->logOnly(['price', 'sale_price', 'stock_quantity', 'is_active', 'sku', 'currency', 'brand_id', 'manufacturer_id'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     // ── Casts ─────────────────────────────────────────────────────────────────
 

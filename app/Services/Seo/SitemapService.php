@@ -185,6 +185,8 @@ class SitemapService
         $dom = new \DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
 
+        $dom->appendChild($dom->createProcessingInstruction('xml-stylesheet', 'type="text/xsl" href="/sitemap.xsl"'));
+
         $urlset = $dom->createElementNS(
             'http://www.sitemaps.org/schemas/sitemap/0.9',
             'urlset'

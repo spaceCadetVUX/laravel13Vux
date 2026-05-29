@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Traits\HasActivityLog;
 use App\Traits\HasGeoProfile;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use App\Traits\HasJsonldSchemas;
 use App\Traits\HasLlmsEntry;
 use App\Traits\HasMedia;
@@ -22,6 +24,18 @@ class Manufacturer extends Model
     use HasLlmsEntry;
     use HasMedia;
     use HasActivityLog;
+    use LogsActivity;
+
+    // ── Activity log ──────────────────────────────────────────────────────────
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('manufacturer')
+            ->logOnly(['name', 'slug', 'logo', 'website', 'country', 'is_active', 'sort_order'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $keyType    = 'string';
     public    $incrementing = true;

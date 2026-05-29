@@ -4,8 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ActivityLogResource\Pages;
 use BackedEnum;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Infolists\Components\KeyValueEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -43,9 +47,15 @@ class ActivityLogResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('description')
-                    ->label('Description')
-                    ->searchable()
-                    ->limit(60),
+                    ->label('Event')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'created' => 'success',
+                        'updated' => 'warning',
+                        'deleted' => 'danger',
+                        default   => 'gray',
+                    })
+                    ->searchable(),
 
                 TextColumn::make('subject_type')
                     ->label('Subject')
@@ -94,7 +104,36 @@ class ActivityLogResource extends Resource
                     }),
             ])
             ->actions([
-                // View-only — no edit/delete
+                ViewAction::make()
+                    ->modalHeading('Activity Detail')
+                    ->infolist(fn (Schema $schema): Schema => $schema->schema([
+                        Section::make('Info')->schema([
+                            TextEntry::make('log_name')->label('Log')->badge()->color('primary'),
+                            TextEntry::make('description')->label('Event')->badge()
+                                ->color(fn (string $state): string => match ($state) {
+                                    'created' => 'success',
+                                    'updated' => 'warning',
+                                    'deleted' => 'danger',
+                                    default   => 'gray',
+                                }),
+                            TextEntry::make('subject_type')->label('Subject')
+                                ->formatStateUsing(fn (?string $state): string => $state ? class_basename($state) : '—'),
+                            TextEntry::make('causer.name')->label('By')->placeholder('System'),
+                            TextEntry::make('created_at')->label('When')->dateTime(),
+                        ])->columns(3),
+
+                        Section::make('Old values')
+                            ->schema([
+                                KeyValueEntry::make('attribute_changes.old')->label('')->placeholder('—'),
+                            ])
+                            ->visible(fn (Activity $record): bool => filled($record->attribute_changes['old'] ?? null)),
+
+                        Section::make('New values')
+                            ->schema([
+                                KeyValueEntry::make('attribute_changes.attributes')->label('')->placeholder('—'),
+                            ])
+                            ->visible(fn (Activity $record): bool => filled($record->attribute_changes['attributes'] ?? null)),
+                    ])),
             ])
             ->bulkActions([
                 // No bulk actions on audit log

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Traits\HasActivityLog;
 use App\Traits\HasGeoProfile;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 use App\Traits\HasJsonldSchemas;
 use App\Traits\HasLlmsEntry;
 use App\Traits\HasMedia;
@@ -28,6 +30,7 @@ class Category extends Model
     use HasLlmsEntry;
     use HasMedia;
     use HasActivityLog;
+    use LogsActivity;
 
     // ── PK config (bigint auto-increment — explicit for clarity) ─────────────
 
@@ -45,6 +48,17 @@ class Category extends Model
         'sort_order',
         'is_active',
     ];
+
+    // ── Activity log ──────────────────────────────────────────────────────────
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('category')
+            ->logOnly(['parent_id', 'slug', 'image_path', 'sort_order', 'is_active'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     // ── Casts ─────────────────────────────────────────────────────────────────
 

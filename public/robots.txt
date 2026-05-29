@@ -21,4 +21,4 @@ Disallow: /*?filter=
 Disallow: /*?page=
 
 # Sitemap
-Sitemap: https://YOUR_DOMAIN/sitemap.xml
+Sitemap: https://knxstore.vn/sitemap.xml
