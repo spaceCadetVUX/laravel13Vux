@@ -59,9 +59,20 @@ class RedirectResource extends Resource
                 ->default(RedirectType::Permanent->value)
                 ->required(),
 
+            Forms\Components\Select::make('locale')
+                ->label('Locale')
+                ->options([
+                    'vi' => '🇻🇳 Tiếng Việt (vi)',
+                    'en' => '🇬🇧 English (en)',
+                ])
+                ->placeholder('— All locales —')
+                ->nullable()
+                ->helperText('Để trống = match mọi locale. Chọn để giới hạn theo ngôn ngữ cụ thể.'),
+
             Forms\Components\Toggle::make('is_active')
                 ->label('Active')
-                ->default(true),
+                ->default(true)
+                ->columnSpanFull(),
 
         ])->columns(2);
     }
@@ -83,6 +94,16 @@ class RedirectResource extends Resource
                     ->label('To')
                     ->searchable()
                     ->limit(60),
+
+                TextColumn::make('locale')
+                    ->label('Locale')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => $state ?? 'all')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'vi'  => 'success',
+                        'en'  => 'info',
+                        default => 'gray',
+                    }),
 
                 TextColumn::make('type')
                     ->label('Type')
@@ -111,6 +132,13 @@ class RedirectResource extends Resource
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
+
+                Tables\Filters\SelectFilter::make('locale')
+                    ->options([
+                        'vi' => '🇻🇳 vi',
+                        'en' => '🇬🇧 en',
+                    ])
+                    ->placeholder('All locales'),
 
                 Tables\Filters\SelectFilter::make('type')
                     ->options([

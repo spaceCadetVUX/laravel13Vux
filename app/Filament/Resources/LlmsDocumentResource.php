@@ -32,6 +32,8 @@ class LlmsDocumentResource extends Resource
 
     protected static ?string $navigationLabel = 'LLMs Documents';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     // ── Infolist ──────────────────────────────────────────────────────────────
 
     public static function infolist(Schema $schema): Schema
