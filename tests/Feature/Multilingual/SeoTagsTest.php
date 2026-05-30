@@ -43,7 +43,7 @@ class SeoTagsTest extends TestCase
     {
         $this->createProductWithTranslations();
 
-        $html = $this->get('/vi/products/san-pham-seo')
+        $html = $this->get('/vi/san-pham/san-pham-seo')
             ->assertStatus(200)
             ->getContent();
 
@@ -53,7 +53,7 @@ class SeoTagsTest extends TestCase
         );
 
         // Canonical points to the vi URL, not /en/
-        $this->assertStringContainsString('/vi/products/san-pham-seo', $html);
+        $this->assertStringContainsString('/vi/san-pham/san-pham-seo', $html);
         $this->assertStringNotContainsString(
             'rel="canonical" href="' . url('/en/products'),
             $html
@@ -64,7 +64,7 @@ class SeoTagsTest extends TestCase
     {
         $this->createProductWithTranslations();
 
-        $viHtml = $this->get('/vi/products/san-pham-seo')
+        $viHtml = $this->get('/vi/san-pham/san-pham-seo')
             ->assertStatus(200)
             ->getContent();
 
@@ -83,7 +83,7 @@ class SeoTagsTest extends TestCase
     {
         $this->createProductWithTranslations();
 
-        $html = $this->get('/vi/products/san-pham-seo')
+        $html = $this->get('/vi/san-pham/san-pham-seo')
             ->assertStatus(200)
             ->getContent();
 

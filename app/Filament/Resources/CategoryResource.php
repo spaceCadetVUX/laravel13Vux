@@ -253,7 +253,7 @@ class CategoryResource extends Resource
                                                                     if (empty($state)) {
                                                                         $slug = $livewire->record?->translation('vi')?->slug ?? $livewire->record?->slug;
                                                                         if ($slug) {
-                                                                            $set('canonical_url', url('/vi/categories/' . $slug));
+                                                                            $set('canonical_url', \App\Support\LocaleUrl::for('category', $slug, 'vi'));
                                                                         }
                                                                     }
                                                                 })
@@ -433,7 +433,7 @@ class CategoryResource extends Resource
                                                                     if (empty($state)) {
                                                                         $slug = $livewire->record?->translation('en')?->slug ?? $livewire->record?->slug;
                                                                         if ($slug) {
-                                                                            $set('canonical_url', url('/en/categories/' . $slug));
+                                                                            $set('canonical_url', \App\Support\LocaleUrl::for('category', $slug, 'en'));
                                                                         }
                                                                     }
                                                                 })

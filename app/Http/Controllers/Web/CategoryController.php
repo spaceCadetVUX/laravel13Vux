@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CategoryTranslation;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
+use App\Support\LocaleUrl;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -25,7 +26,7 @@ class CategoryController extends Controller
 
             if ($viTranslation) {
                 return redirect(
-                    route('category.show', ['locale' => config('app.fallback_locale'), 'slug' => $viTranslation->slug]),
+                    LocaleUrl::for('category', $viTranslation->slug, config('app.fallback_locale')),
                     302
                 );
             }
@@ -38,7 +39,7 @@ class CategoryController extends Controller
             abort(404);
         }
 
-        $alternateUrls       = app(SeoService::class)->alternateUrls($category, 'category.show');
+        $alternateUrls       = app(SeoService::class)->alternateUrls($category);
         $seoMeta             = $translation;
         $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($category, $locale)
             ->pluck('payload')

@@ -163,6 +163,45 @@ class ManufacturerResource extends Resource
                         ->collapsed(),
                 ])
                 ->columnSpanFull(),
+
+            Group::make()
+                ->relationship('seoMetaEn')
+                ->schema([
+                    Forms\Components\Hidden::make('locale')->default('en'),
+
+                    Section::make('SEO (English)')
+                        ->icon('heroicon-o-language')
+                        ->schema([
+                            Forms\Components\TextInput::make('canonical_url')
+                                ->label('Canonical URL (en)')
+                                ->url()
+                                ->placeholder('Auto-generated from slug — /en/manufacturers/{slug}')
+                                ->hint('Auto-generated from slug')
+                                ->hintIcon('heroicon-o-sparkles')
+                                ->hintColor('info')
+                                ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                    if (empty($state) && $livewire->record?->slug) {
+                                        $set('canonical_url', LocaleUrl::for('manufacturer', $livewire->record->slug, 'en'));
+                                    }
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\Select::make('robots')
+                                ->label('Robots')
+                                ->options([
+                                    'index, follow'     => 'index, follow (default)',
+                                    'noindex, follow'   => 'noindex, follow',
+                                    'index, nofollow'   => 'index, nofollow',
+                                    'noindex, nofollow' => 'noindex, nofollow',
+                                ])
+                                ->default('index, follow')
+                                ->native(false),
+                        ])
+                        ->columns(2)
+                        ->collapsible()
+                        ->collapsed(),
+                ])
+                ->columnSpanFull(),
         ]);
     }
 

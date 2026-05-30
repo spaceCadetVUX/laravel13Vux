@@ -8,13 +8,19 @@ use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\BlogCategoryTranslation;
 use App\Models\Seo\Redirect;
+use App\Support\LocaleUrl;
 
 class BlogCategoryTranslationObserver
 {
     public function saved(BlogCategoryTranslation $translation): void
     {
         $blogCategory = $translation->blogCategory;
-        $locale       = $translation->locale;
+
+        if (! $blogCategory->is_active) {
+            return;
+        }
+
+        $locale = $translation->locale;
 
         dispatch(new SyncJsonldSchema($blogCategory, $locale))->onQueue('seo');
         dispatch(new SyncSitemapEntry($blogCategory, $locale))->onQueue('seo');
@@ -36,9 +42,9 @@ class BlogCategoryTranslationObserver
         }
 
         Redirect::updateOrCreate(
-            ['from_path' => "/{$locale}/blog/categories/{$oldSlug}"],
+            ['from_path' => parse_url(LocaleUrl::for('blog_category', $oldSlug, $locale), PHP_URL_PATH)],
             [
-                'to_path'   => "/{$locale}/blog/categories/{$newSlug}",
+                'to_path'   => parse_url(LocaleUrl::for('blog_category', $newSlug, $locale), PHP_URL_PATH),
                 'type'      => RedirectType::Permanent,
                 'locale'    => $locale,
                 'is_active' => true,

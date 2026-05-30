@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductTranslation;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
+use App\Support\LocaleUrl;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
@@ -25,7 +26,7 @@ class ProductController extends Controller
 
             if ($viTranslation) {
                 return redirect(
-                    route('product.show', ['locale' => config('app.fallback_locale'), 'slug' => $viTranslation->slug]),
+                    LocaleUrl::for('product', $viTranslation->slug, config('app.fallback_locale')),
                     302
                 );
             }
@@ -41,10 +42,10 @@ class ProductController extends Controller
         $primaryCategory   = $product->categories->first();
         $catTranslation    = $primaryCategory?->translation($locale);
         $catUrl            = $primaryCategory && $catTranslation
-            ? route('category.show', ['locale' => $locale, 'slug' => $catTranslation->slug])
+            ? LocaleUrl::for('category', $catTranslation->slug, $locale)
             : '';
 
-        $alternateUrls       = app(SeoService::class)->alternateUrls($product, 'product.show');
+        $alternateUrls       = app(SeoService::class)->alternateUrls($product);
         $seoMeta             = $product->seoMeta($locale);
         $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($product, $locale)
             ->pluck('payload')

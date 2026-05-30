@@ -52,44 +52,69 @@ if (app()->isLocal() || app()->environment('staging')) {
     Route::get('test-seo-head', fn () => view('test-seo-head'));
 }
 
-// ── Locale group: /{locale}/* ─────────────────────────────────────────────────
-// web middleware already applied globally via bootstrap/app.php withRouting
-// set.locale resolves locale from route param and sets app()->getLocale()
+// ── vi group: Vietnamese URL paths ──────────────────────────────────────────
+// set.locale reads {locale} param → sets app()->setLocale('vi')
 Route::prefix('{locale}')
-    ->where(['locale' => implode('|', config('app.supported_locales'))])
+    ->where(['locale' => 'vi'])
     ->middleware('set.locale')
     ->group(function () {
 
-        // Home
-        Route::get('/', HomeController::class . '@index')->name('home');
+        Route::get('/', [HomeController::class, 'index'])->name('home');
 
-        // Catalog — product categories
-        Route::get('categories/{slug}', [CategoryController::class, 'show'])
+        Route::get('danh-muc/{slug}', [CategoryController::class, 'show'])
             ->name('category.show');
 
-        // Catalog — products
-        Route::get('products/{slug}', [ProductController::class, 'show'])
+        Route::get('san-pham/{slug}', [ProductController::class, 'show'])
             ->name('product.show');
 
-        // Search
-        Route::get('search', [SearchController::class, 'index'])
+        Route::get('tim-kiem', [SearchController::class, 'index'])
             ->name('search');
 
-        // Blog — index
-        Route::get('blog', [BlogController::class, 'index'])
+        Route::get('bai-viet', [BlogController::class, 'index'])
             ->name('blog.index');
 
-        // Blog — category (MUST be before blog/{slug} to avoid slug collision)
-        Route::get('blog/categories/{slug}', [BlogController::class, 'category'])
+        // chu-de MUST be before bai-viet/{slug} — no collision risk since different prefix
+        Route::get('chu-de/{slug}', [BlogController::class, 'category'])
             ->name('blog.category');
 
-        // Blog — post detail
-        Route::get('blog/{slug}', [BlogController::class, 'show'])
+        Route::get('bai-viet/{slug}', [BlogController::class, 'show'])
             ->name('blog.show');
 
-        // Static pages — MUST be last in group (catch-all segment)
+        // Static pages — catch-all, must be last
         Route::get('{slug}', [PageController::class, 'show'])
             ->name('page.show');
+    });
+
+// ── en group: English URL paths ──────────────────────────────────────────────
+Route::prefix('{locale}')
+    ->where(['locale' => 'en'])
+    ->middleware('set.locale')
+    ->group(function () {
+
+        Route::get('/', [HomeController::class, 'index'])->name('home.en');
+
+        Route::get('categories/{slug}', [CategoryController::class, 'show'])
+            ->name('category.show.en');
+
+        Route::get('products/{slug}', [ProductController::class, 'show'])
+            ->name('product.show.en');
+
+        Route::get('search', [SearchController::class, 'index'])
+            ->name('search.en');
+
+        Route::get('blog', [BlogController::class, 'index'])
+            ->name('blog.index.en');
+
+        // blog/category MUST be before blog/{slug} to avoid slug collision
+        Route::get('blog/category/{slug}', [BlogController::class, 'category'])
+            ->name('blog.category.en');
+
+        Route::get('blog/{slug}', [BlogController::class, 'show'])
+            ->name('blog.show.en');
+
+        // Static pages — catch-all, must be last
+        Route::get('{slug}', [PageController::class, 'show'])
+            ->name('page.show.en');
     });
 
 // ── Fallback: no locale prefix → 301 to /vi/ ────────────────────────────────

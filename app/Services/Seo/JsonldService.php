@@ -285,7 +285,7 @@ class JsonldService
             '@context'    => 'https://schema.org',
             '@type'       => 'Product',
             'name'        => $t?->name ?? $product->name,
-            'url'         => route('product.show', ['locale' => $locale, 'slug' => $t?->slug ?? $product->slug]),
+            'url'         => LocaleUrl::for('product', $t?->slug ?? $product->slug, $locale),
             'description' => strip_tags($t?->short_description ?? ''),
             'sku'         => $product->sku,
             'offers'      => [
@@ -597,13 +597,13 @@ class JsonldService
                 if (filled($catSlug)) {
                     $items[] = [
                         'name' => (string) ($cat->name ?? ''),
-                        'url'  => route('category.show', ['locale' => $locale, 'slug' => $catSlug]),
+                        'url'  => LocaleUrl::for('category', $catSlug, $locale),
                     ];
                 }
             }
         }
 
-        $items[] = ['name' => $name, 'url' => route('product.show', ['locale' => $locale, 'slug' => $slug])];
+        $items[] = ['name' => $name, 'url' => LocaleUrl::for('product', $slug, $locale)];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -624,7 +624,7 @@ class JsonldService
 
         $items = [
             ['name' => 'Home', 'url' => $baseUrl],
-            ['name' => 'Blog', 'url' => route('blog.index', ['locale' => $locale])],
+            ['name' => 'Blog', 'url' => LocaleUrl::listUrl('blog_post', $locale)],
         ];
 
         if (method_exists($model, 'blogCategory')) {
@@ -636,12 +636,12 @@ class JsonldService
                 $catName = (string) ($category->translation($locale)?->name ?? $category->name);
                 $items[] = [
                     'name' => $catName,
-                    'url'  => route('blog.category', ['locale' => $locale, 'slug' => $catSlug]),
+                    'url'  => LocaleUrl::for('blog_category', $catSlug, $locale),
                 ];
             }
         }
 
-        $items[] = ['name' => $title, 'url' => route('blog.show', ['locale' => $locale, 'slug' => $slug])];
+        $items[] = ['name' => $title, 'url' => LocaleUrl::for('blog_post', $slug, $locale)];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -695,7 +695,7 @@ class JsonldService
             if (filled($name)) {
                 $items[] = [
                     'name' => $name,
-                    'url'  => route('category.show', ['locale' => $locale, 'slug' => $slug]),
+                    'url'  => LocaleUrl::for('category', $slug, $locale),
                 ];
             }
         }
@@ -705,7 +705,7 @@ class JsonldService
         $name = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
         $slug = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
-        $items[] = ['name' => $name, 'url' => route('category.show', ['locale' => $locale, 'slug' => $slug])];
+        $items[] = ['name' => $name, 'url' => LocaleUrl::for('category', $slug, $locale)];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -770,7 +770,7 @@ class JsonldService
                         ->get();
 
                     if ($topProducts->isNotEmpty()) {
-                        $listItems = $topProducts->map(function ($product, int $index) use ($baseUrl, $locale): array {
+                        $listItems = $topProducts->map(function ($product, int $index) use ($locale): array {
                             $t           = method_exists($product, 'translation') ? $product->translation($locale) : null;
                             $productName = (string) ($t?->name ?? $product->getAttribute('name') ?? '');
                             $productSlug = (string) ($t?->slug ?? $product->getAttribute('slug') ?? '');
@@ -779,7 +779,7 @@ class JsonldService
                                 '@type'    => 'ListItem',
                                 'position' => $index + 1,
                                 'name'     => $productName,
-                                'url'      => $baseUrl . '/products/' . $productSlug,
+                                'url'      => LocaleUrl::for('product', $productSlug, $locale),
                             ];
 
                             // Thumbnail — relation is already eager-loaded, no extra query.
@@ -872,8 +872,8 @@ class JsonldService
                                 'position' => $index + 1,
                                 'name'     => $postName,
                                 'url'      => filled($postSlug)
-                                    ? route('blog.show', ['locale' => $locale, 'slug' => $postSlug])
-                                    : $baseUrl,
+                                    ? LocaleUrl::for('blog_post', $postSlug, $locale)
+                                    : rtrim((string) (config('seo.app_url') ?: config('app.url')), '/'),
                             ];
                         })->values()->all();
 
@@ -909,7 +909,7 @@ class JsonldService
 
         $items = [
             ['name' => 'Home', 'url' => $baseUrl],
-            ['name' => 'Blog', 'url' => route('blog.index', ['locale' => $locale])],
+            ['name' => 'Blog', 'url' => LocaleUrl::listUrl('blog_post', $locale)],
         ];
 
         if (method_exists($model, 'parent')) {
@@ -921,12 +921,12 @@ class JsonldService
                 $parentName = (string) ($parent->translation($locale)?->name ?? $parent->name);
                 $items[] = [
                     'name' => $parentName,
-                    'url'  => route('blog.category', ['locale' => $locale, 'slug' => $parentSlug]),
+                    'url'  => LocaleUrl::for('blog_category', $parentSlug, $locale),
                 ];
             }
         }
 
-        $items[] = ['name' => $name, 'url' => route('blog.category', ['locale' => $locale, 'slug' => $slug])];
+        $items[] = ['name' => $name, 'url' => LocaleUrl::for('blog_category', $slug, $locale)];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -1176,7 +1176,7 @@ class JsonldService
                 'name'         => $video->title,
                 'description'  => $video->description,
                 'contentUrl'   => $baseUrl . '/storage/' . ltrim((string) ($video->path ?? ''), '/'),
-                'embedUrl'     => $baseUrl . '/products/' . $slug . '#video-' . $video->id,
+                'embedUrl'     => LocaleUrl::for('product', $slug, $locale) . '#video-' . $video->id,
                 'thumbnailUrl' => $video->thumbnail_path
                     ? ($baseUrl . '/storage/' . ltrim((string) $video->thumbnail_path, '/'))
                     : '',
@@ -1303,24 +1303,11 @@ class JsonldService
      * that templates reference but that don't exist as raw DB columns.
      */
     /**
-     * Build a route-based canonical URL for a model.
-     * Falls back to LocaleUrl for models without a dedicated web route (brand, manufacturer).
+     * Build the canonical URL for a model using LocaleUrl — the single source of truth
+     * for all public URL paths (config/localeurl.php).
      */
     private function canonicalRouteFor(string $morphAlias, string $slug, string $locale): string
     {
-        static $routeMap = [
-            'product'       => 'product.show',
-            'category'      => 'category.show',
-            'blog_post'     => 'blog.show',
-            'blog_category' => 'blog.category',
-        ];
-
-        $routeName = $routeMap[$morphAlias] ?? null;
-
-        if ($routeName && filled($slug)) {
-            return route($routeName, ['locale' => $locale, 'slug' => $slug]);
-        }
-
         return LocaleUrl::for($morphAlias, $slug, $locale);
     }
 

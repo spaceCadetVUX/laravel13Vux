@@ -5,14 +5,15 @@ namespace App\Support;
 /**
  * Single source of truth for locale-aware public URLs.
  *
- * URL strategy (Option C — Vietnamese-first):
- *   vi (default): /thuong-hieu/philips      ← no locale prefix
- *   en:           /en/brands/philips        ← /en/ prefix
+ * URL strategy (Subdirectory — Google-recommended for multilingual SEO):
+ *   vi: /vi/thuong-hieu/philips   ← /vi/ prefix for all locales
+ *   en: /en/brands/philips        ← /en/ prefix for all locales
  *
  * Usage:
- *   LocaleUrl::for('brand', 'philips')          → vi canonical
+ *   LocaleUrl::for('brand', 'philips', 'vi')    → vi canonical
  *   LocaleUrl::for('brand', 'philips', 'en')    → en canonical
  *   LocaleUrl::hreflang('brand', 'philips')     → full hreflang map
+ *   LocaleUrl::listUrl('brand', 'vi')           → /vi/thuong-hieu (no trailing slash)
  */
 class LocaleUrl
 {

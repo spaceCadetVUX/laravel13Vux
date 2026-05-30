@@ -55,7 +55,7 @@ class EditBlogCategory extends EditRecord
                 ['locale' => $locale],
                 collect($localeData)
                     ->only(['name', 'slug', 'description'])
-                    ->filter(fn ($v) => $v !== null && $v !== '')
+                    ->filter(fn ($v) => $v !== null)
                     ->toArray()
             );
         }

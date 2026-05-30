@@ -13,6 +13,7 @@ use App\Models\Seo\LlmsEntry;
 use App\Models\Seo\Redirect;
 use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
+use App\Support\LocaleUrl;
 
 class ProductObserver
 {
@@ -34,11 +35,14 @@ class ProductObserver
             return;
         }
 
+        $defaultLocale = config('app.fallback_locale', 'vi');
+
         Redirect::updateOrCreate(
-            ['from_path' => '/products/' . $oldSlug],
+            ['from_path' => parse_url(LocaleUrl::for('product', $oldSlug, $defaultLocale), PHP_URL_PATH)],
             [
-                'to_path'   => '/products/' . $newSlug,
+                'to_path'   => parse_url(LocaleUrl::for('product', $newSlug, $defaultLocale), PHP_URL_PATH),
                 'type'      => RedirectType::Permanent,
+                'locale'    => $defaultLocale,
                 'is_active' => true,
             ]
         );

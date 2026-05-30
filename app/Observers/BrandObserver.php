@@ -2,19 +2,52 @@
 
 namespace App\Observers;
 
+use App\Enums\RedirectType;
 use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\Brand;
-use App\Services\Catalog\BrandService;
 use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
+use App\Models\Seo\Redirect;
 use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
+use App\Services\Catalog\BrandService;
+use App\Support\LocaleUrl;
 
 class BrandObserver
 {
+    /**
+     * Fires BEFORE the UPDATE SQL — old slug still in getOriginal().
+     * Brand slug is shared across locales → create redirects for all supported locales.
+     */
+    public function updating(Brand $brand): void
+    {
+        if (! $brand->isDirty('slug')) {
+            return;
+        }
+
+        $oldSlug = $brand->getOriginal('slug');
+        $newSlug = $brand->slug;
+
+        if (! $oldSlug || ! $newSlug || $oldSlug === $newSlug) {
+            return;
+        }
+
+        foreach (config('app.supported_locales', ['vi', 'en']) as $locale) {
+            Redirect::updateOrCreate(
+                ['from_path' => parse_url(LocaleUrl::for('brand', $oldSlug, $locale), PHP_URL_PATH)],
+                [
+                    'to_path'   => parse_url(LocaleUrl::for('brand', $newSlug, $locale), PHP_URL_PATH),
+                    'type'      => RedirectType::Permanent,
+                    'locale'    => $locale,
+                    'is_active' => true,
+                ]
+            );
+        }
+    }
+
     public function saved(Brand $brand): void
     {
         app(BrandService::class)->bustListCache();

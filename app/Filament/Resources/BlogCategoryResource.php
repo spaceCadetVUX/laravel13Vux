@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\OgType;
 use App\Filament\Resources\BlogCategoryResource\Pages;
 use App\Models\BlogCategory;
 use App\Forms\Components\MediaFileUpload;
+use App\Support\LocaleUrl;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -133,41 +135,151 @@ class BlogCategoryResource extends Resource
                                             fn (array $data) => ['locale' => 'vi', ...$data]
                                         )
                                         ->schema([
-                                            Forms\Components\TextInput::make('meta_title')
-                                                ->label('Meta Title (vi)')
-                                                ->placeholder('Tự điền từ tên danh mục')
-                                                ->helperText('Tối ưu: 50–60 ký tự. Google cắt bớt nếu quá dài.')
-                                                ->live(debounce: 500)
-                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/60')
-                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 60 ? 'warning' : 'success')
-                                                ->columnSpanFull(),
+                                            Section::make('Meta Tags')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('meta_title')
+                                                        ->label('Meta Title (vi)')
+                                                        ->placeholder('Tự điền từ tên danh mục')
+                                                        ->helperText('Tối ưu: 50–60 ký tự.')
+                                                        ->live(debounce: 500)
+                                                        ->hint(fn ($state): string => mb_strlen($state ?? '') . '/60')
+                                                        ->hintColor(fn ($state): string => static::charCounterColor($state, 50, 60))
+                                                        ->columnSpanFull(),
 
-                                            Forms\Components\Textarea::make('meta_description')
-                                                ->label('Meta Description (vi)')
-                                                ->placeholder('Mô tả ngắn hiển thị trên Google')
-                                                ->helperText('Tối ưu: 120–155 ký tự. Google cắt bớt nếu quá dài.')
-                                                ->rows(3)
-                                                ->live(debounce: 500)
-                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/155')
-                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 155 ? 'warning' : 'success')
-                                                ->columnSpanFull(),
+                                                    Forms\Components\Textarea::make('meta_description')
+                                                        ->label('Meta Description (vi)')
+                                                        ->placeholder('Mô tả ngắn hiển thị trên Google')
+                                                        ->helperText('Tối ưu: 120–155 ký tự.')
+                                                        ->rows(3)
+                                                        ->live(debounce: 500)
+                                                        ->hint(fn ($state): string => mb_strlen($state ?? '') . '/155')
+                                                        ->hintColor(fn ($state): string => static::charCounterColor($state, 120, 155))
+                                                        ->columnSpanFull(),
 
-                                            MediaFileUpload::make('og_image')
-                                                ->label('OG Image (vi)')
-                                                ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
-                                                ->image()
-                                                ->nullable()
-                                                ->columnSpanFull(),
+                                                    Forms\Components\TextInput::make('meta_keywords')
+                                                        ->label('Meta Keywords (vi)')
+                                                        ->helperText('Phân cách bằng dấu phẩy')
+                                                        ->columnSpanFull(),
 
-                                            Forms\Components\Select::make('robots')
-                                                ->label('Robots (vi)')
-                                                ->options([
-                                                    'index, follow'     => 'index, follow — Default',
-                                                    'noindex, follow'   => 'noindex, follow — Exclude from index',
-                                                    'noindex, nofollow' => 'noindex, nofollow — Block completely',
+                                                    Forms\Components\TextInput::make('canonical_url')
+                                                        ->label('Canonical URL (vi)')
+                                                        ->url()
+                                                        ->placeholder('Tự tạo từ slug (vi)')
+                                                        ->hint('Tự tạo từ slug (vi)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                            if (empty($state)) {
+                                                                $slug = $livewire->record?->translation('vi')?->slug ?? $livewire->record?->slug;
+                                                                if ($slug) {
+                                                                    $set('canonical_url', LocaleUrl::for('blog_category', $slug, 'vi'));
+                                                                }
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Select::make('robots')
+                                                        ->label('Robots (vi)')
+                                                        ->options([
+                                                            'index, follow'     => 'index, follow — Default',
+                                                            'noindex, follow'   => 'noindex, follow — Exclude from index',
+                                                            'noindex, nofollow' => 'noindex, nofollow — Block completely',
+                                                        ])
+                                                        ->default('index, follow')
+                                                        ->native(false),
                                                 ])
-                                                ->default('index, follow')
-                                                ->native(false),
+                                                ->columns(2),
+
+                                            Section::make('Open Graph (vi)')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('og_title')
+                                                        ->label('OG Title (vi)')
+                                                        ->placeholder('Tự điền từ Meta Title (vi)')
+                                                        ->hint('Tự điền từ Meta Title (vi)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                            if (empty($state)) {
+                                                                $set('og_title', $record?->meta_title
+                                                                    ?? $livewire->record?->translation('vi')?->name
+                                                                    ?? $livewire->record?->name);
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('og_description')
+                                                        ->label('OG Description (vi)')
+                                                        ->rows(2)
+                                                        ->placeholder('Tự điền từ Meta Description (vi)')
+                                                        ->hint('Tự điền từ Meta Description (vi)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record): void {
+                                                            if (empty($state) && $record?->meta_description) {
+                                                                $set('og_description', $record->meta_description);
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+
+                                                    MediaFileUpload::make('og_image')
+                                                        ->label('OG Image (vi)')
+                                                        ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
+                                                        ->image()
+                                                        ->nullable()
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Select::make('og_type')
+                                                        ->label('OG Type')
+                                                        ->options(collect(OgType::cases())->mapWithKeys(
+                                                            fn (OgType $case) => [$case->value => $case->value]
+                                                        ))
+                                                        ->default(OgType::Website->value)
+                                                        ->native(false),
+                                                ])
+                                                ->columns(2)
+                                                ->collapsed(),
+
+                                            Section::make('Twitter Card (vi)')
+                                                ->schema([
+                                                    Forms\Components\Select::make('twitter_card')
+                                                        ->label('Card Type')
+                                                        ->options([
+                                                            'summary'             => 'Summary',
+                                                            'summary_large_image' => 'Summary Large Image',
+                                                        ])
+                                                        ->default('summary_large_image')
+                                                        ->native(false),
+
+                                                    Forms\Components\TextInput::make('twitter_title')
+                                                        ->label('Twitter Title (vi)')
+                                                        ->placeholder('Tự điền từ Meta Title (vi)')
+                                                        ->hint('Tự điền từ Meta Title (vi)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                            if (empty($state)) {
+                                                                $set('twitter_title', $record?->meta_title
+                                                                    ?? $livewire->record?->translation('vi')?->name
+                                                                    ?? $livewire->record?->name);
+                                                            }
+                                                        }),
+
+                                                    Forms\Components\Textarea::make('twitter_description')
+                                                        ->label('Twitter Description (vi)')
+                                                        ->rows(2)
+                                                        ->placeholder('Tự điền từ Meta Description (vi)')
+                                                        ->hint('Tự điền từ Meta Description (vi)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record): void {
+                                                            if (empty($state) && $record?->meta_description) {
+                                                                $set('twitter_description', $record->meta_description);
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->columns(2)
+                                                ->collapsed(),
                                         ]),
                                 ]),
 
@@ -179,41 +291,151 @@ class BlogCategoryResource extends Resource
                                             fn (array $data) => ['locale' => 'en', ...$data]
                                         )
                                         ->schema([
-                                            Forms\Components\TextInput::make('meta_title')
-                                                ->label('Meta Title (en)')
-                                                ->placeholder('Auto-filled from category name')
-                                                ->helperText('Optimal: 50–60 characters. Google truncates if too long.')
-                                                ->live(debounce: 500)
-                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/60')
-                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 60 ? 'warning' : 'success')
-                                                ->columnSpanFull(),
+                                            Section::make('Meta Tags')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('meta_title')
+                                                        ->label('Meta Title (en)')
+                                                        ->placeholder('Auto-filled from category name')
+                                                        ->helperText('Optimal: 50–60 characters.')
+                                                        ->live(debounce: 500)
+                                                        ->hint(fn ($state): string => mb_strlen($state ?? '') . '/60')
+                                                        ->hintColor(fn ($state): string => static::charCounterColor($state, 50, 60))
+                                                        ->columnSpanFull(),
 
-                                            Forms\Components\Textarea::make('meta_description')
-                                                ->label('Meta Description (en)')
-                                                ->placeholder('Short description shown in Google results')
-                                                ->helperText('Optimal: 120–155 characters. Google truncates if too long.')
-                                                ->rows(3)
-                                                ->live(debounce: 500)
-                                                ->hint(fn ($state): string => mb_strlen($state ?? '') . '/155')
-                                                ->hintColor(fn ($state): string => mb_strlen($state ?? '') > 155 ? 'warning' : 'success')
-                                                ->columnSpanFull(),
+                                                    Forms\Components\Textarea::make('meta_description')
+                                                        ->label('Meta Description (en)')
+                                                        ->placeholder('Short description shown in Google results')
+                                                        ->helperText('Optimal: 120–155 characters.')
+                                                        ->rows(3)
+                                                        ->live(debounce: 500)
+                                                        ->hint(fn ($state): string => mb_strlen($state ?? '') . '/155')
+                                                        ->hintColor(fn ($state): string => static::charCounterColor($state, 120, 155))
+                                                        ->columnSpanFull(),
 
-                                            MediaFileUpload::make('og_image')
-                                                ->label('OG Image (en)')
-                                                ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
-                                                ->image()
-                                                ->nullable()
-                                                ->columnSpanFull(),
+                                                    Forms\Components\TextInput::make('meta_keywords')
+                                                        ->label('Meta Keywords (en)')
+                                                        ->helperText('Comma-separated')
+                                                        ->columnSpanFull(),
 
-                                            Forms\Components\Select::make('robots')
-                                                ->label('Robots (en)')
-                                                ->options([
-                                                    'index, follow'     => 'index, follow — Default',
-                                                    'noindex, follow'   => 'noindex, follow — Exclude from index',
-                                                    'noindex, nofollow' => 'noindex, nofollow — Block completely',
+                                                    Forms\Components\TextInput::make('canonical_url')
+                                                        ->label('Canonical URL (en)')
+                                                        ->url()
+                                                        ->placeholder('Auto-generated from slug (en)')
+                                                        ->hint('Auto-generated from slug (en)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $livewire): void {
+                                                            if (empty($state)) {
+                                                                $slug = $livewire->record?->translation('en')?->slug ?? $livewire->record?->slug;
+                                                                if ($slug) {
+                                                                    $set('canonical_url', LocaleUrl::for('blog_category', $slug, 'en'));
+                                                                }
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Select::make('robots')
+                                                        ->label('Robots (en)')
+                                                        ->options([
+                                                            'index, follow'     => 'index, follow — Default',
+                                                            'noindex, follow'   => 'noindex, follow — Exclude from index',
+                                                            'noindex, nofollow' => 'noindex, nofollow — Block completely',
+                                                        ])
+                                                        ->default('index, follow')
+                                                        ->native(false),
                                                 ])
-                                                ->default('index, follow')
-                                                ->native(false),
+                                                ->columns(2),
+
+                                            Section::make('Open Graph (en)')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('og_title')
+                                                        ->label('OG Title (en)')
+                                                        ->placeholder('Auto-filled from Meta Title (en)')
+                                                        ->hint('Auto-filled from Meta Title (en)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                            if (empty($state)) {
+                                                                $set('og_title', $record?->meta_title
+                                                                    ?? $livewire->record?->translation('en')?->name
+                                                                    ?? $livewire->record?->name);
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('og_description')
+                                                        ->label('OG Description (en)')
+                                                        ->rows(2)
+                                                        ->placeholder('Auto-filled from Meta Description (en)')
+                                                        ->hint('Auto-filled from Meta Description (en)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record): void {
+                                                            if (empty($state) && $record?->meta_description) {
+                                                                $set('og_description', $record->meta_description);
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+
+                                                    MediaFileUpload::make('og_image')
+                                                        ->label('OG Image (en)')
+                                                        ->helperText('Facebook, Zalo. Recommended: 1200×630px.')
+                                                        ->image()
+                                                        ->nullable()
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Select::make('og_type')
+                                                        ->label('OG Type')
+                                                        ->options(collect(OgType::cases())->mapWithKeys(
+                                                            fn (OgType $case) => [$case->value => $case->value]
+                                                        ))
+                                                        ->default(OgType::Website->value)
+                                                        ->native(false),
+                                                ])
+                                                ->columns(2)
+                                                ->collapsed(),
+
+                                            Section::make('Twitter Card (en)')
+                                                ->schema([
+                                                    Forms\Components\Select::make('twitter_card')
+                                                        ->label('Card Type')
+                                                        ->options([
+                                                            'summary'             => 'Summary',
+                                                            'summary_large_image' => 'Summary Large Image',
+                                                        ])
+                                                        ->default('summary_large_image')
+                                                        ->native(false),
+
+                                                    Forms\Components\TextInput::make('twitter_title')
+                                                        ->label('Twitter Title (en)')
+                                                        ->placeholder('Auto-filled from Meta Title (en)')
+                                                        ->hint('Auto-filled from Meta Title (en)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record, $livewire): void {
+                                                            if (empty($state)) {
+                                                                $set('twitter_title', $record?->meta_title
+                                                                    ?? $livewire->record?->translation('en')?->name
+                                                                    ?? $livewire->record?->name);
+                                                            }
+                                                        }),
+
+                                                    Forms\Components\Textarea::make('twitter_description')
+                                                        ->label('Twitter Description (en)')
+                                                        ->rows(2)
+                                                        ->placeholder('Auto-filled from Meta Description (en)')
+                                                        ->hint('Auto-filled from Meta Description (en)')
+                                                        ->hintIcon('heroicon-o-sparkles')
+                                                        ->hintColor('info')
+                                                        ->afterStateHydrated(function ($state, $set, $record): void {
+                                                            if (empty($state) && $record?->meta_description) {
+                                                                $set('twitter_description', $record->meta_description);
+                                                            }
+                                                        })
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->columns(2)
+                                                ->collapsed(),
                                         ]),
                                 ]),
                         ]),
@@ -429,6 +651,14 @@ class BlogCategoryResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    private static function charCounterColor(?string $state, int $min, int $max): string
+    {
+        $len = mb_strlen($state ?? '');
+        if ($len === 0) return 'gray';
+        if ($len < $min || $len > $max) return 'warning';
+        return 'success';
     }
 
     public static function getPages(): array

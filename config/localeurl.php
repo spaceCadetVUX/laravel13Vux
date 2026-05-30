@@ -3,8 +3,9 @@
 /**
  * Locale-aware URL prefix map for all public model types.
  *
- * vi = default locale — no /vi/ prefix in URL (Vietnamese-first site).
- * en = /en/ prefix.
+ * Both vi and en use explicit locale prefix (subdirectory strategy).
+ * Recommended by Google for multilingual SEO — clear locale signal in URL,
+ * clean hreflang, no duplicate-content ambiguity.
  *
  * Used by:
  *   - App\Support\LocaleUrl (canonical generation + hreflang)
@@ -19,12 +20,12 @@ return [
 
     'prefixes' => [
         'vi' => [
-            'brand'         => '/thuong-hieu/',
-            'manufacturer'  => '/nha-san-xuat/',
-            'product'       => '/san-pham/',
-            'category'      => '/danh-muc/',
-            'blog_post'     => '/bai-viet/',
-            'blog_category' => '/chu-de/',
+            'brand'         => '/vi/thuong-hieu/',
+            'manufacturer'  => '/vi/nha-san-xuat/',
+            'product'       => '/vi/san-pham/',
+            'category'      => '/vi/danh-muc/',
+            'blog_post'     => '/vi/bai-viet/',
+            'blog_category' => '/vi/chu-de/',
         ],
         'en' => [
             'brand'         => '/en/brands/',

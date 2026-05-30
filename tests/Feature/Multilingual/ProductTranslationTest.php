@@ -28,7 +28,7 @@ class ProductTranslationTest extends TestCase
             'slug'       => 'san-pham-a',
         ]);
 
-        $this->get('/vi/products/san-pham-a')->assertStatus(200);
+        $this->get('/vi/san-pham/san-pham-a')->assertStatus(200);
     }
 
     public function test_product_show_en_without_translation_redirects_to_vi(): void
@@ -43,7 +43,7 @@ class ProductTranslationTest extends TestCase
 
         $this->get('/en/products/san-pham-b')
             ->assertStatus(302)
-            ->assertRedirect('/vi/products/san-pham-b');
+            ->assertRedirect('/vi/san-pham/san-pham-b');
     }
 
     public function test_product_show_en_with_translation_returns_200(): void
@@ -67,6 +67,6 @@ class ProductTranslationTest extends TestCase
 
     public function test_product_show_nonexistent_slug_returns_404(): void
     {
-        $this->get('/vi/products/nonexistent')->assertStatus(404);
+        $this->get('/vi/san-pham/nonexistent')->assertStatus(404);
     }
 }

@@ -141,7 +141,7 @@ class BrandResource extends Resource
                                                             Forms\Components\TextInput::make('canonical_url')
                                                                 ->label('Canonical URL (vi)')
                                                                 ->url()
-                                                                ->placeholder('Tự tạo từ slug — /thuong-hieu/{slug}')
+                                                                ->placeholder('Tự tạo từ slug — /vi/thuong-hieu/{slug}')
                                                                 ->hint('Tự tạo từ slug')
                                                                 ->hintIcon('heroicon-o-sparkles')
                                                                 ->hintColor('info')

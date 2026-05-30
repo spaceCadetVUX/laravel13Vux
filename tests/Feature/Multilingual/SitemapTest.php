@@ -55,9 +55,9 @@ class SitemapTest extends TestCase
             'model_type'       => 'product',
             'model_id'         => '00000000-0000-0000-0000-000000000001',
             'locale'           => 'vi',
-            'url'              => url('/vi/products/test-product'),
+            'url'              => url('/vi/san-pham/test-product'),
             'alternate_urls'   => [
-                'vi' => url('/vi/products/test-product'),
+                'vi' => url('/vi/san-pham/test-product'),
                 'en' => url('/en/products/test-product'),
             ],
             'is_active'        => true,

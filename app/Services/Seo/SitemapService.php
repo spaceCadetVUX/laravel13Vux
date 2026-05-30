@@ -5,20 +5,21 @@ namespace App\Services\Seo;
 use App\Enums\SitemapChangefreq;
 use App\Models\Seo\SitemapEntry;
 use App\Models\Seo\SitemapIndex;
+use App\Support\LocaleUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 class SitemapService
 {
     /**
-     * Morph alias → SEO defaults + route name for locale-aware URL generation.
-     * index lookup is now done via SitemapIndex.model_type + locale (not hardcoded name).
+     * Morph alias → SEO defaults for sitemap entries.
+     * URL generation uses LocaleUrl::for() — not route() — so paths match config/localeurl.php.
      */
     private const MODEL_CONFIG = [
-        'product'       => ['route_name' => 'product.show',  'changefreq' => SitemapChangefreq::Daily,  'priority' => 0.8],
-        'blog_post'     => ['route_name' => 'blog.show',     'changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.6],
-        'category'      => ['route_name' => 'category.show', 'changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.7],
-        'blog_category' => ['route_name' => 'blog.category', 'changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.5],
+        'product'       => ['changefreq' => SitemapChangefreq::Daily,  'priority' => 0.8],
+        'blog_post'     => ['changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.6],
+        'category'      => ['changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.7],
+        'blog_category' => ['changefreq' => SitemapChangefreq::Weekly, 'priority' => 0.5],
     ];
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -118,13 +119,12 @@ class SitemapService
             return;
         }
 
-        // Require a translation for this locale — no translation = no URL to index.
-        $translation = method_exists($model, 'translation')
-            ? $model->translation($locale)
-            : null;
+        // For translated models: require a locale translation — missing = remove stale entry.
+        // For non-translated models (Brand, Manufacturer): fall through using model slug directly.
+        $hasTranslations = method_exists($model, 'translation');
+        $translation     = $hasTranslations ? $model->translation($locale) : null;
 
-        if ($translation === null) {
-            // Remove stale entry if it exists (e.g. translation deleted).
+        if ($hasTranslations && $translation === null) {
             SitemapEntry::where('sitemap_index_id', $index->id)
                 ->where('model_type', $morphAlias)
                 ->where('model_id', $model->getKey())
@@ -132,23 +132,25 @@ class SitemapService
             return;
         }
 
-        $slug = (string) ($translation->slug ?? $model->getAttribute('slug') ?? '');
+        $slug = (string) ($translation?->slug ?? $model->getAttribute('slug') ?? '');
 
         if ($slug === '') {
             return;
         }
 
-        $url = route($config['route_name'], ['locale' => $locale, 'slug' => $slug]);
+        $url = LocaleUrl::for($morphAlias, $slug, $locale);
 
         // Build alternate_urls for hreflang xlinks.
         $alternateUrls = [];
         foreach (config('app.supported_locales') as $altLocale) {
-            $altTranslation = $model->translation($altLocale);
-            if ($altTranslation) {
-                $alternateUrls[$altLocale] = route($config['route_name'], [
-                    'locale' => $altLocale,
-                    'slug'   => $altTranslation->slug,
-                ]);
+            if ($hasTranslations) {
+                $altTranslation = $model->translation($altLocale);
+                if ($altTranslation) {
+                    $alternateUrls[$altLocale] = LocaleUrl::for($morphAlias, $altTranslation->slug, $altLocale);
+                }
+            } else {
+                // Non-translated model — same slug, different locale prefix
+                $alternateUrls[$altLocale] = LocaleUrl::for($morphAlias, $slug, $altLocale);
             }
         }
 

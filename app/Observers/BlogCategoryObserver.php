@@ -7,10 +7,13 @@ use App\Jobs\Seo\SyncJsonldSchema;
 use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\BlogCategory;
+use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\LlmsEntry;
 use App\Models\Seo\Redirect;
+use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
+use App\Support\LocaleUrl;
 
 class BlogCategoryObserver
 {
@@ -31,11 +34,15 @@ class BlogCategoryObserver
             return;
         }
 
+        // Main slug = vi/default locale slug. Use LocaleUrl to get the correct vi path.
+        $defaultLocale = config('app.fallback_locale', 'vi');
+
         Redirect::updateOrCreate(
-            ['from_path' => '/blog/category/' . $oldSlug],
+            ['from_path' => parse_url(LocaleUrl::for('blog_category', $oldSlug, $defaultLocale), PHP_URL_PATH)],
             [
-                'to_path'   => '/blog/category/' . $newSlug,
+                'to_path'   => parse_url(LocaleUrl::for('blog_category', $newSlug, $defaultLocale), PHP_URL_PATH),
                 'type'      => RedirectType::Permanent,
+                'locale'    => $defaultLocale,
                 'is_active' => true,
             ]
         );
@@ -78,23 +85,18 @@ class BlogCategoryObserver
     }
 
     /**
-     * Deactivate all SEO entries when a category is deleted.
-     * Rows are kept for potential restore — never hard-deleted.
+     * Hard-delete all polymorphic SEO rows on delete.
+     * BlogCategory has no SoftDeletes — deleted() fires once on the actual DB DELETE.
      */
     public function deleted(BlogCategory $blogCategory): void
     {
         $morphClass = $blogCategory->getMorphClass();
+        $modelId    = $blogCategory->getKey();
 
-        SitemapEntry::where('model_type', $morphClass)
-            ->where('model_id', $blogCategory->getKey())
-            ->update(['is_active' => false]);
-
-        LlmsEntry::where('model_type', $morphClass)
-            ->where('model_id', $blogCategory->getKey())
-            ->update(['is_active' => false]);
-
-        JsonldSchema::where('model_type', $morphClass)
-            ->where('model_id', $blogCategory->getKey())
-            ->update(['is_active' => false]);
+        SeoMeta::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        GeoEntityProfile::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        JsonldSchema::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        SitemapEntry::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
+        LlmsEntry::where('model_type', $morphClass)->where('model_id', $modelId)->delete();
     }
 }

@@ -8,6 +8,7 @@ use App\Jobs\Seo\SyncLlmsEntry;
 use App\Jobs\Seo\SyncSitemapEntry;
 use App\Models\BlogPostTranslation;
 use App\Models\Seo\Redirect;
+use App\Support\LocaleUrl;
 
 class BlogPostTranslationObserver
 {
@@ -36,9 +37,9 @@ class BlogPostTranslationObserver
         }
 
         Redirect::updateOrCreate(
-            ['from_path' => "/{$locale}/blog/{$oldSlug}"],
+            ['from_path' => parse_url(LocaleUrl::for('blog_post', $oldSlug, $locale), PHP_URL_PATH)],
             [
-                'to_path'   => "/{$locale}/blog/{$newSlug}",
+                'to_path'   => parse_url(LocaleUrl::for('blog_post', $newSlug, $locale), PHP_URL_PATH),
                 'type'      => RedirectType::Permanent,
                 'locale'    => $locale,
                 'is_active' => true,

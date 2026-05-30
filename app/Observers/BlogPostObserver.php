@@ -14,6 +14,7 @@ use App\Models\Seo\LlmsEntry;
 use App\Models\Seo\Redirect;
 use App\Models\Seo\SeoMeta;
 use App\Models\Seo\SitemapEntry;
+use App\Support\LocaleUrl;
 
 class BlogPostObserver
 {
@@ -34,11 +35,14 @@ class BlogPostObserver
             return;
         }
 
+        $defaultLocale = config('app.fallback_locale', 'vi');
+
         Redirect::updateOrCreate(
-            ['from_path' => '/blog/' . $oldSlug],
+            ['from_path' => parse_url(LocaleUrl::for('blog_post', $oldSlug, $defaultLocale), PHP_URL_PATH)],
             [
-                'to_path'   => '/blog/' . $newSlug,
+                'to_path'   => parse_url(LocaleUrl::for('blog_post', $newSlug, $defaultLocale), PHP_URL_PATH),
                 'type'      => RedirectType::Permanent,
+                'locale'    => $defaultLocale,
                 'is_active' => true,
             ]
         );

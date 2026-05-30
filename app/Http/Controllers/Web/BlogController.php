@@ -8,6 +8,7 @@ use App\Models\BlogCategoryTranslation;
 use App\Models\BlogPostTranslation;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
+use App\Support\LocaleUrl;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -33,7 +34,7 @@ class BlogController extends Controller
 
             if ($viTranslation) {
                 return redirect(
-                    route('blog.category', ['locale' => config('app.fallback_locale'), 'slug' => $viTranslation->slug]),
+                    LocaleUrl::for('blog_category', $viTranslation->slug, config('app.fallback_locale')),
                     302
                 );
             }
@@ -46,7 +47,7 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $alternateUrls       = app(SeoService::class)->alternateUrls($blogCategory, 'blog.category');
+        $alternateUrls       = app(SeoService::class)->alternateUrls($blogCategory);
         $seoMeta             = $blogCategory->seoMeta($locale);
         $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($blogCategory, $locale)
             ->pluck('payload')
@@ -76,7 +77,7 @@ class BlogController extends Controller
 
             if ($viTranslation) {
                 return redirect(
-                    route('blog.show', ['locale' => config('app.fallback_locale'), 'slug' => $viTranslation->slug]),
+                    LocaleUrl::for('blog_post', $viTranslation->slug, config('app.fallback_locale')),
                     302
                 );
             }
@@ -92,7 +93,7 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $alternateUrls       = app(SeoService::class)->alternateUrls($post, 'blog.show');
+        $alternateUrls       = app(SeoService::class)->alternateUrls($post);
         $seoMeta             = $post->seoMeta($locale);
         $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($post, $locale)
             ->pluck('payload')
