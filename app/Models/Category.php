@@ -42,6 +42,8 @@ class Category extends Model
         'image_path',
         'sort_order',
         'is_active',
+        'faq_items_vi',
+        'faq_items_en',
         'mcp_drafted_at',
         'mcp_token_id',
     ];
@@ -64,6 +66,8 @@ class Category extends Model
         return [
             'is_active'      => 'boolean',
             'deleted_at'     => 'datetime',
+            'faq_items_vi'   => 'array',
+            'faq_items_en'   => 'array',
             'mcp_drafted_at' => 'datetime',
             'mcp_token_id'   => 'integer',
         ];

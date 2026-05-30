@@ -4,6 +4,10 @@ use App\Http\Controllers\Mcp\AuditController;
 use App\Http\Controllers\Mcp\EntityListController;
 use App\Http\Controllers\Mcp\ReviewQueueController;
 use App\Http\Controllers\Mcp\SearchController;
+use App\Http\Controllers\Mcp\Category\ActivateController  as CategoryActivateController;
+use App\Http\Controllers\Mcp\Category\ContextController   as CategoryContextController;
+use App\Http\Controllers\Mcp\Category\ReadinessController as CategoryReadinessController;
+use App\Http\Controllers\Mcp\Category\UpsertController    as CategoryUpsertController;
 use App\Http\Controllers\Mcp\Product\ActivateController   as ProductActivateController;
 use App\Http\Controllers\Mcp\Product\ContextController    as ProductContextController;
 use App\Http\Controllers\Mcp\Product\ReadinessController  as ProductReadinessController;
@@ -34,6 +38,10 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         Route::get('products/{slug}/context',   ProductContextController::class);
         Route::get('products/{slug}/readiness', ProductReadinessController::class);
 
+        // Sprint 2: Categories — read
+        Route::get('categories/{slug}/context',   CategoryContextController::class);
+        Route::get('categories/{slug}/readiness', CategoryReadinessController::class);
+
         // Generic entity list — MUST be last (wildcard catches everything)
         Route::get('{modelType}', EntityListController::class);
     });
@@ -43,6 +51,9 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
 
         // Sprint 1: Products — upsert (supports ?dry_run=true)
         Route::put('products/{slug}', ProductUpsertController::class);
+
+        // Sprint 2: Categories — upsert
+        Route::put('categories/{slug}', CategoryUpsertController::class);
     });
 
     // ── mcp:publish — activate / publish ──────────────────────────────────────
@@ -50,5 +61,8 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
 
         // Sprint 1: Products — activate
         Route::patch('products/{slug}/activate', ProductActivateController::class);
+
+        // Sprint 2: Categories — activate
+        Route::patch('categories/{slug}/activate', CategoryActivateController::class);
     });
 });
