@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Mcp\AuditController;
+use App\Http\Controllers\Mcp\Batch\SeoMetaController  as BatchSeoMetaController;
+use App\Http\Controllers\Mcp\Batch\TranslateController as BatchTranslateController;
 use App\Http\Controllers\Mcp\EntityListController;
 use App\Http\Controllers\Mcp\ReviewQueueController;
 use App\Http\Controllers\Mcp\SearchController;
@@ -82,6 +84,10 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         // Sprint 4: Brands + Manufacturers — upsert
         Route::put('brands/{slug}',        BrandUpsertController::class);
         Route::put('manufacturers/{slug}', ManufacturerUpsertController::class);
+
+        // Sprint 5: Batch operations
+        Route::post('batch/seo-meta',  BatchSeoMetaController::class);
+        Route::post('batch/translate', BatchTranslateController::class);
     });
 
     // ── mcp:publish — activate / publish ──────────────────────────────────────
