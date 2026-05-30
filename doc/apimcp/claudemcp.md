@@ -83,7 +83,7 @@ KNXSTORE_API_TOKEN=your_sanctum_personal_access_token_here
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev":   "tsx watch src/index.ts",
+    "dev":   "tsx src/index.ts",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -98,6 +98,30 @@ KNXSTORE_API_TOKEN=your_sanctum_personal_access_token_here
 }
 ```
 
+> **Lưu ý `dev` script:** dùng `tsx src/index.ts` (không phải `tsx watch`). Vì đây là stdio transport — nếu watch restart process thì connection Claude Desktop bị đứt. Để develop, test bằng MCP Inspector thay vì hot-reload.
+
+---
+
+## `tsconfig.json`
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
+```
+
+> **Bắt buộc dùng `module: "NodeNext"`** vì project là ESM (`"type": "module"`) và import paths dùng `.js` extension. Thiếu setting này `tsc` build fail.
+
 ---
 
 ## `src/client.ts` — HTTP client (viết 1 lần, dùng mọi sprint)
@@ -109,29 +133,63 @@ const TOKEN = process.env.KNXSTORE_API_TOKEN!;
 export async function api(
   method: "GET" | "PUT" | "PATCH" | "POST",
   path: string,
-  body?: unknown,
+  bodyOrParams?: unknown,
 ): Promise<unknown> {
-  const res = await fetch(`${BASE}${path}`, {
+  // GET: bodyOrParams là object params → append as query string
+  // PUT/PATCH/POST: bodyOrParams là request body → JSON stringify
+  let url  = `${BASE}${path}`;
+  let body: string | undefined;
+
+  if (method === "GET" && bodyOrParams && typeof bodyOrParams === "object") {
+    const qs = new URLSearchParams(
+      Object.entries(bodyOrParams as Record<string, unknown>)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => [k, String(v)])
+    ).toString();
+    if (qs) url += `?${qs}`;
+  } else if (bodyOrParams !== undefined) {
+    body = JSON.stringify(bodyOrParams);
+  }
+
+  const res = await fetch(url, {
     method,
     headers: {
       "Authorization": `Bearer ${TOKEN}`,
       "Content-Type":  "application/json",
       "Accept":        "application/json",
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body,
   });
 
   const json = await res.json();
 
   if (!res.ok) {
-    // Trả về error message rõ ràng để Claude đọc và tự sửa
-    const msg = json?.message ?? `HTTP ${res.status}`;
+    const msg  = json?.message ?? `HTTP ${res.status}`;
     const errs = json?.errors ? JSON.stringify(json.errors) : "";
     throw new Error(`${msg}${errs ? " — " + errs : ""}`);
   }
 
   return json;
 }
+
+/** Wrap bất kỳ data nào thành MCP tool response. Export và dùng trong mọi sprint. */
+export function ok(data: unknown) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+}
+```
+
+**Cách dùng trong tools:**
+
+```typescript
+// GET với query params — pass object, client tự build query string
+await api("GET", "/mcp/audit", { model_type: "product", locale: "vi", per_page: 50 });
+// → GET /api/v1/mcp/audit?model_type=product&locale=vi&per_page=50
+
+// PUT/POST với body — pass object, client JSON stringify
+await api("PUT", "/mcp/products/my-slug", { name: "...", translations: {...} });
+
+// PATCH không có body
+await api("PATCH", "/mcp/products/my-slug/activate", {});
 ```
 
 ---
@@ -167,16 +225,6 @@ await server.connect(transport);
 ```
 
 ---
-
-## Response helper (dùng trong mọi tool)
-
-Mỗi tool phải trả về `{ content: [{ type: "text", text: string }] }`:
-
-```typescript
-export function ok(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
-```
 
 ---
 
@@ -331,6 +379,9 @@ activate_product        → PATCH /mcp/products/{slug}/activate body: {}
 ### Input schemas
 
 ```typescript
+// get_category_context / check_category_readiness / activate_category
+z.object({ slug: z.string() })
+
 // save_category
 z.object({
   slug:               z.string(),
@@ -376,6 +427,9 @@ z.object({
 ### Input schemas
 
 ```typescript
+// get_blog_post_context / get_blog_category_context / activate_blog_category
+z.object({ slug: z.string() })
+
 // save_blog_post
 z.object({
   slug:               z.string(),
@@ -441,6 +495,9 @@ z.object({
 ### Input schemas
 
 ```typescript
+// get_brand_context / activate_brand / get_manufacturer_context / activate_manufacturer
+z.object({ slug: z.string() })
+
 // save_brand
 z.object({
   slug:               z.string(),
@@ -577,11 +634,7 @@ Sprint 6  →  Import from specs (cần Laravel endpoint Sprint 6 làm trước)
 // src/tools/sprint1.ts
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { api } from "../client.js";
-
-function ok(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
+import { api, ok } from "../client.js";  // ok export từ client.ts — không define local
 
 export function registerSprint1Tools(server: McpServer) {
 
@@ -623,7 +676,10 @@ export function registerSprint1Tools(server: McpServer) {
       faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
       faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
       attributes: z.array(z.object({ name: z.string(), value: z.string(), unit: z.string().nullable().optional() })).optional(),
-      _stubs: z.any().optional(),
+      _stubs: z.object({
+        manufacturer: z.object({ slug: z.string(), name: z.string(), country: z.string().optional(), website: z.string().optional() }).optional(),
+        category: z.object({ slug: z.string(), translations: z.record(z.object({ name: z.string(), slug: z.string() })) }).optional(),
+      }).optional(),
     },
     async ({ slug, ...body }) => ok(await api("PUT", `/mcp/products/${slug}`, body)),
   );

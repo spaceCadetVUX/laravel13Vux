@@ -17,7 +17,7 @@ class UpsertController extends Controller
     public function __invoke(Request $request, string $slug): JsonResponse
     {
         $tokenId = $request->user()->currentAccessToken()->id;
-        $dryRun  = filter_var($request->query('dry_run', false), FILTER_VALIDATE_BOOLEAN);
+        $dryRun  = $request->boolean('dry_run');
 
         $result = $this->service->upsert($slug, $request->all(), $tokenId, $dryRun);
 
