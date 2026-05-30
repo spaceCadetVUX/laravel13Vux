@@ -38,6 +38,8 @@ class BlogCategory extends Model
         'slug',
         'description',
         'is_active',
+        'mcp_drafted_at',
+        'mcp_token_id',
     ];
 
     // ── Casts ─────────────────────────────────────────────────────────────────
@@ -45,7 +47,9 @@ class BlogCategory extends Model
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'is_active'      => 'boolean',
+            'mcp_drafted_at' => 'datetime',
+            'mcp_token_id'   => 'integer',
         ];
     }
 

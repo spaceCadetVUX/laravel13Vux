@@ -11,6 +11,7 @@ class ProductAttribute extends Model
         'product_id',
         'name',
         'value',
+        'unit',
         'sort_order',
     ];
 

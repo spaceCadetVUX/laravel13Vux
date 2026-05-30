@@ -14,6 +14,7 @@ class SeoMeta extends Model
         'model_type',
         'model_id',
         'locale',
+        'is_mcp_protected',
         'meta_title',
         'meta_description',
         'meta_keywords',
@@ -31,7 +32,8 @@ class SeoMeta extends Model
     protected function casts(): array
     {
         return [
-            'og_type' => OgType::class,
+            'og_type'          => OgType::class,
+            'is_mcp_protected' => 'boolean',
         ];
     }
 

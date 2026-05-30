@@ -18,13 +18,15 @@ class ProductTranslation extends Model
         'price',
         'sale_price',
         'currency',
+        'is_mcp_protected',
     ];
 
     protected function casts(): array
     {
         return [
-            'price'      => 'decimal:2',
-            'sale_price' => 'decimal:2',
+            'price'            => 'decimal:2',
+            'sale_price'       => 'decimal:2',
+            'is_mcp_protected' => 'boolean',
         ];
     }
 

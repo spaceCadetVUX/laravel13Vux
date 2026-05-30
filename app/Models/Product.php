@@ -57,6 +57,10 @@ class Product extends Model
         'currency',
         'stock_quantity',
         'is_active',
+        'faq_items_vi',
+        'faq_items_en',
+        'mcp_drafted_at',
+        'mcp_token_id',
     ];
 
     // ── Activity log ──────────────────────────────────────────────────────────
@@ -78,7 +82,11 @@ class Product extends Model
             'price'          => 'decimal:2',
             'sale_price'     => 'decimal:2',
             'is_active'      => 'boolean',
+            'faq_items_vi'   => 'array',
+            'faq_items_en'   => 'array',
             'deleted_at'     => 'datetime',
+            'mcp_drafted_at' => 'datetime',
+            'mcp_token_id'   => 'integer',
         ];
     }
 

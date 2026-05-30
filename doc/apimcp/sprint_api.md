@@ -47,14 +47,26 @@ $token->can('mcp:publish') // Laravel Sanctum token abilities
 
 ### Content Protection Flag
 
-Thêm column `is_mcp_protected` vào `seo_meta`, `product_translations`, `blog_post_translations`:
+**Quyết định: thêm vào cả translation tables + seo_meta — bảo vệ description/body lẫn SEO.**
+
+Migration thêm column `is_mcp_protected boolean default false` vào:
+
+| Bảng | Bảo vệ gì |
+|---|---|
+| `product_translations` | name, description, short_description |
+| `category_translations` | name, description |
+| `blog_post_translations` | title, excerpt, body |
+| `blog_category_translations` | name, description |
+| `seo_meta` | meta_title, meta_description, og_title, og_description |
 
 ```
-is_mcp_protected = true  →  MCP bị block hoàn toàn, trả về 403
+is_mcp_protected = true  →  MCP bị block, trả về 403
 is_mcp_protected = false →  MCP có thể viết (default)
 ```
 
-Khi Tùng viết tay content trực tiếp trong Filament → toggle `is_mcp_protected = true` → MCP không bao giờ ghi đè.
+Khi Tùng viết tay content trong Filament → toggle `is_mcp_protected = true` trên row đó → MCP không bao giờ ghi đè.
+
+**Filament:** thêm Toggle `is_mcp_protected` vào mỗi translation tab và SEO tab — nhỏ, ở cuối section.
 
 ---
 
@@ -276,13 +288,35 @@ Tìm entity theo keyword — tránh tạo duplicate, tìm sản phẩm liên qua
 }
 ```
 
-Dùng Meilisearch dưới hood — cùng Scout index với frontend search.
+**Quyết định: hybrid search — Scout cho entity có full-text index, DB LIKE cho entity ít record.**
+
+| Entity | Search engine | Lý do |
+|---|---|---|
+| `product`, `category` | Meilisearch Scout | Đã có `Searchable` trait + index, cần fuzzy full-text |
+| `brand`, `manufacturer` | DB `LIKE '%q%'` trên name + slug | < 100 records, tên thường exact (ABB, JUNG) — Scout là over-engineering |
+
+Implement trong `McpSearchService`: tách query theo type → merge results → sort by score.
 
 ---
 
 ### `GET /api/v1/mcp/review-queue`
 
 Danh sách entity MCP đã draft nhưng chưa được activate/publish — để Tùng biết cần review gì.
+
+**Quyết định: dùng column `mcp_drafted_at` + `mcp_token_id` trực tiếp trên entity tables — query O(1), không cần join activity_log.**
+
+Migration thêm 2 columns vào các bảng:
+
+| Bảng | Columns thêm |
+|---|---|
+| `products` | `mcp_drafted_at timestamp nullable`, `mcp_token_id bigint nullable` |
+| `categories` | `mcp_drafted_at timestamp nullable`, `mcp_token_id bigint nullable` |
+| `blog_posts` | `mcp_drafted_at timestamp nullable`, `mcp_token_id bigint nullable` |
+| `blog_categories` | `mcp_drafted_at timestamp nullable`, `mcp_token_id bigint nullable` |
+| `brands` | `mcp_drafted_at timestamp nullable`, `mcp_token_id bigint nullable` |
+| `manufacturers` | `mcp_drafted_at timestamp nullable`, `mcp_token_id bigint nullable` |
+
+Set khi MCP gọi PUT upsert. Reset về `null` khi entity được activate/publish (xem là đã reviewed).
 
 **Query params:**
 ```
@@ -975,6 +1009,35 @@ Khi expose qua MCP server, mỗi endpoint = 1 tool Claude có thể gọi:
 | `bulk_seo_fill` | `POST /mcp/batch/seo-meta` | Fill SEO hàng loạt |
 | `bulk_translate` | `POST /mcp/batch/translate` | Dịch vi→en hoặc en→vi |
 | `import_from_specs` | `POST /mcp/import/product-from-specs` | Từ datasheet text |
+
+---
+
+## Migrations cần tạo trước khi code
+
+Tất cả migration chạy trước Sprint 0 — các endpoint phụ thuộc vào columns này.
+
+### Migration 1: `add_mcp_protection_to_translation_tables`
+
+```php
+// Thêm vào 4 translation tables + seo_meta
+$table->boolean('is_mcp_protected')->default(false)->after('locale');
+```
+
+Tables: `product_translations`, `category_translations`, `blog_post_translations`, `blog_category_translations`, `seo_meta`
+
+---
+
+### Migration 2: `add_mcp_tracking_to_entity_tables`
+
+```php
+// Thêm vào 6 entity tables
+$table->timestamp('mcp_drafted_at')->nullable()->after('updated_at');
+$table->foreignId('mcp_token_id')->nullable()->constrained('personal_access_tokens')->nullOnDelete()->after('mcp_drafted_at');
+```
+
+Tables: `products`, `categories`, `blog_posts`, `blog_categories`, `brands`, `manufacturers`
+
+**Reset về null khi activate/publish** — đánh dấu là đã reviewed.
 
 ---
 

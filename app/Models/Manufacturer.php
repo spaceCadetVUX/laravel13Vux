@@ -46,13 +46,17 @@ class Manufacturer extends Model
         'country',
         'is_active',
         'sort_order',
+        'mcp_drafted_at',
+        'mcp_token_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active'  => 'boolean',
-            'sort_order' => 'integer',
+            'is_active'      => 'boolean',
+            'sort_order'     => 'integer',
+            'mcp_drafted_at' => 'datetime',
+            'mcp_token_id'   => 'integer',
         ];
     }
 

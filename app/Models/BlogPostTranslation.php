@@ -10,11 +10,19 @@ class BlogPostTranslation extends Model
     protected $fillable = [
         'blog_post_id',
         'locale',
+        'is_mcp_protected',
         'title',
         'slug',
         'excerpt',
         'body',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_mcp_protected' => 'boolean',
+        ];
+    }
 
     public function blogPost(): BelongsTo
     {

@@ -1,0 +1,537 @@
+<?php
+
+namespace App\Services\Mcp;
+
+use App\Models\Category;
+use App\Models\CategoryTranslation;
+use App\Models\Manufacturer;
+use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductTranslation;
+use App\Models\Seo\SeoMeta;
+use Illuminate\Support\Facades\DB;
+
+class McpProductService
+{
+    // ── Context ───────────────────────────────────────────────────────────────
+
+    public function context(string $slug): array
+    {
+        $product = $this->loadProduct($slug);
+
+        return $this->buildContextResponse($product);
+    }
+
+    // ── Readiness ─────────────────────────────────────────────────────────────
+
+    public function readiness(string $slug): array
+    {
+        $product = $this->loadProduct($slug);
+
+        return $this->computeReadiness($product);
+    }
+
+    // ── Upsert ────────────────────────────────────────────────────────────────
+
+    public function upsert(string $slug, array $data, int $tokenId, bool $dryRun): array
+    {
+        // Captured before potential rollback so dry_run can return the preview
+        $preview     = null;
+        $autoCreated = [];
+
+        try {
+            DB::transaction(function () use ($slug, $data, $tokenId, $dryRun, &$preview, &$autoCreated) {
+                $overwrite = (bool) ($data['overwrite_existing'] ?? false);
+
+                // 1. Resolve manufacturer via _stubs
+                $manufacturerId = $this->resolveManufacturer(
+                    $data['manufacturer_slug'] ?? null,
+                    $data['_stubs']['manufacturer'] ?? null,
+                    $autoCreated,
+                );
+
+                // 2. Resolve category via _stubs
+                $categoryId = $this->resolveCategory(
+                    $data['category_slug'] ?? null,
+                    $data['_stubs']['category'] ?? null,
+                    $autoCreated,
+                );
+
+                // 3. Find or create product (restore if soft-deleted)
+                $product = Product::withTrashed()->where('slug', $slug)->first();
+
+                if ($product && $product->trashed()) {
+                    $product->restore();
+                }
+
+                if (! $product) {
+                    // price is NOT NULL — default 0 for MCP drafts; admin sets real price later
+                    $product = new Product([
+                        'slug'     => $slug,
+                        'is_active'=> false,
+                        'price'    => 0,
+                    ]);
+                }
+
+                // Base fields — never touch is_active here (use /activate)
+                $product->fill(array_filter([
+                    'name'            => $data['name'] ?? null,
+                    'slug'            => $slug,
+                    'sku'             => $data['sku'] ?? null,
+                    'price'           => $data['price'] ?? null,
+                    'manufacturer_id' => $manufacturerId,
+                    'mcp_drafted_at'  => now(),
+                    'mcp_token_id'    => $tokenId,
+                ], fn ($v) => $v !== null));
+
+                if (isset($data['faq_items_vi'])) {
+                    $product->faq_items_vi = $data['faq_items_vi'];
+                }
+                if (isset($data['faq_items_en'])) {
+                    $product->faq_items_en = $data['faq_items_en'];
+                }
+
+                $product->save();
+
+                // 4. Sync category (pivot)
+                if ($categoryId) {
+                    $product->categories()->syncWithoutDetaching([$categoryId]);
+                }
+
+                // 5. Translations
+                if (! empty($data['translations'])) {
+                    $this->writeTranslations($product, $data['translations'], $overwrite);
+                }
+
+                // 6. SEO meta
+                if (! empty($data['seo'])) {
+                    $this->writeSeoMeta($product, $data['seo'], $overwrite);
+                }
+
+                // 7. Attributes
+                if (isset($data['attributes'])) {
+                    $this->writeAttributes($product, $data['attributes']);
+                }
+
+                // Build the response BEFORE rolling back (dry_run needs this)
+                $product->refresh()->load(['manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes']);
+                $preview = $this->buildContextResponse($product);
+
+                if ($dryRun) {
+                    // Force rollback — no changes written to DB
+                    throw new \RuntimeException('__mcp_dry_run__');
+                }
+            });
+
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() !== '__mcp_dry_run__') {
+                throw $e;
+            }
+            // Dry run complete — transaction rolled back, preview captured
+        }
+
+        $response = ['data' => $preview];
+
+        if (! empty($autoCreated)) {
+            $response['auto_created'] = $autoCreated;
+        }
+
+        return $response;
+    }
+
+    // ── Activate ──────────────────────────────────────────────────────────────
+
+    public function activate(string $slug): array
+    {
+        $product  = $this->loadProduct($slug);
+        $readiness = $this->computeReadiness($product);
+
+        if (! $readiness['ready']) {
+            abort(422, implode('; ', $readiness['blocking_issues']));
+        }
+
+        $product->update([
+            'is_active'      => true,
+            'mcp_drafted_at' => null,
+            'mcp_token_id'   => null,
+        ]);
+
+        $product->refresh()->load(['manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes']);
+
+        return ['data' => $this->buildContextResponse($product)];
+    }
+
+    // ── Private: stub resolvers ───────────────────────────────────────────────
+
+    private function resolveManufacturer(?string $slug, ?array $stub, array &$autoCreated): ?int
+    {
+        if (blank($slug)) {
+            return null;
+        }
+
+        $existing = Manufacturer::where('slug', $slug)->first();
+        if ($existing) {
+            return $existing->id;
+        }
+
+        if (empty($stub)) {
+            abort(422, "Manufacturer '{$slug}' not found and no _stubs.manufacturer provided.");
+        }
+
+        $manufacturer = Manufacturer::create([
+            'slug'      => $stub['slug'] ?? $slug,
+            'name'      => $stub['name'],
+            'country'   => $stub['country'] ?? null,
+            'website'   => $stub['website'] ?? null,
+            'is_active' => false,
+        ]);
+
+        $autoCreated[] = [
+            'type'     => 'manufacturer',
+            'slug'     => $manufacturer->slug,
+            'name'     => $manufacturer->name,
+            'is_active'=> false,
+            'fill_url' => "PUT /api/v1/mcp/manufacturers/{$manufacturer->slug}",
+        ];
+
+        return $manufacturer->id;
+    }
+
+    private function resolveCategory(?string $slug, ?array $stub, array &$autoCreated): ?int
+    {
+        if (blank($slug)) {
+            return null;
+        }
+
+        $existing = Category::where('slug', $slug)->first();
+        if ($existing) {
+            return $existing->id;
+        }
+
+        if (empty($stub)) {
+            abort(422, "Category '{$slug}' not found and no _stubs.category provided.");
+        }
+
+        $translations = $stub['translations'] ?? [];
+        $viName = $translations['vi']['name'] ?? $slug;
+        $enName = $translations['en']['name'] ?? $slug;
+
+        $category = Category::create([
+            'slug'      => $stub['slug'] ?? $slug,
+            'name'      => $enName,
+            'is_active' => false,
+        ]);
+
+        foreach (['vi' => $viName, 'en' => $enName] as $locale => $name) {
+            $t = $translations[$locale] ?? [];
+            CategoryTranslation::create([
+                'category_id' => $category->id,
+                'locale'      => $locale,
+                'name'        => $t['name'] ?? $name,
+                'slug'        => $t['slug'] ?? $stub['slug'] ?? $slug,
+            ]);
+        }
+
+        $autoCreated[] = [
+            'type'     => 'category',
+            'slug'     => $category->slug,
+            'is_active'=> false,
+            'fill_url' => "PUT /api/v1/mcp/categories/{$category->slug}",
+        ];
+
+        return $category->id;
+    }
+
+    // ── Private: write helpers ────────────────────────────────────────────────
+
+    private function writeTranslations(Product $product, array $translations, bool $overwrite): void
+    {
+        foreach ($translations as $locale => $data) {
+            if (! in_array($locale, ['vi', 'en'], true)) {
+                continue;
+            }
+
+            $translation = ProductTranslation::firstOrNew([
+                'product_id' => $product->id,
+                'locale'     => $locale,
+            ]);
+
+            if ($translation->exists && $translation->is_mcp_protected) {
+                continue; // translation is human-written — never overwrite
+            }
+
+            $writeable = ['name', 'slug', 'description', 'short_description'];
+
+            foreach ($writeable as $field) {
+                if (! isset($data[$field])) {
+                    continue;
+                }
+
+                if (! $overwrite && $translation->exists && filled($translation->{$field})) {
+                    continue; // skip fields already populated
+                }
+
+                $translation->{$field} = $data[$field];
+            }
+
+            $translation->save();
+        }
+    }
+
+    private function writeSeoMeta(Product $product, array $seo, bool $overwrite): void
+    {
+        foreach ($seo as $locale => $data) {
+            if (! in_array($locale, ['vi', 'en'], true)) {
+                continue;
+            }
+
+            $seoMeta = SeoMeta::firstOrNew([
+                'model_type' => 'product',
+                'model_id'   => $product->id,
+                'locale'     => $locale,
+            ]);
+
+            if ($seoMeta->exists && $seoMeta->is_mcp_protected) {
+                continue;
+            }
+
+            $writeable = ['meta_title', 'meta_description', 'og_title', 'og_description', 'robots'];
+
+            foreach ($writeable as $field) {
+                if (! isset($data[$field])) {
+                    continue;
+                }
+
+                if (! $overwrite && $seoMeta->exists && filled($seoMeta->{$field})) {
+                    continue;
+                }
+
+                $seoMeta->{$field} = $data[$field];
+            }
+
+            // Default robots
+            if (blank($seoMeta->robots)) {
+                $seoMeta->robots = 'index, follow';
+            }
+
+            $seoMeta->model_type = 'product';
+            $seoMeta->model_id   = $product->id;
+            $seoMeta->locale     = $locale;
+            $seoMeta->save();
+        }
+    }
+
+    private function writeAttributes(Product $product, array $attributes): void
+    {
+        $product->attributes()->delete();
+
+        foreach ($attributes as $i => $attr) {
+            ProductAttribute::create([
+                'product_id' => $product->id,
+                'name'       => $attr['name'],
+                'value'      => $attr['value'],
+                'unit'       => $attr['unit'] ?? null,
+                'sort_order' => $i,
+            ]);
+        }
+    }
+
+    // ── Private: readiness ────────────────────────────────────────────────────
+
+    private function computeReadiness(Product $product): array
+    {
+        $checks   = [];
+        $blocking = [];
+        $warnings = [];
+        $score    = 0;
+
+        // Per-locale checks
+        foreach (['vi', 'en'] as $locale) {
+            $translation = $product->translations->firstWhere('locale', $locale);
+            $seoMeta     = $product->seoMetas->firstWhere('locale', $locale);
+
+            $descLen      = mb_strlen($translation?->description ?? '');
+            $shortDescLen = mb_strlen($translation?->short_description ?? '');
+            $metaTitle    = $seoMeta?->meta_title ?? '';  // meta_title lives in seo_meta, not translation
+            $metaDesc     = $seoMeta?->meta_description ?? '';
+            $metaTitleLen = mb_strlen($metaTitle);
+            $faqCount     = count($locale === 'vi' ? ($product->faq_items_vi ?? []) : ($product->faq_items_en ?? []));
+
+            $hasDesc      = $descLen > 0;
+            $hasShortDesc = $shortDescLen > 0;
+            $hasMeta      = mb_strlen($metaTitle) > 0;
+            $hasMetaDesc  = mb_strlen($metaDesc) > 0;
+
+            $checks[$locale] = [
+                'has_description'        => ['pass' => $hasDesc,      'value' => $descLen],
+                'description_min_length' => ['pass' => $descLen >= 100, 'min' => 100, 'value' => $descLen],
+                'has_short_description'  => ['pass' => $hasShortDesc],
+                'has_meta_title'         => ['pass' => $hasMeta],
+                'meta_title_length'      => ['pass' => $metaTitleLen <= 70, 'value' => $metaTitleLen, 'max' => 70],
+                'has_meta_description'   => ['pass' => $hasMetaDesc],
+                'has_faq'                => ['pass' => $faqCount >= 1, 'count' => $faqCount],
+            ];
+
+            // Blocking
+            if (! $hasDesc)      { $blocking[] = "{$locale}.description missing"; }
+            if (! $hasMeta)      { $blocking[] = "{$locale}.meta_title missing"; }
+            if (! $hasMetaDesc)  { $blocking[] = "{$locale}.meta_description missing"; }
+
+            // Warnings
+            if ($hasDesc && $descLen < 100) {
+                $warnings[] = "{$locale}.description quá ngắn ({$descLen}/100 ký tự)";
+            }
+            if ($hasMeta && $metaTitleLen > 70) {
+                $warnings[] = "{$locale}.meta_title quá dài ({$metaTitleLen}/70 ký tự)";
+            }
+            if ($faqCount === 0) {
+                $warnings[] = "{$locale}.faq chưa có — nên thêm ít nhất 3 câu hỏi";
+            }
+
+            // Score (15 + 15 + 5 + 5 + 10 + 10 per locale = 60 total)
+            if ($hasDesc)      { $score += 15; }
+            if ($hasShortDesc) { $score += 5; }
+            if ($hasMeta)      { $score += 10; }
+            if ($hasMetaDesc)  { $score += 10; }
+        }
+
+        // General checks
+        $categories     = $product->categories;
+        $hasCategory    = $categories->isNotEmpty();
+        $hasManufacturer= filled($product->manufacturer_id);
+        $hasSku         = filled($product->sku);
+        $allCatActive   = $hasCategory && $categories->every(fn ($c) => $c->is_active);
+        $inactiveCats   = $categories->where('is_active', false)->pluck('slug')->join(', ');
+
+        $checks['general'] = [
+            'has_sku'            => ['pass' => $hasSku],
+            'has_category'       => ['pass' => $hasCategory],
+            'has_manufacturer'   => ['pass' => $hasManufacturer],
+            'category_is_active' => ['pass' => $allCatActive],
+        ];
+
+        if (! $hasSku)         { $blocking[] = 'general.has_sku — SKU chưa được set'; }
+        if (! $hasCategory)    { $blocking[] = 'general.has_category — product chưa có danh mục'; }
+        if (! $hasManufacturer){ $blocking[] = 'general.has_manufacturer — product chưa có nhà sản xuất'; }
+        if ($hasCategory && ! $allCatActive) {
+            $blocking[] = "general.category_is_active — category '{$inactiveCats}' chưa active";
+        }
+
+        // Score (5 + 10 + 5 + 5 = 25 for general — now 85 base + 5 sku)
+        if ($hasSku)         { $score += 5; }
+        if ($hasCategory)    { $score += 10; }
+        if ($hasManufacturer){ $score += 5; }
+        if ($allCatActive)   { $score += 5; }
+
+        return [
+            'slug'            => $this->productSlug($product),
+            'score'           => $score,
+            'ready'           => empty($blocking),
+            'checks'          => $checks,
+            'blocking_issues' => $blocking,
+            'warnings'        => $warnings,
+        ];
+    }
+
+    // ── Private: response builder ─────────────────────────────────────────────
+
+    private function buildContextResponse(Product $product): array
+    {
+        $translationsOut = [];
+        foreach ($product->translations as $t) {
+            $translationsOut[$t->locale] = [
+                'name'              => $t->name,
+                'slug'              => $t->slug,
+                'description'       => $t->description,
+                'short_description' => $t->short_description,
+                'is_mcp_protected'  => (bool) $t->is_mcp_protected,
+            ];
+        }
+
+        $seoOut = [];
+        foreach ($product->seoMetas as $s) {
+            $seoOut[$s->locale] = [
+                'meta_title'       => $s->meta_title,
+                'meta_description' => $s->meta_description,
+                'robots'           => $s->robots,
+                'is_mcp_protected' => (bool) $s->is_mcp_protected,
+            ];
+        }
+
+        $categoryOut = null;
+        $firstCategory = $product->categories->first();
+        if ($firstCategory) {
+            $catTranslations = [];
+            foreach ($firstCategory->translations as $ct) {
+                $catTranslations[$ct->locale] = ['name' => $ct->name];
+            }
+            $categoryOut = [
+                'slug'         => $firstCategory->slug,
+                'is_active'    => (bool) $firstCategory->is_active,
+                'translations' => $catTranslations,
+            ];
+        }
+
+        // Related: other active products in same categories (limit 5)
+        $relatedProducts = [];
+        if ($firstCategory) {
+            $related = Product::active()
+                ->whereHas('categories', fn ($q) => $q->where('categories.id', $firstCategory->id))
+                ->where('id', '!=', $product->id)
+                ->with('translations')
+                ->limit(5)
+                ->get();
+
+            foreach ($related as $r) {
+                $relatedProducts[] = [
+                    'slug' => $r->slug,
+                    'name' => $r->translations->firstWhere('locale', 'vi')?->name
+                              ?? $r->translations->firstWhere('locale', 'en')?->name
+                              ?? $r->slug,
+                ];
+            }
+        }
+
+        return [
+            'slug'            => $this->productSlug($product),
+            'name'            => $product->name,
+            'sku'             => $product->sku,
+            'is_active'       => (bool) $product->is_active,
+            'mcp_drafted_at'  => $product->mcp_drafted_at?->toIso8601String(),
+            'manufacturer'    => $product->manufacturer
+                ? ['slug' => $product->manufacturer->slug, 'name' => $product->manufacturer->name]
+                : null,
+            'category'        => $categoryOut,
+            'attributes'      => $product->attributes->map(fn ($a) => [
+                'name'  => $a->name,
+                'value' => $a->value,
+                'unit'  => $a->unit,
+            ])->all(),
+            'translations'    => $translationsOut,
+            'seo'             => $seoOut,
+            'faq_items_vi'    => $product->faq_items_vi ?? [],
+            'faq_items_en'    => $product->faq_items_en ?? [],
+            'related_products'=> $relatedProducts,
+        ];
+    }
+
+    // ── Private: helpers ──────────────────────────────────────────────────────
+
+    private function loadProduct(string $slug): Product
+    {
+        $product = Product::where('slug', $slug)
+            ->with(['manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes'])
+            ->first();
+
+        if (! $product) {
+            abort(404, "Product '{$slug}' not found.");
+        }
+
+        return $product;
+    }
+
+    private function productSlug(Product $product): string
+    {
+        return $product->slug;
+    }
+}

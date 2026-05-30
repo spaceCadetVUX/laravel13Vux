@@ -42,6 +42,8 @@ class Category extends Model
         'image_path',
         'sort_order',
         'is_active',
+        'mcp_drafted_at',
+        'mcp_token_id',
     ];
 
     // ── Activity log ──────────────────────────────────────────────────────────
@@ -60,8 +62,10 @@ class Category extends Model
     protected function casts(): array
     {
         return [
-            'is_active'  => 'boolean',
-            'deleted_at' => 'datetime',
+            'is_active'      => 'boolean',
+            'deleted_at'     => 'datetime',
+            'mcp_drafted_at' => 'datetime',
+            'mcp_token_id'   => 'integer',
         ];
     }
 

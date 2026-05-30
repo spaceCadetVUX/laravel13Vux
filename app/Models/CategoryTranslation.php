@@ -10,6 +10,7 @@ class CategoryTranslation extends Model
     protected $fillable = [
         'category_id',
         'locale',
+        'is_mcp_protected',
         'name',
         'slug',
         'description',
@@ -25,7 +26,8 @@ class CategoryTranslation extends Model
     protected function casts(): array
     {
         return [
-            'rich_content' => 'array',
+            'rich_content'     => 'array',
+            'is_mcp_protected' => 'boolean',
         ];
     }
 

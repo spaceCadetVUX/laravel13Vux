@@ -10,10 +10,18 @@ class BlogCategoryTranslation extends Model
     protected $fillable = [
         'blog_category_id',
         'locale',
+        'is_mcp_protected',
         'name',
         'slug',
         'description',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_mcp_protected' => 'boolean',
+        ];
+    }
 
     public function blogCategory(): BelongsTo
     {

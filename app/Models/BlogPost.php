@@ -62,6 +62,8 @@ class BlogPost extends Model
         'featured_image',
         'status',
         'published_at',
+        'mcp_drafted_at',
+        'mcp_token_id',
     ];
 
     // ── Casts ─────────────────────────────────────────────────────────────────
@@ -69,9 +71,11 @@ class BlogPost extends Model
     protected function casts(): array
     {
         return [
-            'status'       => BlogPostStatus::class,
-            'published_at' => 'datetime',
-            'deleted_at'   => 'datetime',
+            'status'         => BlogPostStatus::class,
+            'published_at'   => 'datetime',
+            'deleted_at'     => 'datetime',
+            'mcp_drafted_at' => 'datetime',
+            'mcp_token_id'   => 'integer',
         ];
     }
 
