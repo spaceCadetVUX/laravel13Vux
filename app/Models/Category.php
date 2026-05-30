@@ -32,6 +32,12 @@ class Category extends Model
     use HasActivityLog;
     use LogsActivity;
 
+    // keyType must be 'string' so Eloquent binds the PK as a quoted string in
+    // PostgreSQL polymorphic queries (seo_meta.model_id, geo_entity_profiles.model_id are varchar(36)).
+    public $incrementing = true;
+
+    protected $keyType = 'string';
+
     // ── Mass assignment ───────────────────────────────────────────────────────
 
     protected $fillable = [

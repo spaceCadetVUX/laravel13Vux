@@ -134,57 +134,61 @@ class BlogPostResource extends Resource
                                 ))
                                 ->columnSpanFull(),
 
-                            Tabs::make('FaqLocaleTabs')
-                                ->tabs([
-                                    Tab::make('🇻🇳 Tiếng Việt')
+                            Section::make('🇻🇳 Tiếng Việt')
+                                ->schema([
+                                    Forms\Components\Repeater::make('faq_items_vi')
+                                        ->label('')
                                         ->schema([
-                                            Forms\Components\Repeater::make('faq_items_vi')
-                                                ->label('')
-                                                ->schema([
-                                                    Forms\Components\TextInput::make('question')
-                                                        ->label('Câu hỏi')
-                                                        ->required()
-                                                        ->placeholder('VD: KNX là gì?')
-                                                        ->columnSpanFull(),
-
-                                                    Forms\Components\Textarea::make('answer')
-                                                        ->label('Trả lời')
-                                                        ->required()
-                                                        ->rows(3)
-                                                        ->columnSpanFull(),
-                                                ])
-                                                ->addActionLabel('Thêm câu hỏi')
-                                                ->reorderable()
-                                                ->collapsible()
-                                                ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
-                                                ->defaultItems(0)
+                                            Forms\Components\TextInput::make('question')
+                                                ->label('Câu hỏi')
+                                                ->required()
+                                                ->placeholder('VD: KNX là gì?')
                                                 ->columnSpanFull(),
-                                        ]),
 
-                                    Tab::make('🇬🇧 English')
+                                            Forms\Components\Textarea::make('answer')
+                                                ->label('Trả lời')
+                                                ->required()
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->afterStateHydrated(function (Forms\Components\Repeater $component, $record): void {
+                                            $component->state($record?->faq_items_vi ?? []);
+                                        })
+                                        ->addActionLabel('Thêm câu hỏi')
+                                        ->reorderable()
+                                        ->collapsible()
+                                        ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+                                        ->defaultItems(0)
+                                        ->columnSpanFull(),
+                                ])
+                                ->columnSpanFull(),
+
+                            Section::make('🇬🇧 English')
+                                ->schema([
+                                    Forms\Components\Repeater::make('faq_items_en')
+                                        ->label('')
                                         ->schema([
-                                            Forms\Components\Repeater::make('faq_items_en')
-                                                ->label('')
-                                                ->schema([
-                                                    Forms\Components\TextInput::make('question')
-                                                        ->label('Question')
-                                                        ->required()
-                                                        ->placeholder('e.g. What is KNX?')
-                                                        ->columnSpanFull(),
-
-                                                    Forms\Components\Textarea::make('answer')
-                                                        ->label('Answer')
-                                                        ->required()
-                                                        ->rows(3)
-                                                        ->columnSpanFull(),
-                                                ])
-                                                ->addActionLabel('Add question')
-                                                ->reorderable()
-                                                ->collapsible()
-                                                ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
-                                                ->defaultItems(0)
+                                            Forms\Components\TextInput::make('question')
+                                                ->label('Question')
+                                                ->required()
+                                                ->placeholder('e.g. What is KNX?')
                                                 ->columnSpanFull(),
-                                        ]),
+
+                                            Forms\Components\Textarea::make('answer')
+                                                ->label('Answer')
+                                                ->required()
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->afterStateHydrated(function (Forms\Components\Repeater $component, $record): void {
+                                            $component->state($record?->faq_items_en ?? []);
+                                        })
+                                        ->addActionLabel('Add question')
+                                        ->reorderable()
+                                        ->collapsible()
+                                        ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+                                        ->defaultItems(0)
+                                        ->columnSpanFull(),
                                 ])
                                 ->columnSpanFull(),
                         ]),

@@ -78,7 +78,7 @@ class McpBlogPostService
                 $post->save();
 
                 // ── Translations ──────────────────────────────────────────────
-                $this->writeTranslations($post, $data['translations'] ?? [], $overwrite);
+                $this->writeTranslations($post, $data['translations'] ?? [], $overwrite, $slug);
 
                 // ── SEO meta ──────────────────────────────────────────────────
                 $this->writeSeoMeta($post, $data['seo'] ?? [], $overwrite);
@@ -136,7 +136,7 @@ class McpBlogPostService
         return $post;
     }
 
-    private function writeTranslations(BlogPost $post, array $translations, bool $overwrite): void
+    private function writeTranslations(BlogPost $post, array $translations, bool $overwrite, string $routeSlug = ''): void
     {
         foreach ($translations as $locale => $trans) {
             if (!in_array($locale, ['vi', 'en'], true)) continue;
@@ -149,6 +149,11 @@ class McpBlogPostService
                 if (!array_key_exists($field, $trans)) continue;
                 if (!$overwrite && $tr->exists && filled($tr->$field)) continue;
                 $tr->$field = $trans[$field];
+            }
+
+            // Auto-fill slug from route slug if not provided and creating new row
+            if (!$tr->exists && empty($tr->slug) && filled($routeSlug)) {
+                $tr->slug = $routeSlug;
             }
 
             if ($tr->isDirty()) {
