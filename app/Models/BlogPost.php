@@ -62,6 +62,8 @@ class BlogPost extends Model
         'featured_image',
         'status',
         'published_at',
+        'faq_items_vi',
+        'faq_items_en',
         'mcp_drafted_at',
         'mcp_token_id',
     ];
@@ -74,6 +76,8 @@ class BlogPost extends Model
             'status'         => BlogPostStatus::class,
             'published_at'   => 'datetime',
             'deleted_at'     => 'datetime',
+            'faq_items_vi'   => 'array',
+            'faq_items_en'   => 'array',
             'mcp_drafted_at' => 'datetime',
             'mcp_token_id'   => 'integer',
         ];

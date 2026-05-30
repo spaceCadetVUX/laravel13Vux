@@ -4,11 +4,17 @@ use App\Http\Controllers\Mcp\AuditController;
 use App\Http\Controllers\Mcp\EntityListController;
 use App\Http\Controllers\Mcp\ReviewQueueController;
 use App\Http\Controllers\Mcp\SearchController;
-use App\Http\Controllers\Mcp\Category\ActivateController  as CategoryActivateController;
-use App\Http\Controllers\Mcp\Category\ContextController   as CategoryContextController;
-use App\Http\Controllers\Mcp\Category\ReadinessController as CategoryReadinessController;
-use App\Http\Controllers\Mcp\Category\UpsertController    as CategoryUpsertController;
-use App\Http\Controllers\Mcp\Product\ActivateController   as ProductActivateController;
+use App\Http\Controllers\Mcp\BlogCategory\ActivateController as BlogCategoryActivateController;
+use App\Http\Controllers\Mcp\BlogCategory\ContextController  as BlogCategoryContextController;
+use App\Http\Controllers\Mcp\BlogCategory\UpsertController   as BlogCategoryUpsertController;
+use App\Http\Controllers\Mcp\BlogPost\ContextController      as BlogPostContextController;
+use App\Http\Controllers\Mcp\BlogPost\PublishController      as BlogPostPublishController;
+use App\Http\Controllers\Mcp\BlogPost\UpsertController       as BlogPostUpsertController;
+use App\Http\Controllers\Mcp\Category\ActivateController     as CategoryActivateController;
+use App\Http\Controllers\Mcp\Category\ContextController      as CategoryContextController;
+use App\Http\Controllers\Mcp\Category\ReadinessController    as CategoryReadinessController;
+use App\Http\Controllers\Mcp\Category\UpsertController       as CategoryUpsertController;
+use App\Http\Controllers\Mcp\Product\ActivateController      as ProductActivateController;
 use App\Http\Controllers\Mcp\Product\ContextController    as ProductContextController;
 use App\Http\Controllers\Mcp\Product\ReadinessController  as ProductReadinessController;
 use App\Http\Controllers\Mcp\Product\UpsertController     as ProductUpsertController;
@@ -42,6 +48,10 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         Route::get('categories/{slug}/context',   CategoryContextController::class);
         Route::get('categories/{slug}/readiness', CategoryReadinessController::class);
 
+        // Sprint 3: Blog posts + Blog categories — read
+        Route::get('blog-posts/{slug}/context',      BlogPostContextController::class);
+        Route::get('blog-categories/{slug}/context', BlogCategoryContextController::class);
+
         // Generic entity list — MUST be last (wildcard catches everything)
         Route::get('{modelType}', EntityListController::class);
     });
@@ -54,6 +64,10 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
 
         // Sprint 2: Categories — upsert
         Route::put('categories/{slug}', CategoryUpsertController::class);
+
+        // Sprint 3: Blog posts + Blog categories — upsert
+        Route::put('blog-posts/{slug}',      BlogPostUpsertController::class);
+        Route::put('blog-categories/{slug}', BlogCategoryUpsertController::class);
     });
 
     // ── mcp:publish — activate / publish ──────────────────────────────────────
@@ -64,5 +78,9 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
 
         // Sprint 2: Categories — activate
         Route::patch('categories/{slug}/activate', CategoryActivateController::class);
+
+        // Sprint 3: Blog posts — publish; Blog categories — activate
+        Route::patch('blog-posts/{slug}/publish',      BlogPostPublishController::class);
+        Route::patch('blog-categories/{slug}/activate', BlogCategoryActivateController::class);
     });
 });
