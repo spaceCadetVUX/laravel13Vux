@@ -4,12 +4,18 @@ use App\Http\Controllers\Mcp\AuditController;
 use App\Http\Controllers\Mcp\EntityListController;
 use App\Http\Controllers\Mcp\ReviewQueueController;
 use App\Http\Controllers\Mcp\SearchController;
-use App\Http\Controllers\Mcp\BlogCategory\ActivateController as BlogCategoryActivateController;
-use App\Http\Controllers\Mcp\BlogCategory\ContextController  as BlogCategoryContextController;
-use App\Http\Controllers\Mcp\BlogCategory\UpsertController   as BlogCategoryUpsertController;
-use App\Http\Controllers\Mcp\BlogPost\ContextController      as BlogPostContextController;
-use App\Http\Controllers\Mcp\BlogPost\PublishController      as BlogPostPublishController;
-use App\Http\Controllers\Mcp\BlogPost\UpsertController       as BlogPostUpsertController;
+use App\Http\Controllers\Mcp\BlogCategory\ActivateController  as BlogCategoryActivateController;
+use App\Http\Controllers\Mcp\BlogCategory\ContextController   as BlogCategoryContextController;
+use App\Http\Controllers\Mcp\BlogCategory\UpsertController    as BlogCategoryUpsertController;
+use App\Http\Controllers\Mcp\BlogPost\ContextController       as BlogPostContextController;
+use App\Http\Controllers\Mcp\BlogPost\PublishController       as BlogPostPublishController;
+use App\Http\Controllers\Mcp\BlogPost\UpsertController        as BlogPostUpsertController;
+use App\Http\Controllers\Mcp\Brand\ActivateController         as BrandActivateController;
+use App\Http\Controllers\Mcp\Brand\ContextController          as BrandContextController;
+use App\Http\Controllers\Mcp\Brand\UpsertController           as BrandUpsertController;
+use App\Http\Controllers\Mcp\Manufacturer\ActivateController  as ManufacturerActivateController;
+use App\Http\Controllers\Mcp\Manufacturer\ContextController   as ManufacturerContextController;
+use App\Http\Controllers\Mcp\Manufacturer\UpsertController    as ManufacturerUpsertController;
 use App\Http\Controllers\Mcp\Category\ActivateController     as CategoryActivateController;
 use App\Http\Controllers\Mcp\Category\ContextController      as CategoryContextController;
 use App\Http\Controllers\Mcp\Category\ReadinessController    as CategoryReadinessController;
@@ -52,6 +58,10 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         Route::get('blog-posts/{slug}/context',      BlogPostContextController::class);
         Route::get('blog-categories/{slug}/context', BlogCategoryContextController::class);
 
+        // Sprint 4: Brands + Manufacturers — read
+        Route::get('brands/{slug}/context',       BrandContextController::class);
+        Route::get('manufacturers/{slug}/context', ManufacturerContextController::class);
+
         // Generic entity list — MUST be last (wildcard catches everything)
         Route::get('{modelType}', EntityListController::class);
     });
@@ -68,6 +78,10 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         // Sprint 3: Blog posts + Blog categories — upsert
         Route::put('blog-posts/{slug}',      BlogPostUpsertController::class);
         Route::put('blog-categories/{slug}', BlogCategoryUpsertController::class);
+
+        // Sprint 4: Brands + Manufacturers — upsert
+        Route::put('brands/{slug}',        BrandUpsertController::class);
+        Route::put('manufacturers/{slug}', ManufacturerUpsertController::class);
     });
 
     // ── mcp:publish — activate / publish ──────────────────────────────────────
@@ -80,7 +94,11 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         Route::patch('categories/{slug}/activate', CategoryActivateController::class);
 
         // Sprint 3: Blog posts — publish; Blog categories — activate
-        Route::patch('blog-posts/{slug}/publish',      BlogPostPublishController::class);
+        Route::patch('blog-posts/{slug}/publish',       BlogPostPublishController::class);
         Route::patch('blog-categories/{slug}/activate', BlogCategoryActivateController::class);
+
+        // Sprint 4: Brands + Manufacturers — activate
+        Route::patch('brands/{slug}/activate',        BrandActivateController::class);
+        Route::patch('manufacturers/{slug}/activate', ManufacturerActivateController::class);
     });
 });
