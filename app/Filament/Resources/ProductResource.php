@@ -1083,30 +1083,34 @@ class ProductResource extends Resource
                                                         ])
                                                         ->collapsed(),
 
-                                                    Section::make('FAQ (vi)')
-                                                        ->description('Câu hỏi thường gặp — đưa vào JSON-LD FAQPage và llms.txt.')
-                                                        ->schema([
-                                                            Forms\Components\Repeater::make('faq')
-                                                                ->label('')
-                                                                ->schema([
-                                                                    Forms\Components\TextInput::make('question')
-                                                                        ->label('Câu hỏi')
-                                                                        ->required()
-                                                                        ->columnSpanFull(),
+                                                ]),
 
-                                                                    Forms\Components\Textarea::make('answer')
-                                                                        ->label('Trả lời')
-                                                                        ->rows(2)
-                                                                        ->required()
-                                                                        ->columnSpanFull(),
-                                                                ])
-                                                                ->maxItems(10)
-                                                                ->defaultItems(0)
-                                                                ->addActionLabel('+ Thêm Q&A')
+                                            Section::make('FAQ (vi)')
+                                                ->description('Câu hỏi thường gặp — đưa vào JSON-LD FAQPage và llms.txt.')
+                                                ->schema([
+                                                    Forms\Components\Repeater::make('faq_items_vi')
+                                                        ->label('')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('question')
+                                                                ->label('Câu hỏi')
+                                                                ->required()
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('answer')
+                                                                ->label('Trả lời')
+                                                                ->rows(2)
+                                                                ->required()
                                                                 ->columnSpanFull(),
                                                         ])
-                                                        ->collapsed(),
-                                                ]),
+                                                        ->afterStateHydrated(function (Forms\Components\Repeater $component, $record): void {
+                                                            $component->state($record?->faq_items_vi ?? []);
+                                                        })
+                                                        ->maxItems(10)
+                                                        ->defaultItems(0)
+                                                        ->addActionLabel('+ Thêm Q&A')
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->collapsed(),
                                         ]),
 
                                     Tab::make('🇬🇧 English')
@@ -1158,30 +1162,34 @@ class ProductResource extends Resource
                                                         ])
                                                         ->collapsed(),
 
-                                                    Section::make('FAQ (en)')
-                                                        ->description('Frequently asked questions — injected into JSON-LD FAQPage schema and llms.txt.')
-                                                        ->schema([
-                                                            Forms\Components\Repeater::make('faq')
-                                                                ->label('')
-                                                                ->schema([
-                                                                    Forms\Components\TextInput::make('question')
-                                                                        ->label('Question')
-                                                                        ->required()
-                                                                        ->columnSpanFull(),
+                                                ]),
 
-                                                                    Forms\Components\Textarea::make('answer')
-                                                                        ->label('Answer')
-                                                                        ->rows(2)
-                                                                        ->required()
-                                                                        ->columnSpanFull(),
-                                                                ])
-                                                                ->maxItems(10)
-                                                                ->defaultItems(0)
-                                                                ->addActionLabel('+ Add Q&A')
+                                            Section::make('FAQ (en)')
+                                                ->description('Frequently asked questions — injected into JSON-LD FAQPage schema and llms.txt.')
+                                                ->schema([
+                                                    Forms\Components\Repeater::make('faq_items_en')
+                                                        ->label('')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('question')
+                                                                ->label('Question')
+                                                                ->required()
+                                                                ->columnSpanFull(),
+
+                                                            Forms\Components\Textarea::make('answer')
+                                                                ->label('Answer')
+                                                                ->rows(2)
+                                                                ->required()
                                                                 ->columnSpanFull(),
                                                         ])
-                                                        ->collapsed(),
-                                                ]),
+                                                        ->afterStateHydrated(function (Forms\Components\Repeater $component, $record): void {
+                                                            $component->state($record?->faq_items_en ?? []);
+                                                        })
+                                                        ->maxItems(10)
+                                                        ->defaultItems(0)
+                                                        ->addActionLabel('+ Add Q&A')
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->collapsed(),
                                         ]),
                                 ])
                                 ->columnSpanFull(),
@@ -1260,7 +1268,7 @@ class ProductResource extends Resource
                                                     ->action(function ($livewire): void {
                                                         $product = $livewire->record;
                                                         if (! $product?->exists) { return; }
-                                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product, 'vi');
+                                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product, null, 'vi');
                                                         Notification::make()->title('LLMs entry (vi) regenerated')->success()->send();
                                                         redirect(ProductResource::getUrl('edit', ['record' => $product]));
                                                     }),
@@ -1316,7 +1324,7 @@ class ProductResource extends Resource
                                                     ->action(function ($livewire): void {
                                                         $product = $livewire->record;
                                                         if (! $product?->exists) { return; }
-                                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product, 'en');
+                                                        app(\App\Services\Seo\LlmsGeneratorService::class)->upsertEntry($product, null, 'en');
                                                         Notification::make()->title('LLMs entry (en) regenerated')->success()->send();
                                                         redirect(ProductResource::getUrl('edit', ['record' => $product]));
                                                     }),

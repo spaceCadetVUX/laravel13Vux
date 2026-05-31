@@ -15,10 +15,12 @@ class CategoryTreeResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $t = $this->resource->translation(app()->getLocale());
+
         return [
             'id'         => $this->id,
-            'name'       => $this->name,
-            'slug'       => $this->slug,
+            'name'       => $t?->name ?? $this->name,
+            'slug'       => $t?->slug ?? $this->slug,
             'image_url'  => $this->image_path
                 ? asset('storage/' . $this->image_path)
                 : null,

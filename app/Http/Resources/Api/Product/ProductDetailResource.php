@@ -19,6 +19,24 @@ class ProductDetailResource extends ProductResource
 
             'description' => $this->description,
 
+            // ── Localized pricing ──────────────────────────────────────────────
+            'pricing' => $this->whenLoaded(
+                'translations',
+                function () {
+                    $out = [];
+                    foreach ($this->translations as $t) {
+                        if (filled($t->price) || filled($t->sale_price) || filled($t->currency)) {
+                            $out[$t->locale] = [
+                                'price'      => $t->price !== null ? (string) $t->price : null,
+                                'sale_price' => $t->sale_price !== null ? (string) $t->sale_price : null,
+                                'currency'   => $t->currency,
+                            ];
+                        }
+                    }
+                    return $out;
+                },
+            ),
+
             // ── Media ──────────────────────────────────────────────────────────
             'images' => $this->whenLoaded(
                 'images',

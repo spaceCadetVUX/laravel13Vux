@@ -24,6 +24,7 @@ class ProductResource extends JsonResource
             'short_description' => $this->short_description,
             'price'             => (string) $this->price,
             'sale_price'        => $this->sale_price ? (string) $this->sale_price : null,
+            'currency'          => $this->currency,
             'stock_quantity'    => $this->stock_quantity,
             'is_active'         => $this->is_active,
             'category'          => $this->whenLoaded('categories', fn () => $this->categories->first()

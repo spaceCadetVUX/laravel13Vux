@@ -33,9 +33,9 @@ class CategoryService
         return $category;
     }
 
-    public function getProductsPaginated(Category $category, int $perPage = 15): LengthAwarePaginator
+    public function getProductsPaginated(Category $category, array $filters = []): LengthAwarePaginator
     {
-        return $this->categoryRepository->getProductsPaginated($category, $perPage);
+        return $this->categoryRepository->getProductsPaginated($category, $filters);
     }
 
     public function bustTreeCache(): void

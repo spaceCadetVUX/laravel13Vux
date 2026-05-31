@@ -3,6 +3,7 @@
 namespace App\Services\Mcp;
 
 use App\Models\Category;
+use App\Models\Seo\GeoEntityProfile;
 use Illuminate\Support\Facades\DB;
 
 class McpCategoryService
@@ -11,7 +12,7 @@ class McpCategoryService
 
     public function context(string $slug): array
     {
-        $category = Category::with(['translations', 'parent.translations', 'children.translations'])
+        $category = Category::with(['translations', 'parent.translations', 'children.translations', 'geoProfiles'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -20,7 +21,7 @@ class McpCategoryService
 
     public function readiness(string $slug): array
     {
-        $category = Category::with('translations')
+        $category = Category::with(['translations', 'geoProfiles'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -71,7 +72,7 @@ class McpCategoryService
                     $category->sort_order = $data['sort_order'];
                 }
 
-                // ── FAQ ───────────────────────────────────────────────────────
+                // ── FAQ (legacy params → sync vào cả categories + geo_entity_profiles) ──
                 foreach (['faq_items_vi', 'faq_items_en'] as $field) {
                     if (!array_key_exists($field, $data)) continue;
                     if ($overwrite || empty($category->$field)) {
@@ -83,6 +84,18 @@ class McpCategoryService
                 $category->mcp_token_id   = $tokenId;
                 $category->save();
 
+                // ── GEO/AI profile ─────────────────────────────────────────────
+                // Merge legacy faq_items_vi/en vào geo.vi.faq / geo.en.faq nếu chưa có
+                $geoData = $data['geo'] ?? [];
+                foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+                    if (array_key_exists($field, $data) && !array_key_exists('faq', $geoData[$locale] ?? [])) {
+                        $geoData[$locale]['faq'] = $data[$field];
+                    }
+                }
+                if (!empty($geoData)) {
+                    $this->writeGeoProfile($category, $geoData, $overwrite);
+                }
+
                 // ── Translations + SEO (same table) ───────────────────────────
                 $this->writeTranslations(
                     $category,
@@ -92,7 +105,7 @@ class McpCategoryService
                 );
 
                 $preview = $this->buildContextResponse(
-                    $category->fresh(['translations', 'parent.translations', 'children.translations']),
+                    $category->fresh(['translations', 'parent.translations', 'children.translations', 'geoProfiles']),
                 );
 
                 if ($dryRun) throw new \RuntimeException('__mcp_dry_run__');
@@ -122,7 +135,7 @@ class McpCategoryService
 
         return [
             'data' => $this->buildContextResponse(
-                $category->fresh(['translations', 'parent.translations', 'children.translations']),
+                $category->fresh(['translations', 'parent.translations', 'children.translations', 'geoProfiles']),
             ),
         ];
     }
@@ -172,13 +185,13 @@ class McpCategoryService
             $total++; if ($hasMetaDesc) $score++;
             if (!$hasMetaDesc) $blocking[] = "{$locale}.meta_description missing";
 
-            // has_faq (warning)
-            $faqField = "faq_items_{$locale}";
-            $faqItems = $category->$faqField ?? [];
-            $hasFaq   = !empty($faqItems);
+            // has_faq (warning) — check geo_entity_profiles.faq (source of truth for JSON-LD)
+            $geoProfile = $category->geoProfiles->firstWhere('locale', $locale);
+            $faqItems   = $geoProfile?->faq ?? $category->{"faq_items_{$locale}"} ?? [];
+            $hasFaq     = !empty($faqItems);
             $checks[$locale]['has_faq'] = ['pass' => $hasFaq, 'count' => count((array) $faqItems)];
             $total++; if ($hasFaq) $score++;
-            if (!$hasFaq) $warnings[] = "{$locale}.faq chưa có — nên thêm ít nhất 3 câu hỏi";
+            if (!$hasFaq) $warnings[] = "{$locale}.faq chưa có — nên thêm ít nhất 3 câu hỏi (geo.{$locale}.faq)";
         }
 
         // General: must have at least one translation with a slug
@@ -197,6 +210,43 @@ class McpCategoryService
             'blocking_issues' => $blocking,
             'warnings'        => $warnings,
         ];
+    }
+
+    private function writeGeoProfile(Category $category, array $geoPerLocale, bool $overwrite): void
+    {
+        $morphType = $category->getMorphClass();
+        $modelId   = $category->getKey();
+
+        foreach (['vi', 'en'] as $locale) {
+            if (!array_key_exists($locale, $geoPerLocale)) continue;
+
+            $input = $geoPerLocale[$locale];
+
+            $profile = GeoEntityProfile::firstOrNew([
+                'model_type' => $morphType,
+                'model_id'   => $modelId,
+                'locale'     => $locale,
+            ]);
+
+            foreach (['ai_summary', 'use_cases', 'target_audience', 'llm_context_hint'] as $field) {
+                if (!array_key_exists($field, $input)) continue;
+                if (!$overwrite && $profile->exists && filled($profile->$field)) continue;
+                $profile->$field = $input[$field];
+            }
+
+            foreach (['key_facts', 'faq'] as $field) {
+                if (!array_key_exists($field, $input)) continue;
+                if (!$overwrite && $profile->exists && !empty($profile->$field)) continue;
+                $profile->$field = $input[$field];
+            }
+
+            if ($profile->isDirty() || !$profile->exists) {
+                $profile->model_type = $morphType;
+                $profile->model_id   = $modelId;
+                $profile->locale     = $locale;
+                $profile->save();
+            }
+        }
     }
 
     private function writeTranslations(
@@ -276,6 +326,22 @@ class McpCategoryService
             ];
         })->values()->all();
 
+        // ── GEO/AI profiles ───────────────────────────────────────────────────
+        $geo = [];
+        foreach (['vi', 'en'] as $locale) {
+            $profile = $category->geoProfiles->firstWhere('locale', $locale);
+            if ($profile) {
+                $geo[$locale] = [
+                    'ai_summary'       => $profile->ai_summary,
+                    'use_cases'        => $profile->use_cases,
+                    'target_audience'  => $profile->target_audience,
+                    'llm_context_hint' => $profile->llm_context_hint,
+                    'key_facts'        => $profile->key_facts ?? [],
+                    'faq'              => $profile->faq ?? [],
+                ];
+            }
+        }
+
         return [
             'slug'           => $category->slug,
             'name'           => $category->name,
@@ -285,6 +351,7 @@ class McpCategoryService
             'children'       => $children,
             'product_count'  => $category->products()->count(),
             'translations'   => $translations,
+            'geo'            => $geo,
             'faq_items_vi'   => $category->faq_items_vi ?? [],
             'faq_items_en'   => $category->faq_items_en ?? [],
             'mcp_drafted_at' => $category->mcp_drafted_at?->toIso8601String(),

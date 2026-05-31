@@ -7,6 +7,7 @@ use App\Models\Author;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\BlogTag;
+use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\SeoMeta;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -66,16 +67,26 @@ class McpBlogPostService
                 }
 
                 // ── FAQ ───────────────────────────────────────────────────────
+                $faqChanged = false;
                 foreach (['faq_items_vi', 'faq_items_en'] as $field) {
                     if (!array_key_exists($field, $data)) continue;
                     if ($overwrite || empty($post->$field)) {
                         $post->$field = $data[$field];
+                        $faqChanged   = true;
                     }
                 }
 
                 $post->mcp_drafted_at = now();
                 $post->mcp_token_id   = $tokenId;
                 $post->save();
+
+                // ── Sync FAQ → geo_entity_profiles (required by syncFaqPage JSON-LD) ──
+                if ($faqChanged) {
+                    $this->writeGeoFaq($post, [
+                        'vi' => $data['faq_items_vi'] ?? $post->faq_items_vi ?? [],
+                        'en' => $data['faq_items_en'] ?? $post->faq_items_en ?? [],
+                    ], $overwrite);
+                }
 
                 // ── Translations ──────────────────────────────────────────────
                 $this->writeTranslations($post, $data['translations'] ?? [], $overwrite, $slug);
@@ -209,6 +220,38 @@ class McpBlogPostService
         })->all();
 
         $post->tags()->sync($ids);
+    }
+
+    private function writeGeoFaq(BlogPost $post, array $faqPerLocale, bool $overwrite): void
+    {
+        $morphType = $post->getMorphClass();
+        $modelId   = $post->getKey();
+
+        $normalize = fn (array $items): array => collect($items)
+            ->filter(fn (array $item): bool => filled($item['question'] ?? null))
+            ->map(fn (array $item): array => [
+                'question' => trim($item['question']),
+                'answer'   => trim($item['answer'] ?? ''),
+            ])
+            ->values()
+            ->toArray();
+
+        foreach (['vi', 'en'] as $locale) {
+            if (!array_key_exists($locale, $faqPerLocale)) continue;
+
+            $normalized = $normalize((array) $faqPerLocale[$locale]);
+
+            $profile = GeoEntityProfile::firstOrNew([
+                'model_type' => $morphType,
+                'model_id'   => $modelId,
+                'locale'     => $locale,
+            ]);
+
+            if ($profile->exists && !$overwrite && !empty($profile->faq)) continue;
+
+            $profile->faq = $normalized;
+            $profile->save();
+        }
     }
 
     private function buildContextResponse(BlogPost $post): array

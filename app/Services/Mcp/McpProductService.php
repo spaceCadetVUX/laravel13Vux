@@ -8,6 +8,7 @@ use App\Models\Manufacturer;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductTranslation;
+use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\SeoMeta;
 use Illuminate\Support\Facades\DB;
 
@@ -113,8 +114,13 @@ class McpProductService
                     $this->writeAttributes($product, $data['attributes']);
                 }
 
+                // 8. Geo profiles (AI Context + Key Facts)
+                if (! empty($data['geo'])) {
+                    $this->writeGeoProfiles($product, $data['geo'], $overwrite);
+                }
+
                 // Build the response BEFORE rolling back (dry_run needs this)
-                $product->refresh()->load(['manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes']);
+                $product->refresh()->load(['brand', 'manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes', 'geoProfiles']);
                 $preview = $this->buildContextResponse($product);
 
                 if ($dryRun) {
@@ -156,7 +162,7 @@ class McpProductService
             'mcp_token_id'   => null,
         ]);
 
-        $product->refresh()->load(['manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes']);
+        $product->refresh()->load(['brand', 'manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes', 'geoProfiles']);
 
         return ['data' => $this->buildContextResponse($product)];
     }
@@ -295,7 +301,7 @@ class McpProductService
                 continue;
             }
 
-            $writeable = ['meta_title', 'meta_description', 'og_title', 'og_description', 'robots'];
+            $writeable = ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'og_title', 'og_description', 'og_image', 'robots'];
 
             foreach ($writeable as $field) {
                 if (! isset($data[$field])) {
@@ -333,6 +339,40 @@ class McpProductService
                 'unit'       => $attr['unit'] ?? null,
                 'sort_order' => $i,
             ]);
+        }
+    }
+
+    private function writeGeoProfiles(Product $product, array $geo, bool $overwrite): void
+    {
+        $writeable = ['ai_summary', 'use_cases', 'target_audience', 'llm_context_hint', 'key_facts'];
+
+        foreach ($geo as $locale => $data) {
+            if (! in_array($locale, ['vi', 'en'], true)) {
+                continue;
+            }
+
+            $profile = GeoEntityProfile::firstOrNew([
+                'model_type' => 'product',
+                'model_id'   => $product->id,
+                'locale'     => $locale,
+            ]);
+
+            foreach ($writeable as $field) {
+                if (! isset($data[$field])) {
+                    continue;
+                }
+
+                if (! $overwrite && $profile->exists && filled($profile->{$field})) {
+                    continue;
+                }
+
+                $profile->{$field} = $data[$field];
+            }
+
+            $profile->model_type = 'product';
+            $profile->model_id   = $product->id;
+            $profile->locale     = $locale;
+            $profile->save();
         }
     }
 
@@ -410,15 +450,22 @@ class McpProductService
             'category_is_active' => ['pass' => $allCatActive],
         ];
 
+        $hasPrice = $product->price !== null && $product->price > 0;
+        $checks['general']['has_price'] = ['pass' => $hasPrice, 'value' => (float) $product->price];
+
         if (! $hasSku)         { $blocking[] = 'general.has_sku — SKU chưa được set'; }
+        if (! $hasPrice)       { $blocking[] = 'general.has_price — price = 0 hoặc chưa được set'; }
         if (! $hasCategory)    { $blocking[] = 'general.has_category — product chưa có danh mục'; }
         if (! $hasManufacturer){ $blocking[] = 'general.has_manufacturer — product chưa có nhà sản xuất'; }
         if ($hasCategory && ! $allCatActive) {
             $blocking[] = "general.category_is_active — category '{$inactiveCats}' chưa active";
         }
 
-        // Score (5 + 10 + 5 + 5 = 25 for general — now 85 base + 5 sku)
+        // General scoring: sku=5, price=5, category=10, manufacturer=5, cat_active=5 → max 30
+        // Per-locale: desc=15, short_desc=5, meta_title=10, meta_desc=10 → 40×2=80
+        // Total max = 110
         if ($hasSku)         { $score += 5; }
+        if ($hasPrice)       { $score += 5; }
         if ($hasCategory)    { $score += 10; }
         if ($hasManufacturer){ $score += 5; }
         if ($allCatActive)   { $score += 5; }
@@ -448,29 +495,45 @@ class McpProductService
             ];
         }
 
+        $geoOut = [];
+        foreach ($product->geoProfiles as $g) {
+            $geoOut[$g->locale] = [
+                'ai_summary'       => $g->ai_summary,
+                'use_cases'        => $g->use_cases,
+                'target_audience'  => $g->target_audience,
+                'llm_context_hint' => $g->llm_context_hint,
+                'key_facts'        => $g->key_facts ?? [],
+            ];
+        }
+
         $seoOut = [];
         foreach ($product->seoMetas as $s) {
             $seoOut[$s->locale] = [
                 'meta_title'       => $s->meta_title,
                 'meta_description' => $s->meta_description,
+                'meta_keywords'    => $s->meta_keywords,
+                'canonical_url'    => $s->canonical_url,
+                'og_title'         => $s->og_title,
+                'og_description'   => $s->og_description,
+                'og_image'         => $s->og_image,
                 'robots'           => $s->robots,
                 'is_mcp_protected' => (bool) $s->is_mcp_protected,
             ];
         }
 
-        $categoryOut = null;
         $firstCategory = $product->categories->first();
-        if ($firstCategory) {
+
+        $categoriesOut = $product->categories->map(function ($cat) {
             $catTranslations = [];
-            foreach ($firstCategory->translations as $ct) {
-                $catTranslations[$ct->locale] = ['name' => $ct->name];
+            foreach ($cat->translations as $ct) {
+                $catTranslations[$ct->locale] = ['name' => $ct->name, 'slug' => $ct->slug];
             }
-            $categoryOut = [
-                'slug'         => $firstCategory->slug,
-                'is_active'    => (bool) $firstCategory->is_active,
+            return [
+                'slug'         => $cat->slug,
+                'is_active'    => (bool) $cat->is_active,
                 'translations' => $catTranslations,
             ];
-        }
+        })->values()->all();
 
         // Related: other active products in same categories (limit 5)
         $relatedProducts = [];
@@ -493,21 +556,29 @@ class McpProductService
         }
 
         return [
-            'slug'            => $this->productSlug($product),
-            'name'            => $product->name,
-            'sku'             => $product->sku,
-            'is_active'       => (bool) $product->is_active,
-            'mcp_drafted_at'  => $product->mcp_drafted_at?->toIso8601String(),
-            'manufacturer'    => $product->manufacturer
+            'slug'           => $this->productSlug($product),
+            'name'           => $product->name,
+            'sku'            => $product->sku,
+            'price'          => $product->price !== null ? (float) $product->price : null,
+            'sale_price'     => $product->sale_price !== null ? (float) $product->sale_price : null,
+            'currency'       => $product->currency,
+            'stock_quantity' => $product->stock_quantity,
+            'is_active'      => (bool) $product->is_active,
+            'mcp_drafted_at' => $product->mcp_drafted_at?->toIso8601String(),
+            'brand'          => $product->brand
+                ? ['slug' => $product->brand->slug, 'name' => $product->brand->name]
+                : null,
+            'manufacturer'   => $product->manufacturer
                 ? ['slug' => $product->manufacturer->slug, 'name' => $product->manufacturer->name]
                 : null,
-            'category'        => $categoryOut,
+            'categories'      => $categoriesOut,
             'attributes'      => $product->attributes->map(fn ($a) => [
                 'name'  => $a->name,
                 'value' => $a->value,
                 'unit'  => $a->unit,
             ])->all(),
             'translations'    => $translationsOut,
+            'geo'             => $geoOut,
             'seo'             => $seoOut,
             'faq_items_vi'    => $product->faq_items_vi ?? [],
             'faq_items_en'    => $product->faq_items_en ?? [],
@@ -520,7 +591,7 @@ class McpProductService
     private function loadProduct(string $slug): Product
     {
         $product = Product::where('slug', $slug)
-            ->with(['manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes'])
+            ->with(['brand', 'manufacturer', 'categories.translations', 'translations', 'seoMetas', 'attributes', 'geoProfiles'])
             ->first();
 
         if (! $product) {

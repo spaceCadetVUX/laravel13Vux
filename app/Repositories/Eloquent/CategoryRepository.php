@@ -22,7 +22,11 @@ class CategoryRepository extends BaseRepository
     public function getActiveTree(): Collection
     {
         return $this->query()
-            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->with([
+                'translations',
+                'children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order'),
+                'children.translations',
+            ])
             ->whereNull('parent_id')
             ->where('is_active', true)
             ->orderBy('sort_order')
@@ -51,13 +55,35 @@ class CategoryRepository extends BaseRepository
     // ── Products ──────────────────────────────────────────────────────────────
 
     /**
-     * Paginated active products for a category.
+     * Paginated active products for a category with sorting and filters.
+     *
+     * @param  array{sort?:string,min_price?:float,max_price?:float,in_stock?:bool,per_page?:int}  $filters
      */
-    public function getProductsPaginated(Category $category, int $perPage = 15): LengthAwarePaginator
+    public function getProductsPaginated(Category $category, array $filters = []): LengthAwarePaginator
     {
-        return $category->products()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->paginate($perPage);
+        $query = $category->products()
+            ->with(['images', 'categories'])
+            ->where('is_active', true);
+
+        if (isset($filters['min_price'])) {
+            $query->where('price', '>=', $filters['min_price']);
+        }
+
+        if (isset($filters['max_price'])) {
+            $query->where('price', '<=', $filters['max_price']);
+        }
+
+        if (!empty($filters['in_stock'])) {
+            $query->where('stock_quantity', '>', 0);
+        }
+
+        match ($filters['sort'] ?? 'name_asc') {
+            'price_asc'  => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            'newest'     => $query->orderByDesc('created_at'),
+            default      => $query->orderBy('name'),
+        };
+
+        return $query->paginate($filters['per_page'] ?? 15);
     }
 }

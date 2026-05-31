@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\Category\CategoryDetailResource;
 use App\Http\Resources\Api\Category\CategoryResource;
 use App\Http\Resources\Api\Category\CategoryTreeResource;
+use App\Http\Resources\Api\Product\ProductResource;
 use App\Http\Resources\Traits\ApiResponse;
 use App\Services\Category\CategoryService;
 use Illuminate\Http\JsonResponse;
@@ -35,19 +36,27 @@ class CategoryController extends Controller
     /**
      * GET /api/v1/categories/{slug}
      * Return a single category with its paginated active products.
+     * Query params: page, per_page, sort (price_asc|price_desc|newest|name_asc), min_price, max_price, in_stock
      */
     public function show(Request $request, string $slug): JsonResponse
     {
         $category = $this->categoryService->getBySlug($slug);
 
-        $perPage  = (int) $request->query('per_page', 15);
-        $products = $this->categoryService->getProductsPaginated($category, $perPage);
+        $filters = array_filter([
+            'sort'      => $request->query('sort'),
+            'min_price' => $request->query('min_price') !== null ? (float) $request->query('min_price') : null,
+            'max_price' => $request->query('max_price') !== null ? (float) $request->query('max_price') : null,
+            'in_stock'  => filter_var($request->query('in_stock'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            'per_page'  => (int) $request->query('per_page', 15),
+        ], fn ($v) => $v !== null);
+
+        $products = $this->categoryService->getProductsPaginated($category, $filters);
+
+        $data             = (new CategoryDetailResource($category))->resolve();
+        $data['products'] = ProductResource::collection($products->items())->resolve();
 
         return $this->success(
-            data: [
-                'category' => new CategoryDetailResource($category),
-                'products' => $products->items(),   // raw items; wrapped by pagination meta
-            ],
+            data: $data,
             meta: $this->paginationMeta($products),
         );
     }
