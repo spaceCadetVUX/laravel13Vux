@@ -201,6 +201,13 @@ class BlogPostResource extends Resource
                                 ->tabs([
                                     Tab::make('🇻🇳 Tiếng Việt')
                                         ->schema([
+                                            Placeholder::make('canonical_url_auto_vi')
+                                                ->label('Canonical URL (auto-generated)')
+                                                ->content(function ($record): string {
+                                                    $slug = $record?->translations()->where('locale', 'vi')->value('slug');
+                                                    return $slug ? route('blog.show', ['locale' => 'vi', 'slug' => $slug]) : '—';
+                                                }),
+
                                             Group::make()
                                                 ->relationship('seoMetaVi')
                                                 ->mutateRelationshipDataBeforeCreateUsing(
@@ -229,9 +236,9 @@ class BlogPostResource extends Resource
                                                                 ->columnSpanFull(),
 
                                                             Forms\Components\TextInput::make('canonical_url')
-                                                                ->label('Canonical URL (vi)')
+                                                                ->label('Override canonical URL (chỉ điền nếu syndicated)')
                                                                 ->url()
-                                                                ->placeholder('Tự tạo từ slug — chỉ điền nếu syndicated')
+                                                                ->placeholder('Để trống → dùng URL auto ở trên')
                                                                 ->columnSpanFull(),
 
                                                             Forms\Components\Select::make('robots')
@@ -258,11 +265,21 @@ class BlogPostResource extends Resource
                                                             Forms\Components\TextInput::make('og_title')
                                                                 ->label('OG Title (vi)')
                                                                 ->placeholder('Tự điền từ Meta Title')
+                                                                ->afterStateHydrated(function (Forms\Components\TextInput $component, $state, $record): void {
+                                                                    if (blank($state)) {
+                                                                        $component->state($record?->meta_title);
+                                                                    }
+                                                                })
                                                                 ->columnSpanFull(),
 
                                                             Forms\Components\Textarea::make('og_description')
                                                                 ->label('OG Description (vi)')
                                                                 ->rows(2)
+                                                                ->afterStateHydrated(function (Forms\Components\Textarea $component, $state, $record): void {
+                                                                    if (blank($state)) {
+                                                                        $component->state($record?->meta_description);
+                                                                    }
+                                                                })
                                                                 ->columnSpanFull(),
                                                         ])
                                                         ->columns(2)
@@ -273,6 +290,13 @@ class BlogPostResource extends Resource
 
                                     Tab::make('🇬🇧 English')
                                         ->schema([
+                                            Placeholder::make('canonical_url_auto_en')
+                                                ->label('Canonical URL (auto-generated)')
+                                                ->content(function ($record): string {
+                                                    $slug = $record?->translations()->where('locale', 'en')->value('slug');
+                                                    return $slug ? route('blog.show.en', ['locale' => 'en', 'slug' => $slug]) : '—';
+                                                }),
+
                                             Group::make()
                                                 ->relationship('seoMetaEn')
                                                 ->mutateRelationshipDataBeforeCreateUsing(
@@ -301,9 +325,9 @@ class BlogPostResource extends Resource
                                                                 ->columnSpanFull(),
 
                                                             Forms\Components\TextInput::make('canonical_url')
-                                                                ->label('Canonical URL (en)')
+                                                                ->label('Override canonical URL (only if syndicated)')
                                                                 ->url()
-                                                                ->placeholder('Auto-generated from slug — only set if syndicated')
+                                                                ->placeholder('Leave empty → uses auto URL above')
                                                                 ->columnSpanFull(),
 
                                                             Forms\Components\Select::make('robots')
@@ -330,11 +354,21 @@ class BlogPostResource extends Resource
                                                             Forms\Components\TextInput::make('og_title')
                                                                 ->label('OG Title (en)')
                                                                 ->placeholder('Auto-filled from Meta Title')
+                                                                ->afterStateHydrated(function (Forms\Components\TextInput $component, $state, $record): void {
+                                                                    if (blank($state)) {
+                                                                        $component->state($record?->meta_title);
+                                                                    }
+                                                                })
                                                                 ->columnSpanFull(),
 
                                                             Forms\Components\Textarea::make('og_description')
                                                                 ->label('OG Description (en)')
                                                                 ->rows(2)
+                                                                ->afterStateHydrated(function (Forms\Components\Textarea $component, $state, $record): void {
+                                                                    if (blank($state)) {
+                                                                        $component->state($record?->meta_description);
+                                                                    }
+                                                                })
                                                                 ->columnSpanFull(),
                                                         ])
                                                         ->columns(2)
@@ -692,10 +726,20 @@ class BlogPostResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->searchable()
-                    ->sortable()
-                    ->limit(50),
+                Tables\Columns\TextColumn::make('title_bilingual')
+                    ->label('Title')
+                    ->html()
+                    ->getStateUsing(function ($record): string {
+                        $vi = $record->translations->firstWhere('locale', 'vi')?->title;
+                        $en = $record->translations->firstWhere('locale', 'en')?->title;
+                        $top    = e($vi ?? '—');
+                        $bottom = $en ? '<br><span style="font-size:0.75rem;color:#6b7280">' . e($en) . '</span>' : '';
+                        return $top . $bottom;
+                    })
+                    ->searchable(query: function ($query, string $search) {
+                        $query->whereHas('translations', fn ($q) => $q->where('title', 'ilike', "%{$search}%"));
+                    })
+                    ->wrap(),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
@@ -712,13 +756,8 @@ class BlogPostResource extends Resource
                     ->label('Author')
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('published_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->placeholder('—'),
-
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime(timezone: 'Asia/Ho_Chi_Minh')
                     ->sortable(),
             ])
             ->filters([
@@ -731,6 +770,7 @@ class BlogPostResource extends Resource
                     ->label('Category')
                     ->relationship('blogCategory', 'name'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->with('translations'))
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),

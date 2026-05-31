@@ -151,9 +151,14 @@ class McpBlogPostService
                 $tr->$field = $trans[$field];
             }
 
-            // Auto-fill slug from route slug if not provided and creating new row
-            if (!$tr->exists && empty($tr->slug) && filled($routeSlug)) {
-                $tr->slug = $routeSlug;
+            // Auto-fill slug if not provided and creating new row:
+            // vi → use route slug; en → generate from title
+            if (!$tr->exists && empty($tr->slug)) {
+                if ($locale === 'vi' && filled($routeSlug)) {
+                    $tr->slug = $routeSlug;
+                } elseif (filled($tr->title)) {
+                    $tr->slug = \Illuminate\Support\Str::slug($tr->title);
+                }
             }
 
             if ($tr->isDirty()) {
