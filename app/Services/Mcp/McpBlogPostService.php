@@ -19,7 +19,7 @@ class McpBlogPostService
 
     public function context(string $slug): array
     {
-        $post = $this->findBySlug($slug, ['translations', 'seoMetas', 'blogCategory.translations', 'author', 'tags']);
+        $post = $this->findBySlug($slug, ['translations', 'seoMetas', 'geoProfiles', 'blogCategory.translations', 'author', 'tags', 'jsonldSchemas']);
 
         return $this->buildContextResponse($post);
     }
@@ -34,14 +34,14 @@ class McpBlogPostService
 
                 // ── Find or create ────────────────────────────────────────────
                 $post = BlogPost::withTrashed()
-                    ->whereHas('translations', fn($q) => $q->where('slug', $slug))
+                    ->whereHas('translations', fn ($q) => $q->where('slug', $slug))
                     ->first();
 
                 if ($post) {
                     if ($post->trashed()) $post->restore();
                 } else {
                     $post = new BlogPost(['status' => BlogPostStatus::Draft]);
-                    $post->save(); // HasUuids auto-generates the UUID
+                    $post->save();
                 }
 
                 // ── Blog category ─────────────────────────────────────────────
@@ -57,22 +57,26 @@ class McpBlogPostService
                     if ($author) $post->author_id = $author->id;
                 }
 
-                // ── Status (default draft, never override to non-draft via upsert) ──
+                // ── Featured image ────────────────────────────────────────────
+                if (array_key_exists('featured_image', $data)) {
+                    if ($overwrite || empty($post->featured_image)) {
+                        $post->featured_image = $data['featured_image'];
+                    }
+                }
+
+                // ── Status ────────────────────────────────────────────────────
                 if (isset($data['status'])) {
                     $requestedStatus = BlogPostStatus::tryFrom($data['status']);
-                    // Upsert only allows draft — publish goes through /publish endpoint
                     if ($requestedStatus === BlogPostStatus::Draft || $requestedStatus === null) {
                         $post->status = BlogPostStatus::Draft;
                     }
                 }
 
-                // ── FAQ ───────────────────────────────────────────────────────
-                $faqChanged = false;
+                // ── FAQ (legacy faq_items_vi/en) ──────────────────────────────
                 foreach (['faq_items_vi', 'faq_items_en'] as $field) {
                     if (!array_key_exists($field, $data)) continue;
                     if ($overwrite || empty($post->$field)) {
                         $post->$field = $data[$field];
-                        $faqChanged   = true;
                     }
                 }
 
@@ -80,12 +84,28 @@ class McpBlogPostService
                 $post->mcp_token_id   = $tokenId;
                 $post->save();
 
-                // ── Sync FAQ → geo_entity_profiles (required by syncFaqPage JSON-LD) ──
-                if ($faqChanged) {
-                    $this->writeGeoFaq($post, [
-                        'vi' => $data['faq_items_vi'] ?? $post->faq_items_vi ?? [],
-                        'en' => $data['faq_items_en'] ?? $post->faq_items_en ?? [],
-                    ], $overwrite);
+                // ── GEO profiles (AI context + FAQ) ───────────────────────────
+                // geo[locale].faq takes priority; fallback to faq_items_vi/en
+                $geoData = $data['geo'] ?? [];
+                foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+                    if (array_key_exists($field, $data) && !array_key_exists('faq', $geoData[$locale] ?? [])) {
+                        $geoData[$locale]['faq'] = $data[$field];
+                    }
+                }
+                if (!empty($geoData)) {
+                    $this->writeGeoProfiles($post, $geoData, $overwrite);
+
+                    // Sync geo[locale].faq → faq_items_vi/en so Filament FAQ tab stays in sync.
+                    $faqSynced = false;
+                    foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+                        if (isset($geoData[$locale]['faq']) && ($overwrite || empty($post->$field))) {
+                            $post->$field = $geoData[$locale]['faq'];
+                            $faqSynced    = true;
+                        }
+                    }
+                    if ($faqSynced) {
+                        $post->save();
+                    }
                 }
 
                 // ── Translations ──────────────────────────────────────────────
@@ -99,7 +119,7 @@ class McpBlogPostService
                     $this->syncTags($post, (array) $data['tags']);
                 }
 
-                $post->load(['translations', 'seoMetas', 'blogCategory.translations', 'author', 'tags']);
+                $post->load(['translations', 'seoMetas', 'geoProfiles', 'blogCategory.translations', 'author', 'tags', 'jsonldSchemas']);
                 $preview = $this->buildContextResponse($post);
 
                 if ($dryRun) throw new \RuntimeException('__mcp_dry_run__');
@@ -113,7 +133,7 @@ class McpBlogPostService
 
     public function publish(string $slug, array $data): array
     {
-        $post = $this->findBySlug($slug, ['translations', 'seoMetas', 'blogCategory.translations', 'author', 'tags']);
+        $post = $this->findBySlug($slug, ['translations', 'seoMetas', 'geoProfiles', 'blogCategory.translations', 'author', 'tags', 'jsonldSchemas']);
 
         $publishedAt = isset($data['published_at'])
             ? Carbon::parse($data['published_at'])
@@ -128,7 +148,7 @@ class McpBlogPostService
 
         return [
             'data' => $this->buildContextResponse(
-                $post->fresh(['translations', 'seoMetas', 'blogCategory.translations', 'author', 'tags']),
+                $post->fresh(['translations', 'seoMetas', 'geoProfiles', 'blogCategory.translations', 'author', 'tags', 'jsonldSchemas']),
             ),
         ];
     }
@@ -139,7 +159,7 @@ class McpBlogPostService
     {
         $post = BlogPost::withTrashed()
             ->with($with)
-            ->whereHas('translations', fn($q) => $q->where('slug', $slug))
+            ->whereHas('translations', fn ($q) => $q->where('slug', $slug))
             ->first();
 
         if (!$post) abort(404, "Blog post with slug '{$slug}' not found.");
@@ -162,18 +182,15 @@ class McpBlogPostService
                 $tr->$field = $trans[$field];
             }
 
-            // Auto-fill slug if not provided and creating new row:
-            // vi → use route slug; en → generate from title
             if (!$tr->exists && empty($tr->slug)) {
                 if ($locale === 'vi' && filled($routeSlug)) {
                     $tr->slug = $routeSlug;
                 } elseif (filled($tr->title)) {
-                    $tr->slug = \Illuminate\Support\Str::slug($tr->title);
+                    $tr->slug = Str::slug($tr->title);
                 }
             }
 
             if ($tr->isDirty()) {
-                // New translation requires title + slug (both NOT NULL in schema)
                 if (!$tr->exists && (empty($tr->title) || empty($tr->slug))) continue;
                 $tr->blog_post_id = $post->id;
                 $tr->locale       = $locale;
@@ -184,6 +201,8 @@ class McpBlogPostService
 
     private function writeSeoMeta(BlogPost $post, array $seo, bool $overwrite): void
     {
+        $writeable = ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'og_title', 'og_description', 'og_image', 'robots'];
+
         foreach ($seo as $locale => $data) {
             if (!in_array($locale, ['vi', 'en'], true)) continue;
 
@@ -195,7 +214,7 @@ class McpBlogPostService
 
             if ($seoMeta->exists && $seoMeta->is_mcp_protected) continue;
 
-            foreach (['meta_title', 'meta_description', 'og_title', 'og_description', 'robots'] as $field) {
+            foreach ($writeable as $field) {
                 if (!array_key_exists($field, $data)) continue;
                 if (!$overwrite && $seoMeta->exists && filled($seoMeta->$field)) continue;
                 $seoMeta->$field = $data[$field];
@@ -210,22 +229,11 @@ class McpBlogPostService
         }
     }
 
-    private function syncTags(BlogPost $post, array $tagSlugs): void
+    private function writeGeoProfiles(BlogPost $post, array $geoPerLocale, bool $overwrite): void
     {
-        $ids = collect($tagSlugs)->map(function (string $slug) {
-            return BlogTag::firstOrCreate(
-                ['slug' => $slug],
-                ['name' => Str::title(str_replace('-', ' ', $slug))],
-            )->id;
-        })->all();
-
-        $post->tags()->sync($ids);
-    }
-
-    private function writeGeoFaq(BlogPost $post, array $faqPerLocale, bool $overwrite): void
-    {
-        $morphType = $post->getMorphClass();
-        $modelId   = $post->getKey();
+        $morphType     = $post->getMorphClass();
+        $modelId       = $post->getKey();
+        $writeable     = ['ai_summary', 'use_cases', 'target_audience', 'llm_context_hint'];
 
         $normalize = fn (array $items): array => collect($items)
             ->filter(fn (array $item): bool => filled($item['question'] ?? null))
@@ -237,9 +245,9 @@ class McpBlogPostService
             ->toArray();
 
         foreach (['vi', 'en'] as $locale) {
-            if (!array_key_exists($locale, $faqPerLocale)) continue;
+            if (!array_key_exists($locale, $geoPerLocale)) continue;
 
-            $normalized = $normalize((array) $faqPerLocale[$locale]);
+            $input = $geoPerLocale[$locale];
 
             $profile = GeoEntityProfile::firstOrNew([
                 'model_type' => $morphType,
@@ -247,11 +255,38 @@ class McpBlogPostService
                 'locale'     => $locale,
             ]);
 
-            if ($profile->exists && !$overwrite && !empty($profile->faq)) continue;
+            foreach ($writeable as $field) {
+                if (!array_key_exists($field, $input)) continue;
+                if (!$overwrite && $profile->exists && filled($profile->$field)) continue;
+                $profile->$field = $input[$field];
+            }
 
-            $profile->faq = $normalized;
-            $profile->save();
+            if (array_key_exists('faq', $input)) {
+                $normalized = $normalize((array) $input['faq']);
+                if ($overwrite || empty($profile->faq)) {
+                    $profile->faq = $normalized;
+                }
+            }
+
+            if ($profile->isDirty() || !$profile->exists) {
+                $profile->model_type = $morphType;
+                $profile->model_id   = $modelId;
+                $profile->locale     = $locale;
+                $profile->save();
+            }
         }
+    }
+
+    private function syncTags(BlogPost $post, array $tagSlugs): void
+    {
+        $ids = collect($tagSlugs)->map(function (string $slug) {
+            return BlogTag::firstOrCreate(
+                ['slug' => $slug],
+                ['name' => Str::title(str_replace('-', ' ', $slug))],
+            )->id;
+        })->all();
+
+        $post->tags()->sync($ids);
     }
 
     private function buildContextResponse(BlogPost $post): array
@@ -272,11 +307,28 @@ class McpBlogPostService
             $seo[$meta->locale] = [
                 'meta_title'       => $meta->meta_title,
                 'meta_description' => $meta->meta_description,
+                'meta_keywords'    => $meta->meta_keywords,
+                'canonical_url'    => $meta->canonical_url,
                 'og_title'         => $meta->og_title,
                 'og_description'   => $meta->og_description,
+                'og_image'         => $meta->og_image,
                 'robots'           => $meta->robots,
                 'is_mcp_protected' => $meta->is_mcp_protected,
             ];
+        }
+
+        $geo = [];
+        foreach (['vi', 'en'] as $locale) {
+            $profile = $post->geoProfiles->firstWhere('locale', $locale);
+            if ($profile) {
+                $geo[$locale] = [
+                    'ai_summary'       => $profile->ai_summary,
+                    'use_cases'        => $profile->use_cases,
+                    'target_audience'  => $profile->target_audience,
+                    'llm_context_hint' => $profile->llm_context_hint,
+                    'faq'              => $profile->faq ?? [],
+                ];
+            }
         }
 
         $blogCategory = null;
@@ -289,7 +341,6 @@ class McpBlogPostService
             ];
         }
 
-        // Guard: null blog_category_id would generate IS NULL → return all uncategorized posts
         $relatedPosts = [];
         if ($post->blog_category_id) {
             $relatedPosts = BlogPost::with('translations')
@@ -311,17 +362,31 @@ class McpBlogPostService
                 ->all();
         }
 
+        $jsonldOut = [];
+        foreach (($post->jsonldSchemas ?? collect()) as $schema) {
+            $jsonldOut[$schema->locale][] = [
+                'type'              => $schema->schema_type?->value,
+                'label'             => $schema->label,
+                'is_auto_generated' => (bool) $schema->is_auto_generated,
+                'is_active'         => (bool) $schema->is_active,
+                'payload'           => $schema->payload,
+            ];
+        }
+
         return [
             'id'             => $post->id,
             'status'         => $post->status?->value,
             'published_at'   => $post->published_at?->toIso8601String(),
+            'featured_image' => $post->featured_image,
             'blog_category'  => $blogCategory,
             'author'         => $post->author ? ['name' => $post->author->name, 'slug' => $post->author->slug] : null,
-            'tags'           => $post->tags->map(fn($t) => ['slug' => $t->slug, 'name' => $t->name])->all(),
+            'tags'           => $post->tags->map(fn ($t) => ['slug' => $t->slug, 'name' => $t->name])->all(),
             'translations'   => $translations,
             'seo'            => $seo,
+            'geo'            => $geo,
             'faq_items_vi'   => $post->faq_items_vi ?? [],
             'faq_items_en'   => $post->faq_items_en ?? [],
+            'jsonld_schemas' => $jsonldOut,
             'related_posts'  => $relatedPosts,
             'mcp_drafted_at' => $post->mcp_drafted_at?->toIso8601String(),
         ];

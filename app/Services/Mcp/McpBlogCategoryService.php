@@ -3,6 +3,8 @@
 namespace App\Services\Mcp;
 
 use App\Models\BlogCategory;
+use App\Models\Seo\GeoEntityProfile;
+use App\Models\Seo\JsonldSchema;
 use App\Models\Seo\SeoMeta;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +14,8 @@ class McpBlogCategoryService
 
     public function context(string $slug): array
     {
-        $bc = BlogCategory::with(['translations', 'seoMetas', 'parent.translations', 'children.translations'])
+        $bc = BlogCategory::with(['translations', 'seoMetas', 'geoProfiles', 'parent.translations', 'children.translations', 'jsonldSchemas'])
+            ->withCount('posts')
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -27,7 +30,7 @@ class McpBlogCategoryService
             DB::transaction(function () use ($slug, $data, $tokenId, $dryRun, &$preview) {
                 $overwrite = (bool) ($data['overwrite_existing'] ?? false);
 
-                // ── Find or create (no SoftDeletes on blog_categories) ────────
+                // ── Find or create ────────────────────────────────────────────
                 $bc = BlogCategory::where('slug', $slug)->first();
 
                 if (!$bc) {
@@ -67,7 +70,13 @@ class McpBlogCategoryService
                 // ── SEO meta ──────────────────────────────────────────────────
                 $this->writeSeoMeta($bc, $data['seo'] ?? [], $overwrite);
 
-                $bc->load(['translations', 'seoMetas', 'parent.translations', 'children.translations']);
+                // ── GEO/AI profile ────────────────────────────────────────────
+                if (!empty($data['geo'])) {
+                    $this->writeGeoProfiles($bc, $data['geo'], $overwrite);
+                }
+
+                $bc->load(['translations', 'seoMetas', 'geoProfiles', 'parent.translations', 'children.translations', 'jsonldSchemas']);
+                $bc->loadCount('posts');
                 $preview = $this->buildContextResponse($bc);
 
                 if ($dryRun) throw new \RuntimeException('__mcp_dry_run__');
@@ -81,7 +90,7 @@ class McpBlogCategoryService
 
     public function activate(string $slug): array
     {
-        $bc = BlogCategory::with(['translations', 'seoMetas'])
+        $bc = BlogCategory::with(['translations', 'seoMetas', 'geoProfiles'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -99,7 +108,8 @@ class McpBlogCategoryService
 
         return [
             'data' => $this->buildContextResponse(
-                $bc->fresh(['translations', 'seoMetas', 'parent.translations', 'children.translations']),
+                $bc->fresh(['translations', 'seoMetas', 'geoProfiles', 'parent.translations', 'children.translations', 'jsonldSchemas'])
+                   ->loadCount('posts'),
             ),
         ];
     }
@@ -149,10 +159,25 @@ class McpBlogCategoryService
             $checks[$locale]['has_meta_description'] = ['pass' => $hasMetaDesc];
             $total++; if ($hasMetaDesc) $score++;
             if (!$hasMetaDesc) $blocking[] = "{$locale}.meta_description missing";
+
+            // has_faq (warning)
+            $geoProfile = $bc->geoProfiles->firstWhere('locale', $locale);
+            $faqItems   = $geoProfile?->faq ?? [];
+            $hasFaq     = !empty($faqItems);
+            $checks[$locale]['has_faq'] = ['pass' => $hasFaq, 'count' => count((array) $faqItems)];
+            $total++; if ($hasFaq) $score++;
+            if (!$hasFaq) $warnings[] = "{$locale}.faq chưa có — nên thêm ít nhất 3 câu hỏi (geo.{$locale}.faq)";
         }
 
+        // has_geo vi (warning)
+        $geoVi    = $bc->geoProfiles->firstWhere('locale', 'vi');
+        $hasGeoVi = filled($geoVi?->ai_summary);
+        $checks['has_geo_vi'] = ['pass' => $hasGeoVi];
+        $total++; if ($hasGeoVi) $score++;
+        if (!$hasGeoVi) $warnings[] = 'geo.vi.ai_summary chưa có';
+
         // has_slug
-        $hasSlug = $bc->translations->filter(fn($t) => !empty($t->slug))->count() >= 1;
+        $hasSlug = $bc->translations->filter(fn ($t) => !empty($t->slug))->count() >= 1;
         $checks['general']['has_slug'] = ['pass' => $hasSlug];
         $total++; if ($hasSlug) $score++;
         if (!$hasSlug) $blocking[] = 'general.slug missing';
@@ -185,7 +210,6 @@ class McpBlogCategoryService
             }
 
             if ($tr->isDirty()) {
-                // New translation requires name + slug (both NOT NULL in schema)
                 if (!$tr->exists && (empty($tr->name) || empty($tr->slug))) continue;
                 $tr->blog_category_id = $bc->id;
                 $tr->locale           = $locale;
@@ -196,6 +220,8 @@ class McpBlogCategoryService
 
     private function writeSeoMeta(BlogCategory $bc, array $seo, bool $overwrite): void
     {
+        $writeable = ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'og_title', 'og_description', 'og_image', 'robots'];
+
         foreach ($seo as $locale => $data) {
             if (!in_array($locale, ['vi', 'en'], true)) continue;
 
@@ -207,7 +233,7 @@ class McpBlogCategoryService
 
             if ($seoMeta->exists && $seoMeta->is_mcp_protected) continue;
 
-            foreach (['meta_title', 'meta_description', 'og_title', 'og_description', 'robots'] as $field) {
+            foreach ($writeable as $field) {
                 if (!array_key_exists($field, $data)) continue;
                 if (!$overwrite && $seoMeta->exists && filled($seoMeta->$field)) continue;
                 $seoMeta->$field = $data[$field];
@@ -219,6 +245,45 @@ class McpBlogCategoryService
             $seoMeta->model_id   = (string) $bc->id;
             $seoMeta->locale     = $locale;
             $seoMeta->save();
+        }
+    }
+
+    private function writeGeoProfiles(BlogCategory $bc, array $geo, bool $overwrite): void
+    {
+        $morphType     = $bc->getMorphClass();
+        $modelId       = $bc->getKey();
+        $writeable     = ['ai_summary', 'use_cases', 'target_audience', 'llm_context_hint'];
+        $writeableJson = ['key_facts', 'faq'];
+
+        foreach (['vi', 'en'] as $locale) {
+            if (!array_key_exists($locale, $geo)) continue;
+
+            $input = $geo[$locale];
+
+            $profile = GeoEntityProfile::firstOrNew([
+                'model_type' => $morphType,
+                'model_id'   => $modelId,
+                'locale'     => $locale,
+            ]);
+
+            foreach ($writeable as $field) {
+                if (!array_key_exists($field, $input)) continue;
+                if (!$overwrite && $profile->exists && filled($profile->$field)) continue;
+                $profile->$field = $input[$field];
+            }
+
+            foreach ($writeableJson as $field) {
+                if (!array_key_exists($field, $input)) continue;
+                if (!$overwrite && $profile->exists && !empty($profile->$field)) continue;
+                $profile->$field = $input[$field];
+            }
+
+            if ($profile->isDirty() || !$profile->exists) {
+                $profile->model_type = $morphType;
+                $profile->model_id   = $modelId;
+                $profile->locale     = $locale;
+                $profile->save();
+            }
         }
     }
 
@@ -239,11 +304,29 @@ class McpBlogCategoryService
             $seo[$meta->locale] = [
                 'meta_title'       => $meta->meta_title,
                 'meta_description' => $meta->meta_description,
+                'meta_keywords'    => $meta->meta_keywords,
+                'canonical_url'    => $meta->canonical_url,
                 'og_title'         => $meta->og_title,
                 'og_description'   => $meta->og_description,
+                'og_image'         => $meta->og_image,
                 'robots'           => $meta->robots,
                 'is_mcp_protected' => $meta->is_mcp_protected,
             ];
+        }
+
+        $geo = [];
+        foreach (['vi', 'en'] as $locale) {
+            $profile = $bc->geoProfiles->firstWhere('locale', $locale);
+            if ($profile) {
+                $geo[$locale] = [
+                    'ai_summary'       => $profile->ai_summary,
+                    'use_cases'        => $profile->use_cases,
+                    'target_audience'  => $profile->target_audience,
+                    'llm_context_hint' => $profile->llm_context_hint,
+                    'key_facts'        => $profile->key_facts ?? [],
+                    'faq'              => $profile->faq ?? [],
+                ];
+            }
         }
 
         $parent = null;
@@ -266,15 +349,28 @@ class McpBlogCategoryService
             ];
         })->values()->all();
 
+        $jsonldOut = [];
+        foreach (($bc->jsonldSchemas ?? collect()) as $schema) {
+            $jsonldOut[$schema->locale][] = [
+                'type'              => $schema->schema_type?->value,
+                'label'             => $schema->label,
+                'is_auto_generated' => (bool) $schema->is_auto_generated,
+                'is_active'         => (bool) $schema->is_active,
+                'payload'           => $schema->payload,
+            ];
+        }
+
         return [
             'slug'           => $bc->slug,
             'name'           => $bc->name,
             'is_active'      => $bc->is_active,
             'parent'         => $parent,
             'children'       => $children,
-            'post_count'     => $bc->posts()->count(),
+            'post_count'     => $bc->posts_count ?? $bc->loadCount('posts')->posts_count,
             'translations'   => $translations,
             'seo'            => $seo,
+            'geo'            => $geo,
+            'jsonld_schemas' => $jsonldOut,
             'mcp_drafted_at' => $bc->mcp_drafted_at?->toIso8601String(),
         ];
     }

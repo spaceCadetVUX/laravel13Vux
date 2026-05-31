@@ -588,15 +588,17 @@ class JsonldService
 
         // Use the first category as the middle breadcrumb level.
         if (method_exists($model, 'categories')) {
-            $model->loadMissing('categories');
+            $model->loadMissing('categories.translations');
             $categories = $model->getRelationValue('categories');
 
             if ($categories && $categories->isNotEmpty()) {
-                $cat     = $categories->sortBy('sort_order')->first();
-                $catSlug = (string) ($cat->slug ?? '');
+                $cat    = $categories->sortBy('sort_order')->first();
+                $catTr  = method_exists($cat, 'translation') ? $cat->translation($locale) : null;
+                $catName = (string) ($catTr?->name ?? $cat->name ?? '');
+                $catSlug = (string) ($catTr?->slug ?? $cat->slug ?? '');
                 if (filled($catSlug)) {
                     $items[] = [
-                        'name' => (string) ($cat->name ?? ''),
+                        'name' => $catName,
                         'url'  => LocaleUrl::for('category', $catSlug, $locale),
                     ];
                 }
@@ -943,7 +945,21 @@ class JsonldService
         $geoProfile = $model->geoProfile($locale);
         $faq        = (array) ($geoProfile?->faq ?? []);
 
+        // Products store FAQ on the root model (faq_items_vi/en), not in geoProfiles.faq.
+        // Fall back when geoProfile has no faq data.
+        if (empty($faq) && $morphAlias === 'product') {
+            $faqField = 'faq_items_' . $locale;
+            $faq      = (array) ($model->getAttribute($faqField) ?? []);
+        }
+
         if (empty($faq)) {
+            // Source data is now empty — remove stale auto-generated FAQPage if present.
+            JsonldSchema::where('model_type', $morphAlias)
+                ->where('model_id', $model->getKey())
+                ->where('schema_type', JsonldSchemaType::FaqPage->value)
+                ->where('locale', $locale)
+                ->where('is_auto_generated', true)
+                ->delete();
             return;
         }
 
@@ -1230,6 +1246,26 @@ class JsonldService
             $payload['sameAs'] = $website;
         }
 
+        // key_facts → additionalProperty (PropertyValue) for Knowledge Graph enrichment.
+        $model->loadMissing('geoProfiles');
+        $geoProfile = $model->geoProfiles->firstWhere('locale', $locale);
+        $keyFacts   = (array) ($geoProfile?->key_facts ?? []);
+
+        if (! empty($keyFacts)) {
+            $props = [];
+            foreach ($keyFacts as $kf) {
+                if (! is_array($kf)) continue;
+                $label = trim((string) ($kf['label'] ?? ''));
+                $value = trim((string) ($kf['value'] ?? ''));
+                if (filled($label) && filled($value)) {
+                    $props[] = ['@type' => 'PropertyValue', 'name' => $label, 'value' => $value];
+                }
+            }
+            if (! empty($props)) {
+                $payload['additionalProperty'] = $props;
+            }
+        }
+
         return $payload;
     }
 
@@ -1260,6 +1296,26 @@ class JsonldService
         $country = (string) ($model->getAttribute('country') ?? '');
         if (filled($country)) {
             $payload['address'] = ['@type' => 'PostalAddress', 'addressCountry' => $country];
+        }
+
+        // key_facts → additionalProperty (PropertyValue) for Knowledge Graph enrichment.
+        $model->loadMissing('geoProfiles');
+        $geoProfile = $model->geoProfiles->firstWhere('locale', $locale);
+        $keyFacts   = (array) ($geoProfile?->key_facts ?? []);
+
+        if (! empty($keyFacts)) {
+            $props = [];
+            foreach ($keyFacts as $kf) {
+                if (! is_array($kf)) continue;
+                $label = trim((string) ($kf['label'] ?? ''));
+                $value = trim((string) ($kf['value'] ?? ''));
+                if (filled($label) && filled($value)) {
+                    $props[] = ['@type' => 'PropertyValue', 'name' => $label, 'value' => $value];
+                }
+            }
+            if (! empty($props)) {
+                $payload['additionalProperty'] = $props;
+            }
         }
 
         return $payload;
@@ -1344,11 +1400,13 @@ class JsonldService
         if ($morphAlias === 'product' && method_exists($model, 'translation')) {
             $t = $model->translation($locale);
             if ($t) {
-                if (filled($t->price))      { $map['price']      = (float) $t->price; }
-                if (filled($t->sale_price)) { $map['sale_price']  = (float) $t->sale_price; }
-                if (filled($t->currency))   { $map['currency']    = $t->currency; }
-                if (filled($t->name))       { $map['name']        = $t->name; }
-                if (filled($t->slug))       {
+                if (filled($t->price))             { $map['price']             = (float) $t->price; }
+                if (filled($t->sale_price))        { $map['sale_price']        = (float) $t->sale_price; }
+                if (filled($t->currency))          { $map['currency']          = $t->currency; }
+                if (filled($t->name))              { $map['name']              = $t->name; }
+                if (filled($t->short_description)) { $map['short_description'] = strip_tags((string) $t->short_description); }
+                if (filled($t->description))       { $map['description']       = strip_tags((string) $t->description); }
+                if (filled($t->slug))              {
                     $map['slug']  = $t->slug;
                     $canonicalUrl = $this->canonicalRouteFor($morphAlias, $t->slug, $locale);
                 }

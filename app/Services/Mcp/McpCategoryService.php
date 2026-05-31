@@ -12,7 +12,8 @@ class McpCategoryService
 
     public function context(string $slug): array
     {
-        $category = Category::with(['translations', 'parent.translations', 'children.translations', 'geoProfiles'])
+        $category = Category::with(['translations', 'parent.translations', 'children.translations', 'geoProfiles', 'jsonldSchemas'])
+            ->withCount('products')
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -119,7 +120,7 @@ class McpCategoryService
 
     public function activate(string $slug): array
     {
-        $category = Category::with('translations')->where('slug', $slug)->firstOrFail();
+        $category = Category::with(['translations', 'geoProfiles'])->where('slug', $slug)->firstOrFail();
 
         $readiness = $this->computeReadiness($category);
 
@@ -342,6 +343,17 @@ class McpCategoryService
             }
         }
 
+        $jsonldOut = [];
+        foreach (($category->jsonldSchemas ?? collect()) as $schema) {
+            $jsonldOut[$schema->locale][] = [
+                'type'             => $schema->schema_type?->value,
+                'label'            => $schema->label,
+                'is_auto_generated'=> (bool) $schema->is_auto_generated,
+                'is_active'        => (bool) $schema->is_active,
+                'payload'          => $schema->payload,
+            ];
+        }
+
         return [
             'slug'           => $category->slug,
             'name'           => $category->name,
@@ -349,9 +361,10 @@ class McpCategoryService
             'sort_order'     => $category->sort_order,
             'parent'         => $parent,
             'children'       => $children,
-            'product_count'  => $category->products()->count(),
+            'product_count'  => $category->products_count ?? $category->loadCount('products')->products_count,
             'translations'   => $translations,
             'geo'            => $geo,
+            'jsonld_schemas' => $jsonldOut,
             'faq_items_vi'   => $category->faq_items_vi ?? [],
             'faq_items_en'   => $category->faq_items_en ?? [],
             'mcp_drafted_at' => $category->mcp_drafted_at?->toIso8601String(),

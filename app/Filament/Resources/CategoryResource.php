@@ -826,6 +826,23 @@ class CategoryResource extends Resource
                                                 ->reorderable(false)
                                                 ->defaultItems(0)
                                                 ->columnSpanFull(),
+
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_jsonld_vi')
+                                                    ->label('Regenerate vi')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate JSON-LD (vi)')
+                                                    ->modalDescription('Re-generate all Auto schemas for the Vietnamese locale. Manual schemas will not be affected.')
+                                                    ->action(function ($livewire): void {
+                                                        $category = $livewire->record;
+                                                        if (! $category?->exists) { return; }
+                                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($category, 'vi');
+                                                        Notification::make()->title('JSON-LD (vi) đã được regenerate')->success()->send();
+                                                        redirect(CategoryResource::getUrl('edit', ['record' => $category]));
+                                                    }),
+                                            ]),
                                         ]),
 
                                     Tab::make('🇬🇧 English')
@@ -892,6 +909,23 @@ class CategoryResource extends Resource
                                                 ->reorderable(false)
                                                 ->defaultItems(0)
                                                 ->columnSpanFull(),
+
+                                            \Filament\Schemas\Components\Actions::make([
+                                                \Filament\Actions\Action::make('regenerate_jsonld_en')
+                                                    ->label('Regenerate en')
+                                                    ->icon('heroicon-o-arrow-path')
+                                                    ->color('gray')
+                                                    ->requiresConfirmation()
+                                                    ->modalHeading('Regenerate JSON-LD (en)')
+                                                    ->modalDescription('Re-generate all Auto schemas for the English locale. Manual schemas will not be affected.')
+                                                    ->action(function ($livewire): void {
+                                                        $category = $livewire->record;
+                                                        if (! $category?->exists) { return; }
+                                                        app(\App\Services\Seo\JsonldService::class)->syncForModel($category, 'en');
+                                                        Notification::make()->title('JSON-LD (en) regenerated')->success()->send();
+                                                        redirect(CategoryResource::getUrl('edit', ['record' => $category]));
+                                                    }),
+                                            ]),
                                         ]),
                                 ]),
                         ]),

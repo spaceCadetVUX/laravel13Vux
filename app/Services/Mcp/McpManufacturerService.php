@@ -3,6 +3,7 @@
 namespace App\Services\Mcp;
 
 use App\Models\Manufacturer;
+use App\Models\Seo\GeoEntityProfile;
 use App\Models\Seo\SeoMeta;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +13,7 @@ class McpManufacturerService
 
     public function context(string $slug): array
     {
-        $mfr = Manufacturer::with('seoMetas')->where('slug', $slug)->firstOrFail();
+        $mfr = $this->loadManufacturer($slug);
 
         return $this->buildContextResponse($mfr);
     }
@@ -25,10 +26,10 @@ class McpManufacturerService
             DB::transaction(function () use ($slug, $data, $tokenId, $dryRun, &$preview) {
                 $overwrite = (bool) ($data['overwrite_existing'] ?? false);
 
-                // ── Find or create (no SoftDeletes) ───────────────────────────
+                // ── Find or create ────────────────────────────────────────────
                 $mfr = Manufacturer::where('slug', $slug)->first();
 
-                if (!$mfr) {
+                if (! $mfr) {
                     $mfr = new Manufacturer([
                         'slug'      => $slug,
                         'name'      => $data['name'] ?? $slug,
@@ -38,10 +39,14 @@ class McpManufacturerService
                 }
 
                 // ── Scalar fields ─────────────────────────────────────────────
-                $writeable = ['name', 'description', 'website', 'country', 'sort_order'];
+                $writeable = ['name', 'logo', 'description', 'website', 'country', 'sort_order'];
                 foreach ($writeable as $field) {
-                    if (!array_key_exists($field, $data)) continue;
-                    if (!$overwrite && $field !== 'name' && filled($mfr->$field)) continue;
+                    if (! array_key_exists($field, $data)) {
+                        continue;
+                    }
+                    if (! $overwrite && $field !== 'name' && filled($mfr->$field)) {
+                        continue;
+                    }
                     $mfr->$field = $data[$field];
                 }
 
@@ -55,15 +60,26 @@ class McpManufacturerService
                 $mfr->save();
 
                 // ── SEO meta ──────────────────────────────────────────────────
-                $this->writeSeoMeta($mfr, $data['seo'] ?? [], $overwrite);
+                if (! empty($data['seo'])) {
+                    $this->writeSeoMeta($mfr, $data['seo'], $overwrite);
+                }
 
-                $mfr->load('seoMetas');
+                // ── Geo profiles (AI Context + Key Facts) ─────────────────────
+                if (! empty($data['geo'])) {
+                    $this->writeGeoProfiles($mfr, $data['geo'], $overwrite);
+                }
+
+                $mfr->refresh()->load(['seoMetas', 'geoProfiles']);
                 $preview = $this->buildContextResponse($mfr);
 
-                if ($dryRun) throw new \RuntimeException('__mcp_dry_run__');
+                if ($dryRun) {
+                    throw new \RuntimeException('__mcp_dry_run__');
+                }
             });
         } catch (\RuntimeException $e) {
-            if ($e->getMessage() !== '__mcp_dry_run__') throw $e;
+            if ($e->getMessage() !== '__mcp_dry_run__') {
+                throw $e;
+            }
         }
 
         return ['data' => $preview];
@@ -71,11 +87,10 @@ class McpManufacturerService
 
     public function activate(string $slug): array
     {
-        $mfr = Manufacturer::with('seoMetas')->where('slug', $slug)->firstOrFail();
-
+        $mfr      = $this->loadManufacturer($slug);
         $readiness = $this->computeReadiness($mfr);
 
-        if (!empty($readiness['blocking_issues'])) {
+        if (! empty($readiness['blocking_issues'])) {
             abort(422, 'Manufacturer chưa sẵn sàng để activate: ' . implode('; ', $readiness['blocking_issues']));
         }
 
@@ -85,12 +100,28 @@ class McpManufacturerService
             'mcp_token_id'   => null,
         ]);
 
-        return [
-            'data' => $this->buildContextResponse($mfr->fresh('seoMetas')),
-        ];
+        $mfr->refresh()->load(['seoMetas', 'geoProfiles']);
+
+        return ['data' => $this->buildContextResponse($mfr)];
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────────
+    // ── Private: load ──────────────────────────────────────────────────────────
+
+    private function loadManufacturer(string $slug): Manufacturer
+    {
+        $mfr = Manufacturer::with(['seoMetas', 'geoProfiles'])
+            ->withCount('products')
+            ->where('slug', $slug)
+            ->first();
+
+        if (! $mfr) {
+            abort(404, "Manufacturer '{$slug}' not found.");
+        }
+
+        return $mfr;
+    }
+
+    // ── Private: readiness ─────────────────────────────────────────────────────
 
     private function computeReadiness(Manufacturer $mfr): array
     {
@@ -101,28 +132,41 @@ class McpManufacturerService
         $total    = 0;
 
         // has_description (blocking)
-        $hasDesc = !empty($mfr->description);
+        $hasDesc = filled($mfr->description);
         $checks['has_description'] = ['pass' => $hasDesc];
-        $total++; if ($hasDesc) $score++;
-        if (!$hasDesc) $blocking[] = 'description missing';
+        $total++; if ($hasDesc) { $score++; }
+        if (! $hasDesc) { $blocking[] = 'description missing'; }
+
+        // has_logo (warning)
+        $hasLogo = filled($mfr->logo);
+        $checks['has_logo'] = ['pass' => $hasLogo];
+        $total++; if ($hasLogo) { $score++; }
+        if (! $hasLogo) { $warnings[] = 'logo chưa có'; }
+
+        // has_geo vi (warning)
+        $geoVi    = $mfr->geoProfiles->firstWhere('locale', 'vi');
+        $hasGeoVi = filled($geoVi?->ai_summary);
+        $checks['has_geo_vi'] = ['pass' => $hasGeoVi];
+        $total++; if ($hasGeoVi) { $score++; }
+        if (! $hasGeoVi) { $warnings[] = 'geo.vi.ai_summary chưa có'; }
 
         // SEO per locale
         foreach (['vi', 'en'] as $locale) {
             $seoMeta = $mfr->seoMetas->firstWhere('locale', $locale);
 
-            $hasMetaTitle = !empty($seoMeta?->meta_title);
+            $hasMetaTitle = filled($seoMeta?->meta_title);
             $checks["seo_{$locale}"]['has_meta_title'] = ['pass' => $hasMetaTitle];
-            $total++; if ($hasMetaTitle) $score++;
-            if (!$hasMetaTitle) {
+            $total++; if ($hasMetaTitle) { $score++; }
+            if (! $hasMetaTitle) {
                 $locale === 'vi'
                     ? $blocking[] = "seo_vi.meta_title missing"
                     : $warnings[] = "seo_en.meta_title missing";
             }
 
-            $hasMetaDesc = !empty($seoMeta?->meta_description);
+            $hasMetaDesc = filled($seoMeta?->meta_description);
             $checks["seo_{$locale}"]['has_meta_description'] = ['pass' => $hasMetaDesc];
-            $total++; if ($hasMetaDesc) $score++;
-            if (!$hasMetaDesc) {
+            $total++; if ($hasMetaDesc) { $score++; }
+            if (! $hasMetaDesc) {
                 $locale === 'vi'
                     ? $blocking[] = "seo_vi.meta_description missing"
                     : $warnings[] = "seo_en.meta_description missing";
@@ -141,10 +185,16 @@ class McpManufacturerService
         ];
     }
 
+    // ── Private: write helpers ─────────────────────────────────────────────────
+
     private function writeSeoMeta(Manufacturer $mfr, array $seo, bool $overwrite): void
     {
+        $writeable = ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url', 'og_title', 'og_description', 'og_image', 'robots'];
+
         foreach ($seo as $locale => $data) {
-            if (!in_array($locale, ['vi', 'en'], true)) continue;
+            if (! in_array($locale, ['vi', 'en'], true)) {
+                continue;
+            }
 
             $seoMeta = SeoMeta::firstOrNew([
                 'model_type' => 'manufacturer',
@@ -152,15 +202,23 @@ class McpManufacturerService
                 'locale'     => $locale,
             ]);
 
-            if ($seoMeta->exists && $seoMeta->is_mcp_protected) continue;
+            if ($seoMeta->exists && $seoMeta->is_mcp_protected) {
+                continue;
+            }
 
-            foreach (['meta_title', 'meta_description', 'og_title', 'og_description', 'robots'] as $field) {
-                if (!array_key_exists($field, $data)) continue;
-                if (!$overwrite && $seoMeta->exists && filled($seoMeta->$field)) continue;
+            foreach ($writeable as $field) {
+                if (! array_key_exists($field, $data)) {
+                    continue;
+                }
+                if (! $overwrite && $seoMeta->exists && filled($seoMeta->$field)) {
+                    continue;
+                }
                 $seoMeta->$field = $data[$field];
             }
 
-            if (blank($seoMeta->robots)) $seoMeta->robots = 'index, follow';
+            if (blank($seoMeta->robots)) {
+                $seoMeta->robots = 'index, follow';
+            }
 
             $seoMeta->model_type = 'manufacturer';
             $seoMeta->model_id   = (string) $mfr->id;
@@ -169,30 +227,92 @@ class McpManufacturerService
         }
     }
 
+    private function writeGeoProfiles(Manufacturer $mfr, array $geo, bool $overwrite): void
+    {
+        $writeable     = ['ai_summary', 'use_cases', 'target_audience', 'llm_context_hint'];
+        $writeableJson = ['key_facts', 'faq'];
+
+        foreach ($geo as $locale => $data) {
+            if (! in_array($locale, ['vi', 'en'], true)) {
+                continue;
+            }
+
+            $profile = GeoEntityProfile::firstOrNew([
+                'model_type' => 'manufacturer',
+                'model_id'   => (string) $mfr->id,
+                'locale'     => $locale,
+            ]);
+
+            foreach ($writeable as $field) {
+                if (! isset($data[$field])) {
+                    continue;
+                }
+                if (! $overwrite && $profile->exists && filled($profile->$field)) {
+                    continue;
+                }
+                $profile->$field = $data[$field];
+            }
+
+            foreach ($writeableJson as $field) {
+                if (! array_key_exists($field, $data)) {
+                    continue;
+                }
+                if (! $overwrite && $profile->exists && ! empty($profile->$field)) {
+                    continue;
+                }
+                $profile->$field = $data[$field];
+            }
+
+            $profile->model_type = 'manufacturer';
+            $profile->model_id   = (string) $mfr->id;
+            $profile->locale     = $locale;
+            $profile->save();
+        }
+    }
+
+    // ── Private: response builder ──────────────────────────────────────────────
+
     private function buildContextResponse(Manufacturer $mfr): array
     {
-        $seo = [];
+        $seoOut = [];
         foreach ($mfr->seoMetas as $meta) {
-            $seo[$meta->locale] = [
+            $seoOut[$meta->locale] = [
                 'meta_title'       => $meta->meta_title,
                 'meta_description' => $meta->meta_description,
+                'meta_keywords'    => $meta->meta_keywords,
+                'canonical_url'    => $meta->canonical_url,
                 'og_title'         => $meta->og_title,
                 'og_description'   => $meta->og_description,
+                'og_image'         => $meta->og_image,
                 'robots'           => $meta->robots,
-                'is_mcp_protected' => $meta->is_mcp_protected,
+                'is_mcp_protected' => (bool) $meta->is_mcp_protected,
+            ];
+        }
+
+        $geoOut = [];
+        foreach ($mfr->geoProfiles as $g) {
+            $geoOut[$g->locale] = [
+                'ai_summary'       => $g->ai_summary,
+                'use_cases'        => $g->use_cases,
+                'target_audience'  => $g->target_audience,
+                'llm_context_hint' => $g->llm_context_hint,
+                'key_facts'        => $g->key_facts ?? [],
+                'faq'              => $g->faq ?? [],
             ];
         }
 
         return [
             'slug'           => $mfr->slug,
             'name'           => $mfr->name,
+            'logo'           => $mfr->logo,
             'description'    => $mfr->description,
             'website'        => $mfr->website,
             'country'        => $mfr->country,
-            'is_active'      => $mfr->is_active,
+            'is_active'      => (bool) $mfr->is_active,
             'sort_order'     => $mfr->sort_order,
-            'product_count'  => $mfr->products()->count(),
-            'seo'            => $seo,
+            'product_count'  => $mfr->products_count ?? $mfr->loadCount('products')->products_count,
+            'geo'            => $geoOut,
+            'seo'            => $seoOut,
             'mcp_drafted_at' => $mfr->mcp_drafted_at?->toIso8601String(),
         ];
     }
