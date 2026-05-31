@@ -266,7 +266,7 @@ class McpProductService
                 continue; // translation is human-written — never overwrite
             }
 
-            $writeable = ['name', 'slug', 'description', 'short_description'];
+            $writeable = ['name', 'slug', 'description', 'short_description', 'price', 'sale_price', 'currency'];
 
             foreach ($writeable as $field) {
                 if (! isset($data[$field])) {
@@ -491,6 +491,9 @@ class McpProductService
                 'slug'              => $t->slug,
                 'description'       => $t->description,
                 'short_description' => $t->short_description,
+                'price'             => $t->price !== null ? (string) $t->price : null,
+                'sale_price'        => $t->sale_price !== null ? (string) $t->sale_price : null,
+                'currency'          => $t->currency,
                 'is_mcp_protected'  => (bool) $t->is_mcp_protected,
             ];
         }
