@@ -2,6 +2,7 @@
 
 namespace App\Services\Mcp;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
 use App\Models\Manufacturer;
@@ -44,7 +45,14 @@ class McpProductService
             DB::transaction(function () use ($slug, $data, $tokenId, $dryRun, &$preview, &$autoCreated) {
                 $overwrite = (bool) ($data['overwrite_existing'] ?? false);
 
-                // 1. Resolve manufacturer via _stubs
+                // 1a. Resolve brand via _stubs
+                $brandId = $this->resolveBrand(
+                    $data['brand_slug'] ?? null,
+                    $data['_stubs']['brand'] ?? null,
+                    $autoCreated,
+                );
+
+                // 1b. Resolve manufacturer via _stubs
                 $manufacturerId = $this->resolveManufacturer(
                     $data['manufacturer_slug'] ?? null,
                     $data['_stubs']['manufacturer'] ?? null,
@@ -80,6 +88,7 @@ class McpProductService
                     'slug'            => $slug,
                     'sku'             => $data['sku'] ?? null,
                     'price'           => $data['price'] ?? null,
+                    'brand_id'        => $brandId,
                     'manufacturer_id' => $manufacturerId,
                     'mcp_drafted_at'  => now(),
                     'mcp_token_id'    => $tokenId,
@@ -201,6 +210,39 @@ class McpProductService
         ];
 
         return $manufacturer->id;
+    }
+
+    private function resolveBrand(?string $slug, ?array $stub, array &$autoCreated): ?int
+    {
+        if (blank($slug)) {
+            return null;
+        }
+
+        $existing = Brand::where('slug', $slug)->first();
+        if ($existing) {
+            return $existing->id;
+        }
+
+        if (empty($stub)) {
+            abort(422, "Brand '{$slug}' not found and no _stubs.brand provided.");
+        }
+
+        $brand = Brand::create([
+            'slug'      => $stub['slug'] ?? $slug,
+            'name'      => $stub['name'],
+            'website'   => $stub['website'] ?? null,
+            'is_active' => false,
+        ]);
+
+        $autoCreated[] = [
+            'type'     => 'brand',
+            'slug'     => $brand->slug,
+            'name'     => $brand->name,
+            'is_active'=> false,
+            'fill_url' => "PUT /api/v1/mcp/brands/{$brand->slug}",
+        ];
+
+        return $brand->id;
     }
 
     private function resolveCategory(?string $slug, ?array $stub, array &$autoCreated): ?int
