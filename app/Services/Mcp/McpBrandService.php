@@ -85,6 +85,11 @@ class McpBrandService
         return ['data' => $preview];
     }
 
+    public function readiness(string $slug): array
+    {
+        return $this->computeReadiness($this->loadBrand($slug));
+    }
+
     public function activate(string $slug): array
     {
         $brand    = $this->loadBrand($slug);

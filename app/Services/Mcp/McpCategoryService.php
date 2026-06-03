@@ -95,6 +95,18 @@ class McpCategoryService
                 }
                 if (!empty($geoData)) {
                     $this->writeGeoProfile($category, $geoData, $overwrite);
+
+                    // Sync geo[locale].faq → faq_items_vi/en so Filament FAQ tab stays in sync.
+                    $faqSynced = false;
+                    foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+                        if (isset($geoData[$locale]['faq']) && ($overwrite || empty($category->$field))) {
+                            $category->$field = $geoData[$locale]['faq'];
+                            $faqSynced        = true;
+                        }
+                    }
+                    if ($faqSynced) {
+                        $category->save();
+                    }
                 }
 
                 // ── Translations + SEO (same table) ───────────────────────────

@@ -131,6 +131,13 @@ class McpBlogPostService
         return ['data' => $preview];
     }
 
+    public function readiness(string $slug): array
+    {
+        $post = $this->findBySlug($slug, ['translations', 'seoMetas', 'geoProfiles']);
+
+        return $this->computeReadiness($post);
+    }
+
     public function publish(string $slug, array $data): array
     {
         $post = $this->findBySlug($slug, ['translations', 'seoMetas', 'geoProfiles', 'blogCategory.translations', 'author', 'tags', 'jsonldSchemas']);
@@ -154,6 +161,112 @@ class McpBlogPostService
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────
+
+    private function computeReadiness(BlogPost $post): array
+    {
+        $checks   = [];
+        $blocking = [];
+        $warnings = [];
+        $score    = 0;
+        $total    = 0;
+
+        foreach (['vi', 'en'] as $locale) {
+            $isBlocking = $locale === 'vi';
+            $tr         = $post->translations->firstWhere('locale', $locale);
+            $seoMeta    = $post->seoMetas->firstWhere('locale', $locale);
+            $geoProfile = $post->geoProfiles->firstWhere('locale', $locale);
+
+            // has_title (blocking for vi)
+            $hasTitle = filled($tr?->title);
+            $checks[$locale]['has_title'] = ['pass' => $hasTitle];
+            $total++; if ($hasTitle) $score++;
+            if (!$hasTitle) {
+                $isBlocking ? $blocking[] = "{$locale}.title missing" : $warnings[] = "{$locale}.title missing";
+            }
+
+            // has_body (blocking for vi)
+            $hasBody = filled($tr?->body);
+            $checks[$locale]['has_body'] = ['pass' => $hasBody];
+            $total++; if ($hasBody) $score++;
+            if (!$hasBody) {
+                $isBlocking ? $blocking[] = "{$locale}.body missing" : $warnings[] = "{$locale}.body missing";
+            }
+
+            // body_min_length (warning only)
+            $bodyLen   = mb_strlen($tr?->body ?? '');
+            $bodyLenOk = $bodyLen >= 200;
+            $checks[$locale]['body_min_length'] = ['pass' => $bodyLenOk, 'min' => 200, 'value' => $bodyLen];
+            $total++; if ($bodyLenOk) $score++;
+            if ($hasBody && !$bodyLenOk) $warnings[] = "{$locale}.body quá ngắn ({$bodyLen}/200 ký tự)";
+
+            // has_excerpt (warning)
+            $hasExcerpt = filled($tr?->excerpt);
+            $checks[$locale]['has_excerpt'] = ['pass' => $hasExcerpt];
+            $total++; if ($hasExcerpt) $score++;
+            if (!$hasExcerpt) $warnings[] = "{$locale}.excerpt chưa có";
+
+            // has_slug (blocking for vi)
+            $hasSlug = filled($tr?->slug);
+            $checks[$locale]['has_slug'] = ['pass' => $hasSlug];
+            $total++; if ($hasSlug) $score++;
+            if (!$hasSlug) {
+                $isBlocking ? $blocking[] = "{$locale}.slug missing" : $warnings[] = "{$locale}.slug missing";
+            }
+
+            // has_meta_title (blocking for vi, warning for en)
+            $hasMetaTitle = filled($seoMeta?->meta_title);
+            $checks[$locale]['has_meta_title'] = ['pass' => $hasMetaTitle];
+            $total++; if ($hasMetaTitle) $score++;
+            if (!$hasMetaTitle) {
+                $isBlocking ? $blocking[] = "{$locale}.meta_title missing" : $warnings[] = "{$locale}.meta_title missing";
+            }
+
+            // meta_title_length (warning)
+            $metaTitleLen = mb_strlen($seoMeta?->meta_title ?? '');
+            $metaTitleOk  = $metaTitleLen <= 70;
+            $checks[$locale]['meta_title_length'] = ['pass' => $metaTitleOk, 'value' => $metaTitleLen, 'max' => 70];
+            $total++; if ($metaTitleOk) $score++;
+            if ($hasMetaTitle && !$metaTitleOk) $warnings[] = "{$locale}.meta_title quá dài ({$metaTitleLen}/70 ký tự)";
+
+            // has_meta_description (blocking for vi, warning for en)
+            $hasMetaDesc = filled($seoMeta?->meta_description);
+            $checks[$locale]['has_meta_description'] = ['pass' => $hasMetaDesc];
+            $total++; if ($hasMetaDesc) $score++;
+            if (!$hasMetaDesc) {
+                $isBlocking ? $blocking[] = "{$locale}.meta_description missing" : $warnings[] = "{$locale}.meta_description missing";
+            }
+
+            // has_faq (warning)
+            $faqItems = $geoProfile?->faq ?? $post->{"faq_items_{$locale}"} ?? [];
+            $hasFaq   = !empty($faqItems);
+            $checks[$locale]['has_faq'] = ['pass' => $hasFaq, 'count' => count((array) $faqItems)];
+            $total++; if ($hasFaq) $score++;
+            if (!$hasFaq) $warnings[] = "{$locale}.faq chưa có — nên thêm ít nhất 3 câu hỏi (geo.{$locale}.faq)";
+        }
+
+        // has_featured_image (warning)
+        $hasFeaturedImage = filled($post->featured_image);
+        $checks['general']['has_featured_image'] = ['pass' => $hasFeaturedImage];
+        $total++; if ($hasFeaturedImage) $score++;
+        if (!$hasFeaturedImage) $warnings[] = 'featured_image chưa có';
+
+        // has_blog_category (warning)
+        $hasBlogCategory = filled($post->blog_category_id);
+        $checks['general']['has_blog_category'] = ['pass' => $hasBlogCategory];
+        $total++; if ($hasBlogCategory) $score++;
+        if (!$hasBlogCategory) $warnings[] = 'blog_category chưa có';
+
+        $scorePercent = $total > 0 ? (int) round(($score / $total) * 100) : 0;
+
+        return [
+            'slug'            => $post->translations->firstWhere('locale', 'vi')?->slug ?? '',
+            'score'           => $scorePercent,
+            'ready'           => empty($blocking),
+            'checks'          => $checks,
+            'blocking_issues' => $blocking,
+            'warnings'        => $warnings,
+        ];
+    }
 
     private function findBySlug(string $slug, array $with = []): BlogPost
     {
@@ -261,6 +374,12 @@ class McpBlogPostService
                 $profile->$field = $input[$field];
             }
 
+            if (array_key_exists('key_facts', $input)) {
+                if ($overwrite || empty($profile->key_facts)) {
+                    $profile->key_facts = $input['key_facts'];
+                }
+            }
+
             if (array_key_exists('faq', $input)) {
                 $normalized = $normalize((array) $input['faq']);
                 if ($overwrite || empty($profile->faq)) {
@@ -326,6 +445,7 @@ class McpBlogPostService
                     'use_cases'        => $profile->use_cases,
                     'target_audience'  => $profile->target_audience,
                     'llm_context_hint' => $profile->llm_context_hint,
+                    'key_facts'        => $profile->key_facts ?? [],
                     'faq'              => $profile->faq ?? [],
                 ];
             }

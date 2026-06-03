@@ -341,8 +341,19 @@ z.object({
     meta_description: z.string().optional(),
     robots:           z.string().optional(),
   })).optional(),
-  faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-  faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
+  geo: z.record(z.object({
+    ai_summary:       z.string().optional(),
+    use_cases:        z.string().optional(),
+    target_audience:  z.string().optional(),
+    llm_context_hint: z.string().optional(),
+    key_facts:        z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+    faq: z.array(z.object({
+      question: z.string(),
+      answer:   z.string(),
+    })).optional(),  // Ưu tiên hơn faq_items_vi/en
+  })).optional(),
+  faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),  // [Deprecated — dùng geo.vi.faq]
+  faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),  // [Deprecated — dùng geo.en.faq]
   attributes: z.array(z.object({
     name: z.string(), value: z.string(), unit: z.string().nullable().optional(),
   })).optional(),
@@ -397,13 +408,26 @@ z.object({
     rich_content: z.string().optional(),
   })).optional(),
   seo: z.record(z.object({
-    meta_title:        z.string().optional(),
-    meta_description:  z.string().optional(),
-    og_title:          z.string().optional(),
-    og_description:    z.string().optional(),
+    meta_title:          z.string().optional(),
+    meta_description:    z.string().optional(),
+    og_title:            z.string().optional(),
+    og_description:      z.string().optional(),
+    twitter_title:       z.string().optional(),
+    twitter_description: z.string().optional(),
   })).optional(),
-  faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-  faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
+  geo: z.record(z.object({
+    ai_summary:       z.string().optional(),
+    use_cases:        z.string().optional(),
+    target_audience:  z.string().optional(),
+    llm_context_hint: z.string().optional(),
+    key_facts: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
+    faq: z.array(z.object({
+      question: z.string(),
+      answer:   z.string(),
+    })).optional(),  // Ưu tiên hơn faq_items_vi/en
+  })).optional(),
+  faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),  // [Deprecated — dùng geo.vi.faq]
+  faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),  // [Deprecated — dùng geo.en.faq]
 })
 ```
 
@@ -448,8 +472,18 @@ z.object({
     meta_title:       z.string().optional(),
     meta_description: z.string().optional(),
   })).optional(),
-  faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-  faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
+  geo: z.record(z.object({
+    ai_summary:       z.string().optional(),
+    use_cases:        z.string().optional(),
+    target_audience:  z.string().optional(),
+    llm_context_hint: z.string().optional(),
+    faq: z.array(z.object({
+      question: z.string(),
+      answer:   z.string(),
+    })).optional(),  // Ưu tiên hơn faq_items_vi/en
+  })).optional(),
+  faq_items_vi: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),  // [Deprecated — dùng geo.vi.faq]
+  faq_items_en: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),  // [Deprecated — dùng geo.en.faq]
 })
 
 // publish_blog_post

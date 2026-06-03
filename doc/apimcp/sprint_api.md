@@ -509,6 +509,10 @@ Brand không phải foreign key của product — không cần stub ở đây.
     "vi": { "meta_title": "...", "meta_description": "...", "robots": "..." },
     "en": { "meta_title": "...", "meta_description": "...", "robots": "..." }
   },
+  "geo": {
+    "vi": { "ai_summary": "...", "use_cases": "...", "key_facts": [{ "label": "...", "value": "..." }], "faq": [] },
+    "en": { "ai_summary": "...", "use_cases": "...", "key_facts": [{ "label": "...", "value": "..." }], "faq": [] }
+  },
   "faq_items_vi": [],
   "faq_items_en": [],
   "related_products": [
@@ -549,6 +553,32 @@ Upsert product content. Tạo mới nếu slug chưa tồn tại.
     "vi": { "meta_title": "...", "meta_description": "...", "robots": "index, follow" },
     "en": { "meta_title": "...", "meta_description": "...", "robots": "index, follow" }
   },
+  "geo": {
+    "vi": {
+      "ai_summary": "...",
+      "use_cases": "...",
+      "target_audience": "...",
+      "key_facts": [
+        { "label": "Số kênh", "value": "4" },
+        { "label": "Điện áp bus", "value": "21–31 VDC" }
+      ],
+      "faq": [
+        { "question": "KNX Push Button 4-fold dùng cho gì?", "answer": "..." }
+      ]
+    },
+    "en": {
+      "ai_summary": "...",
+      "use_cases": "...",
+      "target_audience": "...",
+      "key_facts": [
+        { "label": "Channels", "value": "4" },
+        { "label": "Bus voltage", "value": "21–31 VDC" }
+      ],
+      "faq": [
+        { "question": "What is KNX Push Button 4-fold used for?", "answer": "..." }
+      ]
+    }
+  },
   "faq_items_vi": [{ "question": "...", "answer": "..." }],
   "faq_items_en": [{ "question": "...", "answer": "..." }],
 
@@ -561,6 +591,8 @@ Upsert product content. Tạo mới nếu slug chưa tồn tại.
   ]
 }
 ```
+
+`geo.vi.faq` / `geo.en.faq` là path chính thức — inject vào JSON-LD FAQPage. `faq_items_vi/en` (deprecated) vẫn nhận được nhưng tự động promote lên `geo.faq` và sync-back.
 
 `attributes` là structured specs — hiển thị trong bảng thông số kỹ thuật, Claude điền từ datasheet.
 
@@ -620,7 +652,7 @@ Kiểm tra product đã đủ điều kiện activate chưa. Gọi trước `PAT
 }
 ```
 
-`ready: false` + `blocking_issues` không empty → server từ chối `PATCH /activate`.
+`score` = 0–100% (giống tất cả entity khác). `ready: false` + `blocking_issues` không empty → server từ chối `PATCH /activate`.
 
 ---
 
@@ -709,10 +741,33 @@ Upsert — luôn save ở `status: draft` nếu không chỉ định.
     "vi": { "meta_title": "...", "meta_description": "..." },
     "en": { "meta_title": "...", "meta_description": "..." }
   },
+  "geo": {
+    "vi": {
+      "ai_summary": "...",
+      "use_cases": "...",
+      "target_audience": "...",
+      "llm_context_hint": "...",
+      "faq": [
+        { "question": "KNX là gì?", "answer": "..." }
+      ]
+    },
+    "en": {
+      "ai_summary": "...",
+      "use_cases": "...",
+      "target_audience": "...",
+      "llm_context_hint": "...",
+      "faq": [
+        { "question": "What is KNX?", "answer": "..." }
+      ]
+    }
+  },
   "faq_items_vi": [...],
   "faq_items_en": [...]
 }
 ```
+
+> `geo.vi.faq` / `geo.en.faq` là path chính thức — inject vào JSON-LD FAQPage.
+> `faq_items_vi/en` (deprecated) vẫn nhận được nhưng sẽ tự động promote lên `geo.faq` và sync-back.
 
 ---
 

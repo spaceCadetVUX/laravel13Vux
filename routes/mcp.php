@@ -8,15 +8,19 @@ use App\Http\Controllers\Mcp\ReviewQueueController;
 use App\Http\Controllers\Mcp\SearchController;
 use App\Http\Controllers\Mcp\BlogCategory\ActivateController  as BlogCategoryActivateController;
 use App\Http\Controllers\Mcp\BlogCategory\ContextController   as BlogCategoryContextController;
+use App\Http\Controllers\Mcp\BlogCategory\ReadinessController as BlogCategoryReadinessController;
 use App\Http\Controllers\Mcp\BlogCategory\UpsertController    as BlogCategoryUpsertController;
 use App\Http\Controllers\Mcp\BlogPost\ContextController       as BlogPostContextController;
 use App\Http\Controllers\Mcp\BlogPost\PublishController       as BlogPostPublishController;
+use App\Http\Controllers\Mcp\BlogPost\ReadinessController     as BlogPostReadinessController;
 use App\Http\Controllers\Mcp\BlogPost\UpsertController        as BlogPostUpsertController;
 use App\Http\Controllers\Mcp\Brand\ActivateController         as BrandActivateController;
 use App\Http\Controllers\Mcp\Brand\ContextController          as BrandContextController;
+use App\Http\Controllers\Mcp\Brand\ReadinessController        as BrandReadinessController;
 use App\Http\Controllers\Mcp\Brand\UpsertController           as BrandUpsertController;
 use App\Http\Controllers\Mcp\Manufacturer\ActivateController  as ManufacturerActivateController;
 use App\Http\Controllers\Mcp\Manufacturer\ContextController   as ManufacturerContextController;
+use App\Http\Controllers\Mcp\Manufacturer\ReadinessController as ManufacturerReadinessController;
 use App\Http\Controllers\Mcp\Manufacturer\UpsertController    as ManufacturerUpsertController;
 use App\Http\Controllers\Mcp\Category\ActivateController     as CategoryActivateController;
 use App\Http\Controllers\Mcp\Category\ContextController      as CategoryContextController;
@@ -57,12 +61,16 @@ Route::prefix('v1/mcp')->middleware(['auth:sanctum'])->group(function () {
         Route::get('categories/{slug}/readiness', CategoryReadinessController::class);
 
         // Sprint 3: Blog posts + Blog categories — read
-        Route::get('blog-posts/{slug}/context',      BlogPostContextController::class);
-        Route::get('blog-categories/{slug}/context', BlogCategoryContextController::class);
+        Route::get('blog-posts/{slug}/context',          BlogPostContextController::class);
+        Route::get('blog-posts/{slug}/readiness',        BlogPostReadinessController::class);
+        Route::get('blog-categories/{slug}/context',     BlogCategoryContextController::class);
+        Route::get('blog-categories/{slug}/readiness',   BlogCategoryReadinessController::class);
 
         // Sprint 4: Brands + Manufacturers — read
-        Route::get('brands/{slug}/context',       BrandContextController::class);
-        Route::get('manufacturers/{slug}/context', ManufacturerContextController::class);
+        Route::get('brands/{slug}/context',              BrandContextController::class);
+        Route::get('brands/{slug}/readiness',            BrandReadinessController::class);
+        Route::get('manufacturers/{slug}/context',       ManufacturerContextController::class);
+        Route::get('manufacturers/{slug}/readiness',     ManufacturerReadinessController::class);
 
         // Generic entity list — MUST be last (wildcard catches everything)
         Route::get('{modelType}', EntityListController::class);

@@ -88,6 +88,15 @@ class McpBlogCategoryService
         return ['data' => $preview];
     }
 
+    public function readiness(string $slug): array
+    {
+        $bc = BlogCategory::with(['translations', 'seoMetas', 'geoProfiles'])
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return $this->computeReadiness($bc);
+    }
+
     public function activate(string $slug): array
     {
         $bc = BlogCategory::with(['translations', 'seoMetas', 'geoProfiles'])

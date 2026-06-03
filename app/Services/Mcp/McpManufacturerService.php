@@ -85,6 +85,11 @@ class McpManufacturerService
         return ['data' => $preview];
     }
 
+    public function readiness(string $slug): array
+    {
+        return $this->computeReadiness($this->loadManufacturer($slug));
+    }
+
     public function activate(string $slug): array
     {
         $mfr      = $this->loadManufacturer($slug);

@@ -82,26 +82,45 @@ class McpProductService
                     ]);
                 }
 
-                // Base fields — never touch is_active here (use /activate)
-                $product->fill(array_filter([
-                    'name'            => $data['name'] ?? null,
-                    'slug'            => $slug,
-                    'sku'             => $data['sku'] ?? null,
-                    'price'           => $data['price'] ?? null,
-                    'sale_price'      => $data['sale_price'] ?? null,
-                    'currency'        => $data['currency'] ?? null,
-                    'stock_quantity'  => $data['stock_quantity'] ?? null,
-                    'brand_id'        => $brandId,
-                    'manufacturer_id' => $manufacturerId,
-                    'mcp_drafted_at'  => now(),
-                    'mcp_token_id'    => $tokenId,
-                ], fn ($v) => $v !== null));
+                // Base fields — slug/audit always written; all others respect overwrite_existing
+                $isNew = !$product->exists;
 
-                if (isset($data['faq_items_vi'])) {
-                    $product->faq_items_vi = $data['faq_items_vi'];
+                $product->slug          = $slug;
+                $product->mcp_drafted_at = now();
+                $product->mcp_token_id   = $tokenId;
+
+                if (array_key_exists('name', $data) && ($isNew || $overwrite || empty($product->name))) {
+                    $product->name = $data['name'];
                 }
-                if (isset($data['faq_items_en'])) {
-                    $product->faq_items_en = $data['faq_items_en'];
+                if (array_key_exists('sku', $data) && ($isNew || $overwrite || empty($product->sku))) {
+                    $product->sku = $data['sku'];
+                }
+                // price: 0 is the draft default — treat as "not set"
+                if (array_key_exists('price', $data) && ($isNew || $overwrite || empty($product->price))) {
+                    $product->price = $data['price'];
+                }
+                if (array_key_exists('sale_price', $data) && ($isNew || $overwrite || is_null($product->sale_price))) {
+                    $product->sale_price = $data['sale_price'];
+                }
+                if (array_key_exists('currency', $data) && ($isNew || $overwrite || empty($product->currency))) {
+                    $product->currency = $data['currency'];
+                }
+                if (array_key_exists('stock_quantity', $data) && ($isNew || $overwrite || is_null($product->stock_quantity))) {
+                    $product->stock_quantity = $data['stock_quantity'];
+                }
+                if ($brandId !== null && ($isNew || $overwrite || is_null($product->brand_id))) {
+                    $product->brand_id = $brandId;
+                }
+                if ($manufacturerId !== null && ($isNew || $overwrite || is_null($product->manufacturer_id))) {
+                    $product->manufacturer_id = $manufacturerId;
+                }
+
+                // ── FAQ (legacy faq_items_vi/en) ──────────────────────────────
+                foreach (['faq_items_vi', 'faq_items_en'] as $field) {
+                    if (!array_key_exists($field, $data)) continue;
+                    if ($overwrite || empty($product->$field)) {
+                        $product->$field = $data[$field];
+                    }
                 }
 
                 $product->save();
@@ -126,9 +145,28 @@ class McpProductService
                     $this->writeAttributes($product, $data['attributes']);
                 }
 
-                // 8. Geo profiles (AI Context + Key Facts)
-                if (! empty($data['geo'])) {
-                    $this->writeGeoProfiles($product, $data['geo'], $overwrite);
+                // 8. Geo profiles (AI Context + Key Facts + FAQ)
+                // geo[locale].faq takes priority; fallback to faq_items_vi/en
+                $geoData = $data['geo'] ?? [];
+                foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+                    if (array_key_exists($field, $data) && !array_key_exists('faq', $geoData[$locale] ?? [])) {
+                        $geoData[$locale]['faq'] = $data[$field];
+                    }
+                }
+                if (!empty($geoData)) {
+                    $this->writeGeoProfiles($product, $geoData, $overwrite);
+
+                    // Sync geo[locale].faq → faq_items_vi/en so Filament FAQ tab stays in sync.
+                    $faqSynced = false;
+                    foreach (['vi' => 'faq_items_vi', 'en' => 'faq_items_en'] as $locale => $field) {
+                        if (isset($geoData[$locale]['faq']) && ($overwrite || empty($product->$field))) {
+                            $product->$field = $geoData[$locale]['faq'];
+                            $faqSynced       = true;
+                        }
+                    }
+                    if ($faqSynced) {
+                        $product->save();
+                    }
                 }
 
                 // Build the response BEFORE rolling back (dry_run needs this)
@@ -391,6 +429,15 @@ class McpProductService
     {
         $writeable = ['ai_summary', 'use_cases', 'target_audience', 'llm_context_hint', 'key_facts'];
 
+        $normalize = fn (array $items): array => collect($items)
+            ->filter(fn (array $item): bool => filled($item['question'] ?? null))
+            ->map(fn (array $item): array => [
+                'question' => trim($item['question']),
+                'answer'   => trim($item['answer'] ?? ''),
+            ])
+            ->values()
+            ->toArray();
+
         foreach ($geo as $locale => $data) {
             if (! in_array($locale, ['vi', 'en'], true)) {
                 continue;
@@ -412,6 +459,13 @@ class McpProductService
                 }
 
                 $profile->{$field} = $data[$field];
+            }
+
+            if (array_key_exists('faq', $data)) {
+                $normalized = $normalize((array) $data['faq']);
+                if ($overwrite || empty($profile->faq)) {
+                    $profile->faq = $normalized;
+                }
             }
 
             $profile->model_type = 'product';
@@ -440,7 +494,9 @@ class McpProductService
             $metaTitle    = $seoMeta?->meta_title ?? '';  // meta_title lives in seo_meta, not translation
             $metaDesc     = $seoMeta?->meta_description ?? '';
             $metaTitleLen = mb_strlen($metaTitle);
-            $faqCount     = count($locale === 'vi' ? ($product->faq_items_vi ?? []) : ($product->faq_items_en ?? []));
+            $geoProfile   = $product->geoProfiles->firstWhere('locale', $locale);
+            $faqItems     = $geoProfile?->faq ?? ($locale === 'vi' ? ($product->faq_items_vi ?? []) : ($product->faq_items_en ?? []));
+            $faqCount     = count((array) $faqItems);
 
             $hasDesc      = $descLen > 0;
             $hasShortDesc = $shortDescLen > 0;
@@ -508,16 +564,18 @@ class McpProductService
 
         // General scoring: sku=5, price=5, category=10, manufacturer=5, cat_active=5 → max 30
         // Per-locale: desc=15, short_desc=5, meta_title=10, meta_desc=10 → 40×2=80
-        // Total max = 110
+        // Total max = 110 → converted to 0–100% for consistency with other entities
         if ($hasSku)         { $score += 5; }
         if ($hasPrice)       { $score += 5; }
         if ($hasCategory)    { $score += 10; }
         if ($hasManufacturer){ $score += 5; }
         if ($allCatActive)   { $score += 5; }
 
+        $scorePercent = (int) round(($score / 110) * 100);
+
         return [
             'slug'            => $this->productSlug($product),
-            'score'           => $score,
+            'score'           => $scorePercent,
             'ready'           => empty($blocking),
             'checks'          => $checks,
             'blocking_issues' => $blocking,
@@ -551,6 +609,7 @@ class McpProductService
                 'target_audience'  => $g->target_audience,
                 'llm_context_hint' => $g->llm_context_hint,
                 'key_facts'        => $g->key_facts ?? [],
+                'faq'              => $g->faq ?? [],
             ];
         }
 
