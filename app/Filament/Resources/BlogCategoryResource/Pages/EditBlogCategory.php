@@ -26,7 +26,7 @@ class EditBlogCategory extends EditRecord
 
             if ($translation) {
                 $data['translations'][$locale] = $translation->only([
-                    'name', 'slug', 'description',
+                    'name', 'slug', 'description', 'rich_content',
                 ]);
             }
         }
@@ -54,7 +54,7 @@ class EditBlogCategory extends EditRecord
             $record->translations()->updateOrCreate(
                 ['locale' => $locale],
                 collect($localeData)
-                    ->only(['name', 'slug', 'description'])
+                    ->only(['name', 'slug', 'description', 'rich_content'])
                     ->filter(fn ($v) => $v !== null)
                     ->toArray()
             );

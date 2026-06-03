@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ActivityLogResource\Pages;
 use BackedEnum;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Infolists\Components\KeyValueEntry;
@@ -38,6 +39,8 @@ class ActivityLogResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([25, 50, 100])
             ->columns([
                 TextColumn::make('log_name')
                     ->label('Log')
@@ -136,7 +139,7 @@ class ActivityLogResource extends Resource
                     ])),
             ])
             ->bulkActions([
-                // No bulk actions on audit log
+                DeleteBulkAction::make()->label('Xóa đã chọn'),
             ]);
     }
 

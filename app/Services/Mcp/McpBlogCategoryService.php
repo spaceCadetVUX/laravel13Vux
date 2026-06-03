@@ -60,6 +60,10 @@ class McpBlogCategoryService
                     }
                 }
 
+                if (array_key_exists('sort_order', $data)) {
+                    $bc->sort_order = $data['sort_order'];
+                }
+
                 $bc->mcp_drafted_at = now();
                 $bc->mcp_token_id   = $tokenId;
                 $bc->save();
@@ -212,7 +216,7 @@ class McpBlogCategoryService
 
             if ($tr->exists && $tr->is_mcp_protected) continue;
 
-            foreach (['name', 'slug', 'description'] as $field) {
+            foreach (['name', 'slug', 'description', 'rich_content'] as $field) {
                 if (!array_key_exists($field, $trans)) continue;
                 if (!$overwrite && $tr->exists && filled($tr->$field)) continue;
                 $tr->$field = $trans[$field];
@@ -304,6 +308,7 @@ class McpBlogCategoryService
                 'name'             => $tr->name,
                 'slug'             => $tr->slug,
                 'description'      => $tr->description,
+                'rich_content'     => $tr->rich_content,
                 'is_mcp_protected' => $tr->is_mcp_protected,
             ];
         }
@@ -373,6 +378,7 @@ class McpBlogCategoryService
             'slug'           => $bc->slug,
             'name'           => $bc->name,
             'is_active'      => $bc->is_active,
+            'sort_order'     => $bc->sort_order,
             'parent'         => $parent,
             'children'       => $children,
             'post_count'     => $bc->posts_count ?? $bc->loadCount('posts')->posts_count,

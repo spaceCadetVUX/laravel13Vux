@@ -38,6 +38,7 @@ class BlogCategory extends Model
         'slug',
         'description',
         'is_active',
+        'sort_order',
         'mcp_drafted_at',
         'mcp_token_id',
     ];

@@ -6,7 +6,9 @@ use App\Enums\OgType;
 use App\Filament\Resources\BlogCategoryResource\Pages;
 use App\Models\BlogCategory;
 use App\Forms\Components\MediaFileUpload;
+use App\Forms\Plugins\MediaRichEditorPlugin;
 use App\Support\LocaleUrl;
+use Filament\Forms\Components\RichEditor;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -52,6 +54,11 @@ class BlogCategoryResource extends Resource
                 ->nullable(),
 
             Forms\Components\TextInput::make('name')
+                ->label('Internal Name')
+                ->hint('Dùng trong admin — không hiển thị cho người dùng')
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintColor('warning')
+                ->helperText('Tên ngắn gọn để nhận biết danh mục trong hệ thống.')
                 ->required()
                 ->live(debounce: 500)
                 ->afterStateUpdated(fn (Set $set, ?string $state) =>
@@ -59,13 +66,26 @@ class BlogCategoryResource extends Resource
                 ),
 
             Forms\Components\TextInput::make('slug')
+                ->label('Internal Slug')
+                ->hint('Dùng trong JSON-LD và API nội bộ — không phải URL công khai')
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintColor('warning')
+                ->helperText('URL công khai dùng slug từ phần Translations.')
                 ->required()
                 ->unique(table: BlogCategory::class, column: 'slug', ignoreRecord: true),
 
             Forms\Components\Textarea::make('description')
+                ->label('Internal Description')
+                ->hint('Không hiển thị trực tiếp — dùng làm gợi ý nội dung')
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintColor('warning')
                 ->rows(3)
                 ->nullable()
                 ->columnSpanFull(),
+
+            Forms\Components\TextInput::make('sort_order')
+                ->numeric()
+                ->default(0),
 
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
@@ -79,41 +99,260 @@ class BlogCategoryResource extends Resource
                             Tab::make('🇻🇳 Tiếng Việt (vi)')
                                 ->schema([
                                     Forms\Components\TextInput::make('translations.vi.name')
-                                        ->label('Tên danh mục (vi)')
+                                        ->label('Tên hiển thị (vi)')
+                                        ->hint('Hiển thị trên trang web cho người dùng Việt Nam')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, Set $set) =>
                                             $set('translations.vi.slug', Str::slug($state ?? '')))
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('translations.vi.slug')
-                                        ->label('Slug (vi)')
-                                        ->helperText('Auto-generated from name. Must be unique per locale.')
+                                        ->label('URL Slug (vi)')
+                                        ->hint('Tạo URL: /vi/blog/{slug}')
+                                        ->hintIcon('heroicon-o-link')
+                                        ->hintColor('success')
+                                        ->helperText('Tự động tạo từ tên. Phải unique theo từng ngôn ngữ.')
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('translations.vi.description')
                                         ->label('Mô tả (vi)')
+                                        ->hint('Hiển thị trên trang blog category — Google đọc để hiểu nội dung')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->rows(3)
+                                        ->columnSpanFull(),
+
+                                    RichEditor::make('translations.vi.rich_content')
+                                        ->label('Nội dung phong phú (vi)')
+                                        ->hint('Nội dung dài — hiển thị ở phần dưới trang blog category')
+                                        ->hintIcon('heroicon-o-document-text')
+                                        ->hintColor('success')
+                                        ->plugins([MediaRichEditorPlugin::make()])
                                         ->columnSpanFull(),
                                 ]),
 
                             Tab::make('🇬🇧 English (en)')
                                 ->schema([
                                     Forms\Components\TextInput::make('translations.en.name')
-                                        ->label('Category name (en)')
+                                        ->label('Display Name (en)')
+                                        ->hint('Shown on the website to English-speaking visitors')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, Set $set) =>
                                             $set('translations.en.slug', Str::slug($state ?? '')))
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('translations.en.slug')
-                                        ->label('Slug (en)')
+                                        ->label('URL Slug (en)')
+                                        ->hint('Creates URL: /en/blog/{slug}')
+                                        ->hintIcon('heroicon-o-link')
+                                        ->hintColor('success')
                                         ->helperText('Auto-generated from name. Must be unique per locale.')
                                         ->columnSpanFull(),
 
                                     Forms\Components\Textarea::make('translations.en.description')
                                         ->label('Description (en)')
+                                        ->hint('Shown on the category page — Google reads this to understand content')
+                                        ->hintIcon('heroicon-o-eye')
+                                        ->hintColor('success')
                                         ->rows(3)
                                         ->columnSpanFull(),
+
+                                    RichEditor::make('translations.en.rich_content')
+                                        ->label('Rich Content (en)')
+                                        ->hint('Long-form content — displayed at the bottom of the blog category page')
+                                        ->hintIcon('heroicon-o-document-text')
+                                        ->hintColor('success')
+                                        ->plugins([MediaRichEditorPlugin::make()])
+                                        ->columnSpanFull(),
+                                ]),
+                        ])
+                        ->columnSpanFull(),
+                ])
+                ->collapsible()
+                ->columnSpanFull(),
+
+            // ── GEO / AI ─────────────────────────────────────────────────────
+            Section::make('GEO / AI')
+                ->icon('heroicon-o-cpu-chip')
+                ->schema([
+                    Tabs::make('GeoLocaleTabs')
+                        ->tabs([
+                            Tab::make('🇻🇳 Tiếng Việt')
+                                ->schema([
+                                    Group::make()
+                                        ->relationship('geoProfileVi')
+                                        ->schema([
+                                            Forms\Components\Hidden::make('locale')->default('vi'),
+
+                                            Section::make('AI Context')
+                                                ->schema([
+                                                    Forms\Components\Textarea::make('ai_summary')
+                                                        ->label('AI Summary (vi)')
+                                                        ->hint('Đoạn tóm tắt ngắn cho AI / chatbot hiểu danh mục blog này')
+                                                        ->rows(4)
+                                                        ->placeholder('Mô tả 2–4 câu: danh mục viết về chủ đề gì, đối tượng độc giả, điểm nổi bật...')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('use_cases')
+                                                        ->label('Use Cases (vi)')
+                                                        ->hint('Chủ đề / ứng dụng — AI dùng để trả lời "danh mục này phù hợp cho ai"')
+                                                        ->rows(3)
+                                                        ->placeholder('VD: Tài liệu kỹ thuật KNX cho kỹ sư, hướng dẫn tích hợp DALI-2...')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\TextInput::make('target_audience')
+                                                        ->label('Target Audience (vi)')
+                                                        ->hint('Đối tượng độc giả mục tiêu')
+                                                        ->placeholder('VD: Kỹ sư tự động hóa, System Integrator, nhà thầu ME...')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('llm_context_hint')
+                                                        ->label('LLM Context Hint (vi)')
+                                                        ->hint('Gợi ý thêm cho LLM khi sinh nội dung về danh mục blog này')
+                                                        ->rows(2)
+                                                        ->columnSpanFull(),
+                                                ]),
+
+                                            Section::make('Key Facts (vi)')
+                                                ->schema([
+                                                    Forms\Components\Repeater::make('key_facts')
+                                                        ->label('')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('label')
+                                                                ->label('Nhãn')
+                                                                ->required()
+                                                                ->placeholder('VD: Số bài viết'),
+                                                            Forms\Components\TextInput::make('value')
+                                                                ->label('Giá trị')
+                                                                ->required()
+                                                                ->placeholder('VD: 50+'),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->addActionLabel('Thêm fact')
+                                                        ->reorderable()
+                                                        ->collapsible()
+                                                        ->defaultItems(0)
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->collapsible(),
+
+                                            Section::make('FAQ (vi)')
+                                                ->schema([
+                                                    Forms\Components\Repeater::make('faq')
+                                                        ->label('')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('question')
+                                                                ->label('Câu hỏi')
+                                                                ->required()
+                                                                ->placeholder('VD: Danh mục này viết về chủ đề gì?')
+                                                                ->columnSpanFull(),
+                                                            Forms\Components\Textarea::make('answer')
+                                                                ->label('Trả lời')
+                                                                ->required()
+                                                                ->rows(3)
+                                                                ->placeholder('Câu trả lời ngắn gọn, rõ ràng...')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->addActionLabel('Thêm câu hỏi')
+                                                        ->reorderable()
+                                                        ->collapsible()
+                                                        ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+                                                        ->defaultItems(0)
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->collapsible(),
+                                        ]),
+                                ]),
+
+                            Tab::make('🇬🇧 English')
+                                ->schema([
+                                    Group::make()
+                                        ->relationship('geoProfileEn')
+                                        ->schema([
+                                            Forms\Components\Hidden::make('locale')->default('en'),
+
+                                            Section::make('AI Context')
+                                                ->schema([
+                                                    Forms\Components\Textarea::make('ai_summary')
+                                                        ->label('AI Summary (en)')
+                                                        ->hint('Short summary for AI / chatbot understanding of this blog category')
+                                                        ->rows(4)
+                                                        ->placeholder('Describe the category in 2–4 sentences: topics covered, target audience, key highlights...')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('use_cases')
+                                                        ->label('Use Cases (en)')
+                                                        ->hint('Topics / applications — AI uses this to answer "who is this for"')
+                                                        ->rows(3)
+                                                        ->placeholder('E.g. Technical KNX documentation for engineers, DALI-2 integration guides...')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\TextInput::make('target_audience')
+                                                        ->label('Target Audience (en)')
+                                                        ->hint('Target reader demographic')
+                                                        ->placeholder('E.g. Automation engineers, System Integrators, ME contractors...')
+                                                        ->columnSpanFull(),
+
+                                                    Forms\Components\Textarea::make('llm_context_hint')
+                                                        ->label('LLM Context Hint (en)')
+                                                        ->hint('Additional context hint for LLMs when generating content about this blog category')
+                                                        ->rows(2)
+                                                        ->columnSpanFull(),
+                                                ]),
+
+                                            Section::make('Key Facts (en)')
+                                                ->schema([
+                                                    Forms\Components\Repeater::make('key_facts')
+                                                        ->label('')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('label')
+                                                                ->label('Label')
+                                                                ->required()
+                                                                ->placeholder('E.g. Articles count'),
+                                                            Forms\Components\TextInput::make('value')
+                                                                ->label('Value')
+                                                                ->required()
+                                                                ->placeholder('E.g. 50+'),
+                                                        ])
+                                                        ->columns(2)
+                                                        ->addActionLabel('Add fact')
+                                                        ->reorderable()
+                                                        ->collapsible()
+                                                        ->defaultItems(0)
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->collapsible(),
+
+                                            Section::make('FAQ (en)')
+                                                ->schema([
+                                                    Forms\Components\Repeater::make('faq')
+                                                        ->label('')
+                                                        ->schema([
+                                                            Forms\Components\TextInput::make('question')
+                                                                ->label('Question')
+                                                                ->required()
+                                                                ->placeholder('E.g. What topics does this category cover?')
+                                                                ->columnSpanFull(),
+                                                            Forms\Components\Textarea::make('answer')
+                                                                ->label('Answer')
+                                                                ->required()
+                                                                ->rows(3)
+                                                                ->placeholder('Short, clear answer...')
+                                                                ->columnSpanFull(),
+                                                        ])
+                                                        ->addActionLabel('Add FAQ')
+                                                        ->reorderable()
+                                                        ->collapsible()
+                                                        ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
+                                                        ->defaultItems(0)
+                                                        ->columnSpanFull(),
+                                                ])
+                                                ->collapsible(),
+                                        ]),
                                 ]),
                         ])
                         ->columnSpanFull(),
@@ -619,6 +858,9 @@ class BlogCategoryResource extends Resource
                 Tables\Columns\TextColumn::make('parent.name')
                     ->label('Parent')
                     ->placeholder('—'),
+
+                Tables\Columns\TextColumn::make('sort_order')
+                    ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()

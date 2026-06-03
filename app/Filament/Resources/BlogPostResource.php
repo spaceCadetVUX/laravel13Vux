@@ -84,7 +84,67 @@ class BlogPostResource extends Resource
                         ])
                         ->columns(2),
 
-                    // ── Tab 2: Publishing ─────────────────────────────────────
+                    // ── Tab 2: Content ────────────────────────────────────────
+                    Tab::make('Content')
+                        ->icon('heroicon-o-language')
+                        ->schema([
+                            Tabs::make('LocaleTabs')
+                                ->tabs([
+                                    Tab::make('🇻🇳 Tiếng Việt (vi)')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('translations.vi.title')
+                                                ->label('Tiêu đề (vi)')
+                                                ->required()
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) =>
+                                                    $set('translations.vi.slug', Str::slug($state ?? '')))
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.vi.slug')
+                                                ->label('Slug (vi)')
+                                                ->helperText('Auto-generated from title. Must be unique per locale.')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.vi.excerpt')
+                                                ->label('Tóm tắt (vi)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\RichEditor::make('translations.vi.body')
+                                                ->label('Nội dung (vi)')
+                                                ->plugins([MediaRichEditorPlugin::make()])
+                                                ->columnSpanFull(),
+                                        ]),
+
+                                    Tab::make('🇬🇧 English (en)')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('translations.en.title')
+                                                ->label('Title (en)')
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(fn ($state, Set $set) =>
+                                                    $set('translations.en.slug', Str::slug($state ?? '')))
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\TextInput::make('translations.en.slug')
+                                                ->label('Slug (en)')
+                                                ->helperText('Auto-generated from title. Must be unique per locale.')
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('translations.en.excerpt')
+                                                ->label('Excerpt (en)')
+                                                ->rows(3)
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\RichEditor::make('translations.en.body')
+                                                ->label('Body (en)')
+                                                ->plugins([MediaRichEditorPlugin::make()])
+                                                ->columnSpanFull(),
+                                        ]),
+                                ])
+                                ->columnSpanFull(),
+                        ]),
+
+                    // ── Tab 3: Publishing ─────────────────────────────────────
                     Tab::make('Publishing')
                         ->schema([
                             Forms\Components\Select::make('status')
@@ -655,66 +715,6 @@ class BlogPostResource extends Resource
                             ]),
                         ])
                         ->hidden(fn ($record) => $record === null),
-
-                    // ── Tab 7: Translations ───────────────────────────────────
-                    Tab::make('Translations')
-                        ->icon('heroicon-o-language')
-                        ->schema([
-                            Tabs::make('LocaleTabs')
-                                ->tabs([
-                                    Tab::make('🇻🇳 Tiếng Việt (vi)')
-                                        ->schema([
-                                            Forms\Components\TextInput::make('translations.vi.title')
-                                                ->label('Tiêu đề (vi)')
-                                                ->required()
-                                                ->live(onBlur: true)
-                                                ->afterStateUpdated(fn ($state, Set $set) =>
-                                                    $set('translations.vi.slug', Str::slug($state ?? '')))
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.vi.slug')
-                                                ->label('Slug (vi)')
-                                                ->helperText('Auto-generated from title. Must be unique per locale.')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.vi.excerpt')
-                                                ->label('Tóm tắt (vi)')
-                                                ->rows(3)
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\RichEditor::make('translations.vi.body')
-                                                ->label('Nội dung (vi)')
-                                                ->plugins([MediaRichEditorPlugin::make()])
-                                                ->columnSpanFull(),
-                                        ]),
-
-                                    Tab::make('🇬🇧 English (en)')
-                                        ->schema([
-                                            Forms\Components\TextInput::make('translations.en.title')
-                                                ->label('Title (en)')
-                                                ->live(onBlur: true)
-                                                ->afterStateUpdated(fn ($state, Set $set) =>
-                                                    $set('translations.en.slug', Str::slug($state ?? '')))
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\TextInput::make('translations.en.slug')
-                                                ->label('Slug (en)')
-                                                ->helperText('Auto-generated from title. Must be unique per locale.')
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\Textarea::make('translations.en.excerpt')
-                                                ->label('Excerpt (en)')
-                                                ->rows(3)
-                                                ->columnSpanFull(),
-
-                                            Forms\Components\RichEditor::make('translations.en.body')
-                                                ->label('Body (en)')
-                                                ->plugins([MediaRichEditorPlugin::make()])
-                                                ->columnSpanFull(),
-                                        ]),
-                                ])
-                                ->columnSpanFull(),
-                        ]),
 
                 ])
                 ->columnSpanFull(),

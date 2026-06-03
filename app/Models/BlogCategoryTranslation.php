@@ -14,6 +14,7 @@ class BlogCategoryTranslation extends Model
         'name',
         'slug',
         'description',
+        'rich_content',
     ];
 
     protected function casts(): array
