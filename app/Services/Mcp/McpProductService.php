@@ -135,6 +135,31 @@ class McpProductService
                     $this->writeTranslations($product, $data['translations'], $overwrite);
                 }
 
+                // 5b. Auto-promote root price/sale_price/currency → per-locale translations.
+                // Prevents frontend null when Claude fills root-level price but not translations.{locale}.price.
+                // Only fills translation rows that already exist (created above or previously).
+                if (array_key_exists('price', $data) && ! empty($data['price'])) {
+                    foreach (['vi', 'en'] as $locale) {
+                        $tr = $product->translations()->where('locale', $locale)->first();
+                        if (! $tr) continue;
+
+                        $dirty = false;
+                        if ($overwrite || empty($tr->price)) {
+                            $tr->price = $data['price'];
+                            $dirty = true;
+                        }
+                        if (array_key_exists('sale_price', $data) && ($overwrite || is_null($tr->sale_price))) {
+                            $tr->sale_price = $data['sale_price'];
+                            $dirty = true;
+                        }
+                        if (array_key_exists('currency', $data) && ($overwrite || empty($tr->currency))) {
+                            $tr->currency = $data['currency'];
+                            $dirty = true;
+                        }
+                        if ($dirty) $tr->save();
+                    }
+                }
+
                 // 6. SEO meta
                 if (! empty($data['seo'])) {
                     $this->writeSeoMeta($product, $data['seo'], $overwrite);
