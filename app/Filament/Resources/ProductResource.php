@@ -6,6 +6,7 @@ use App\Enums\OgType;
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\FilterGroup;
 use App\Models\Manufacturer;
 use App\Models\Product;
 use BackedEnum;
@@ -443,7 +444,42 @@ class ProductResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                    // ── Tab 7: Variants ───────────────────────────────────────
+                    // ── Tab 7: Filters ────────────────────────────────────────
+                    Tab::make('Filters')
+                        ->icon('heroicon-o-funnel')
+                        ->schema(function () {
+                            $groups = FilterGroup::active()
+                                ->with('activeValues')
+                                ->orderBy('sort_order')
+                                ->get();
+
+                            if ($groups->isEmpty()) {
+                                return [
+                                    Forms\Components\Placeholder::make('no_filter_groups')
+                                        ->label('')
+                                        ->content('Chưa có filter group nào. Tạo tại Catalog → Filter Groups.'),
+                                ];
+                            }
+
+                            return $groups->map(fn (FilterGroup $group) =>
+                                Section::make($group->name . ($group->name_en ? " / {$group->name_en}" : ''))
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\CheckboxList::make("filter_group_{$group->id}")
+                                            ->label('')
+                                            ->options(
+                                                $group->activeValues->mapWithKeys(fn ($v) => [
+                                                    $v->id => $v->name . ($v->name_en ? " / {$v->name_en}" : ''),
+                                                ])->toArray()
+                                            )
+                                            ->columns(3)
+                                            ->columnSpanFull()
+                                            ->gridDirection('row'),
+                                    ])
+                            )->all();
+                        }),
+
+                    // ── Tab 8: Variants ───────────────────────────────────────
                     Tab::make('Variants')
                         ->icon('heroicon-o-squares-2x2')
                         ->schema([

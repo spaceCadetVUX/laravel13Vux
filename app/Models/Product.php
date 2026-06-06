@@ -215,6 +215,11 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function filterValues(): BelongsToMany
+    {
+        return $this->belongsToMany(FilterValue::class, 'product_filter_values');
+    }
+
     public function approvedReviews(): HasMany
     {
         return $this->hasMany(Review::class)->where('is_approved', true);
