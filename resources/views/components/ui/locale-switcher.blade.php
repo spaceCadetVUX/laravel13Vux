@@ -2,7 +2,7 @@
 <div class="locale-switcher">
     @foreach(config('app.supported_locales') as $locale)
         @if($locale !== app()->getLocale())
-            <a href="{{ $alternateUrls[$locale] ?? route('home', ['locale' => $locale]) }}"
+            <a href="{{ $alternateUrls[$locale] ?? route($locale . '.index') }}"
                lang="{{ $locale }}">
                 {{ strtoupper($locale) }}
             </a>

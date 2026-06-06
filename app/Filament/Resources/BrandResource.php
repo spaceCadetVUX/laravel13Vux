@@ -155,12 +155,12 @@ class BrandResource extends Resource
                                                             Forms\Components\Select::make('robots')
                                                                 ->label('Robots')
                                                                 ->options([
-                                                                    'index, follow'     => 'index, follow (default)',
-                                                                    'noindex, follow'   => 'noindex, follow',
-                                                                    'index, nofollow'   => 'index, nofollow',
-                                                                    'noindex, nofollow' => 'noindex, nofollow',
+                                                                    'index,follow'     => 'index, follow (default)',
+                                                                    'noindex,follow'   => 'noindex,follow',
+                                                                    'index,nofollow'   => 'index,nofollow',
+                                                                    'noindex,nofollow' => 'noindex,nofollow',
                                                                 ])
-                                                                ->default('index, follow')
+                                                                ->default('index,follow')
                                                                 ->native(false),
                                                         ])
                                                         ->columns(2),
@@ -322,12 +322,12 @@ class BrandResource extends Resource
                                                             Forms\Components\Select::make('robots')
                                                                 ->label('Robots')
                                                                 ->options([
-                                                                    'index, follow'     => 'index, follow (default)',
-                                                                    'noindex, follow'   => 'noindex, follow',
-                                                                    'index, nofollow'   => 'index, nofollow',
-                                                                    'noindex, nofollow' => 'noindex, nofollow',
+                                                                    'index,follow'     => 'index, follow (default)',
+                                                                    'noindex,follow'   => 'noindex,follow',
+                                                                    'index,nofollow'   => 'index,nofollow',
+                                                                    'noindex,nofollow' => 'noindex,nofollow',
                                                                 ])
-                                                                ->default('index, follow')
+                                                                ->default('index,follow')
                                                                 ->native(false),
                                                         ])
                                                         ->columns(2),

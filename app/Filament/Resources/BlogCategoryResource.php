@@ -420,11 +420,11 @@ class BlogCategoryResource extends Resource
                                                     Forms\Components\Select::make('robots')
                                                         ->label('Robots (vi)')
                                                         ->options([
-                                                            'index, follow'     => 'index, follow — Default',
-                                                            'noindex, follow'   => 'noindex, follow — Exclude from index',
-                                                            'noindex, nofollow' => 'noindex, nofollow — Block completely',
+                                                            'index,follow'     => 'index, follow — Default',
+                                                            'noindex,follow'   => 'noindex, follow — Exclude from index',
+                                                            'noindex,nofollow' => 'noindex, nofollow — Block completely',
                                                         ])
-                                                        ->default('index, follow')
+                                                        ->default('index,follow')
                                                         ->native(false),
                                                 ])
                                                 ->columns(2),
@@ -576,11 +576,11 @@ class BlogCategoryResource extends Resource
                                                     Forms\Components\Select::make('robots')
                                                         ->label('Robots (en)')
                                                         ->options([
-                                                            'index, follow'     => 'index, follow — Default',
-                                                            'noindex, follow'   => 'noindex, follow — Exclude from index',
-                                                            'noindex, nofollow' => 'noindex, nofollow — Block completely',
+                                                            'index,follow'     => 'index, follow — Default',
+                                                            'noindex,follow'   => 'noindex, follow — Exclude from index',
+                                                            'noindex,nofollow' => 'noindex, nofollow — Block completely',
                                                         ])
-                                                        ->default('index, follow')
+                                                        ->default('index,follow')
                                                         ->native(false),
                                                 ])
                                                 ->columns(2),

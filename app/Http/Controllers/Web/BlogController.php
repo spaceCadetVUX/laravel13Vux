@@ -57,6 +57,8 @@ class BlogController extends Controller
         $fallbackImage       = null;
         $ogType              = 'website';
 
+        view()->share('alternateUrls', $alternateUrls);
+
         return view('pages.blog.category', compact(
             'blogCategory', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
             'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
@@ -71,13 +73,14 @@ class BlogController extends Controller
             ->first();
 
         if (! $translation) {
-            $viTranslation = BlogPostTranslation::where('locale', config('app.fallback_locale'))
-                ->where('slug', $slug)
+            $viTranslation = BlogPostTranslation::where('slug', $slug)
+                ->whereIn('locale', config('app.supported_locales'))
+                ->where('locale', '!=', $locale)
                 ->first();
 
             if ($viTranslation) {
                 return redirect(
-                    LocaleUrl::for('blog_post', $viTranslation->slug, config('app.fallback_locale')),
+                    LocaleUrl::for('blog_post', $viTranslation->slug, $viTranslation->locale),
                     302
                 );
             }
@@ -104,6 +107,8 @@ class BlogController extends Controller
             ? url('storage/' . ltrim($post->featured_image, '/'))
             : null;
         $ogType              = 'article';
+
+        view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.blog.show', compact(
             'post', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',

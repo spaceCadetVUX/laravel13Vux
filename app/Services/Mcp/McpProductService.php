@@ -2,6 +2,7 @@
 
 namespace App\Services\Mcp;
 
+use Illuminate\Support\Str;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
@@ -136,10 +137,15 @@ class McpProductService
                 }
 
                 // 5b. Auto-promote root price/sale_price/currency → per-locale translations.
-                // Prevents frontend null when Claude fills root-level price but not translations.{locale}.price.
-                // Only fills translation rows that already exist (created above or previously).
+                // Skip any locale that was explicitly provided in translations — those already have correct per-locale values.
                 if (array_key_exists('price', $data) && ! empty($data['price'])) {
+                    $explicitLocales = array_keys($data['translations'] ?? []);
+
                     foreach (['vi', 'en'] as $locale) {
+                        if (in_array($locale, $explicitLocales, true)) {
+                            continue; // locale had explicit price — don't overwrite with root VND
+                        }
+
                         $tr = $product->translations()->where('locale', $locale)->first();
                         if (! $tr) continue;
 
@@ -374,7 +380,7 @@ class McpProductService
                 continue; // translation is human-written — never overwrite
             }
 
-            $writeable = ['name', 'slug', 'description', 'short_description', 'price', 'sale_price', 'currency'];
+            $writeable = ['name', 'description', 'short_description', 'price', 'sale_price', 'currency'];
 
             foreach ($writeable as $field) {
                 if (! isset($data[$field])) {
@@ -382,10 +388,15 @@ class McpProductService
                 }
 
                 if (! $overwrite && $translation->exists && filled($translation->{$field})) {
-                    continue; // skip fields already populated
+                    continue;
                 }
 
                 $translation->{$field} = $data[$field];
+            }
+
+            // Auto-generate slug from name — never let AI set slug directly
+            if (filled($data['name'] ?? null) && ($overwrite || ! filled($translation->slug))) {
+                $translation->slug = Str::slug($data['name']);
             }
 
             $translation->save();

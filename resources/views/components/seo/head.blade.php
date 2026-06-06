@@ -26,7 +26,7 @@
     $ogDescription = $seoMeta?->og_description  ?: ($seoMeta?->meta_description  ?: $fallbackDescription);
     $ogImagePath   = $seoMeta?->og_image;
     $ogImage       = $ogImagePath
-        ? url(\Illuminate\Support\Facades\Storage::url($ogImagePath))
+        ? url(\Illuminate\Support\Facades\Storage::disk('public')->url($ogImagePath))
         : $fallbackImage;
     $resolvedOgType = $seoMeta?->og_type?->value ?: $ogType;
     $ogLocale       = match(app()->getLocale()) {

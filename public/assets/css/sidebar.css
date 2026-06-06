@@ -1,0 +1,354 @@
+:root {
+  /**
+  @font family declaration
+  */
+  --tp-ff-teko: 'Teko', serif;
+  --tp-ff-body: 'Inter', sans-serif;
+  --tp-ff-heading: 'Inter', sans-serif;
+  --tp-ff-inter: 'Inter', sans-serif;
+  --tp-ff-p: 'Inter', sans-serif;
+  --tp-ff-besley: 'Besley', serif;
+  --tp-ff-mango-thin: 'MangoGrotesqueThin', serif;
+  --tp-ff-mango-light: 'MangoGrotesqueLight', serif;
+  --tp-ff-mango: 'MangoGrotesque', serif;
+  --tp-ff-mango-medium: 'MangoGrotesqueMed', serif;
+  --tp-ff-mango-semibold: 'MangoGrotesqueSemBd', serif;
+  --tp-ff-mango-bold: 'MangoGrotesque', serif;
+  --tp-ff-clash-light: 'ClashDisplay-Light', serif;
+  --tp-ff-clash-regular: 'ClashDisplay-Regular', serif;
+  --tp-ff-clash-medium: 'ClashDisplay-Medium', serif;
+  --tp-ff-clash-semibold: 'ClashDisplay-Semibold', serif;
+  --tp-ff-clash-bold: 'ClashDisplay-Bold', serif;
+  --tp-ff-grotesk: 'Space Grotesk', serif;
+  --tp-ff-platform: 'Platform', serif;
+  --tp-ff-playfair: 'Playfair Display', serif;
+  --tp-ff-satisfy: 'Satisfy', cursive;
+  --tp-ff-dirtyline: 'dirtyline-36daysoftype-2022', serif;
+  --tp-ff-phudu: 'Phudu', serif;
+  --tp-ff-poppins: 'Poppins', serif;
+  --tp-ff-onest: 'Onest', serif;
+  --tp-ff-fontawesome: "Font Awesome 6 Pro";
+  /**
+  @color declaration
+  */
+  --tp-common-white: #ffffff;
+  --tp-common-black: #141414;
+  --tp-common-black-2: #232323;
+  --tp-common-black-3: #000;
+  --tp-common-black-4: #0a0a0a;
+  --tp-common-black-5: #121212;
+  --tp-common-black-6: #212121;
+  --tp-common-black-7: #0E0F11;
+  --tp-common-black-8: #1a1b1e;
+  --tp-common-black-9: #16302f;
+  --tp-common-black-10: #21212D;
+  --tp-common-cream: #f9f4e8;
+  --tp-common-cream-2: #FFF6BF;
+  --tp-common-cream-3: #ffffe6;
+  --tp-common-yellow: #ffc446;
+  --tp-common-yellow-1: #FFF669;
+  --tp-common-yellow-green: #E9FF48;
+  --tp-common-green-light: #D0FF71;
+  --tp-common-green-regular: #C1ED00;
+  --tp-common-green-solid: #17312F;
+  --tp-common-pink-light: #FDE1DA;
+  --tp-common-paste: #43D4A0;
+  --tp-common-paste-2: #0C5752;
+  --tp-common-sky: #C5FCFC;
+  --tp-common-red: #FF4851;
+  --tp-common-red-2: #FF481F;
+  --tp-common-red-3: #FF5722;
+  --tp-common-blue: #7463FF;
+  --tp-common-brown: #453030;
+  --tp-grey-1: #f8f8f8;
+  --tp-grey-2: #f1f1f1;
+  --tp-grey-3: #F8F8FB;
+  --tp-grey-4: #F6F8EF;
+  --tp-coffe-1: #653624;
+  --tp-coffe-2: #552411;
+  --tp-cream-1: #B7AB98;
+  --tp-cream-2: #CFC292;
+  --tp-text-body: #2e2d2d;
+  --tp-theme-green: #A0FF27;
+  --tp-theme-pink: #EC6FD5;
+  --tp-theme-yellow: #FFB701;
+  --tp-border-1: #EAEBED;
+  --tp-border-2: #e7e7e7;
+
+  /* main color */
+  --tp-brand-primary-color: #34679A;      
+  --tp-navi-background-color: #14293D;
+  --tp-secondary-color: #2AB7CA;
+  --tp-secondary-light-color: #49cadb;
+  --accent-color: #F6C90E;
+  --temp1: #F0A500;
+  --section-background: #8DA9C4;
+
+
+
+  /* main text color */
+  --tp-heading-text-color: #0F0F0F;
+  --tp-primary-text-color: #34679A;
+  --tp-h2-text-color: #1C1C1C;
+  --tp-subtitle-text-color: #3C3C3C;
+  --tp-white-text-color: #FFFFFF;
+  --tp-sub-white-text-color: #E1E8F0;
+}
+
+
+/* Mobile Filter Toggle Button */
+.mobile-filter-btn {
+    background: linear-gradient(135deg, #ff5722 0%, #ff7043 100%);
+    border: none;
+    padding: 15px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.mobile-filter-btn:hover,
+.mobile-filter-btn.active {
+    background: linear-gradient(135deg, #f4511e 0%, #ff5722 100%);
+    box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+    transform: translateY(-2px);
+}
+
+.mobile-filter-btn i.fas.fa-filter {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.mobile-filter-btn .filter-text {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.mobile-filter-btn .toggle-icon {
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+
+.mobile-filter-btn:active {
+    transform: translateY(0);
+}
+
+/* Ripple effect for button */
+.mobile-filter-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.mobile-filter-btn:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Sidebar Responsive Styles */
+@media (max-width: 991px) {
+    #projects-sidebar {
+        margin-bottom: 30px;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .sidebar-blog-grid-wrap {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar-widget {
+        margin-bottom: 25px !important;
+    }
+
+    .sidebar-widget-title {
+        font-size: 18px !important;
+    }
+
+    /* Search input adjustments */
+    .sidebar-search-input input {
+        padding: 12px 50px 12px 15px !important;
+        font-size: 14px !important;
+    }
+
+    .sidebar-search-input button {
+        right: 5px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+    }
+
+    /* Category list mobile adjustments */
+    .category-list li a {
+        padding: 12px 15px !important;
+        font-size: 14px !important;
+    }
+
+    .category-count {
+        font-size: 12px !important;
+    }
+
+    /* Featured projects mobile */
+    .rc-post {
+        padding-bottom: 15px !important;
+        margin-bottom: 15px !important;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .rc-post:last-child {
+        border-bottom: none;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .rc-post-thumb {
+        width: 80px !important;
+        height: 80px !important;
+        flex-shrink: 0;
+    }
+
+    .rc-post-title {
+        font-size: 14px !important;
+    }
+}
+
+/* Desktop: Always show sidebar */
+@media (min-width: 992px) {
+    .mobile-filter-btn {
+        display: none !important;
+    }
+
+    #projects-sidebar {
+        display: block !important;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 991px) {
+    .col-md-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+}
+
+/* Mobile: Single column */
+@media (max-width: 767px) {
+    .col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    .tp-blog-masonry-item {
+        margin-bottom: 25px;
+    }
+
+    .sidebar-widget-box {
+        padding: 15px;
+    }
+}
+
+/* Slide down animation */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Category list active state */
+.category-list a.active {
+    background: linear-gradient(135deg, #ff5722 0%, #ff7043 100%);
+    color: white !important;
+    border-radius: 6px;
+}
+
+.category-list a.active .category-icon svg,
+.category-list a.active .category-icon i {
+    color: white !important;
+}
+
+.category-list a.active .category-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: white !important;
+}
+
+/* Category list hover effect */
+.category-list a {
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+}
+
+.category-list a:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+    padding-left: 20px !important;
+}
+
+/* Search button styling */
+.sidebar-search-input button {
+    background: linear-gradient(135deg, #ff5722 0%, #ff7043 100%);
+    transition: all 0.3s ease;
+}
+
+.sidebar-search-input button:hover {
+    background: linear-gradient(135deg, #f4511e 0%, #ff5722 100%);
+    transform: scale(1.05);
+}
+
+/* Search input focus */
+.sidebar-search-input input:focus {
+    border-color: #34679A !important;
+    box-shadow: 0 0 0 0.2rem rgba(25, 163, 255, 0.25) !important;
+    outline: none;
+}
+
+/* Sidebar widget box styling */
+.sidebar-widget-box {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.sidebar-widget-box:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Featured project thumbnail */
+.rc-post-thumb img {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.rc-post-thumb:hover img {
+    transform: scale(1.05);
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}

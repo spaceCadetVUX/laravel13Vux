@@ -12,6 +12,12 @@ use Illuminate\Http\RedirectResponse;
 
 class CategoryController extends Controller
 {
+    // TODO: implement category listing page
+    public function index(string $locale): \Illuminate\Http\Response
+    {
+        return response("Categories — {$locale}", 200);
+    }
+
     public function show(string $locale, string $slug): View|RedirectResponse
     {
         $translation = CategoryTranslation::where('locale', $locale)
@@ -20,13 +26,14 @@ class CategoryController extends Controller
             ->first();
 
         if (! $translation) {
-            $viTranslation = CategoryTranslation::where('locale', config('app.fallback_locale'))
-                ->where('slug', $slug)
+            $viTranslation = CategoryTranslation::where('slug', $slug)
+                ->whereIn('locale', config('app.supported_locales'))
+                ->where('locale', '!=', $locale)
                 ->first();
 
             if ($viTranslation) {
                 return redirect(
-                    LocaleUrl::for('category', $viTranslation->slug, config('app.fallback_locale')),
+                    LocaleUrl::for('category', $viTranslation->slug, $viTranslation->locale),
                     302
                 );
             }
@@ -48,6 +55,8 @@ class CategoryController extends Controller
         $fallbackDescription = $translation->description ?? '';
         $fallbackImage       = null;
         $ogType              = 'website';
+
+        view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.category.show', compact(
             'category', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',

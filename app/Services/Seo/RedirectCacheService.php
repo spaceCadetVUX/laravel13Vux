@@ -43,11 +43,12 @@ class RedirectCacheService
         try {
             $cached = Cache::store('redis')->get($key);
 
-            if ($cached !== null) {
-                // Cache hit — deserialize and return
-                return $cached instanceof Collection
-                    ? $cached
-                    : new Collection($cached);
+            if ($cached instanceof Collection) {
+                // Validate items are Redirect models — guard against corrupted/stale cache
+                $first = $cached->first();
+                if ($first === null || $first instanceof Redirect) {
+                    return $cached;
+                }
             }
         } catch (\Throwable) {
             // Redis unavailable (e.g. local dev) — fall through to DB

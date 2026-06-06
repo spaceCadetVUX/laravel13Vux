@@ -24,8 +24,9 @@ class PageController extends Controller
                 ->first();
 
             if ($viTranslation) {
+                $fallbackLocale = config('app.fallback_locale');
                 return redirect(
-                    route('page.show', ['locale' => config('app.fallback_locale'), 'slug' => $viTranslation->slug]),
+                    route($fallbackLocale . '.page.show', ['slug' => $viTranslation->slug]),
                     302
                 );
             }
@@ -38,7 +39,7 @@ class PageController extends Controller
             ->where('is_active', true)
             ->get()
             ->mapWithKeys(fn ($t) => [
-                $t->locale => route('page.show', ['locale' => $t->locale, 'slug' => $t->slug]),
+                $t->locale => route($t->locale . '.page.show', ['slug' => $t->slug]),
             ])
             ->all();
 
@@ -46,7 +47,7 @@ class PageController extends Controller
         $seoMeta             = $translation;
         $jsonldSchemas       = [
             app(JsonldService::class)->buildBreadcrumb([
-                ['name' => __('common.home', [], $locale), 'url' => route('home', ['locale' => $locale])],
+                ['name' => __('common.home', [], $locale), 'url' => route($locale . '.index')],
                 ['name' => $translation->title, 'url' => url()->current()],
             ]),
         ];
@@ -54,6 +55,8 @@ class PageController extends Controller
         $fallbackDescription = $translation->meta_description ?? '';
         $fallbackImage       = null;
         $ogType              = 'website';
+
+        view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.page.show', compact(
             'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\AboutController;
 use App\Http\Controllers\Web\BlogController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\HealthController;
@@ -9,11 +10,11 @@ use App\Http\Controllers\Web\PageController;
 use App\Http\Controllers\Web\ProductController;
 use App\Http\Controllers\Web\SearchController;
 use App\Http\Controllers\Web\SitemapController;
+use App\Http\Controllers\Web\SolutionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // ── Root: detect preferred locale → redirect ─────────────────────────────────
-// 302 (temporary) — browser may vary if Accept-Language changes
 Route::get('/', function (Request $request) {
     $preferred = $request->getPreferredLanguage(config('app.supported_locales')) ?? 'vi';
     return redirect("/{$preferred}/", 302);
@@ -28,20 +29,15 @@ Route::get('sitemap-{locale}-{type}.xml', [SitemapController::class, 'child'])
     ->where(['locale' => 'vi|en', 'type' => 'products|product-categories|blog|blog-categories']);
 
 // ── SEO: LLMs TXT ────────────────────────────────────────────────────────────
-// Locale-aware routes BEFORE locale group to take priority
+// These use {locale} param in URI — kept as-is (set.locale reads from route param)
 Route::middleware('throttle:30,1')->group(function () {
-    // Per-locale llms.txt: /vi/llms.txt, /en/llms.txt
-    // set.locale applied manually — outside the locale prefix group
     $localePattern = implode('|', config('app.supported_locales'));
 
     Route::get('{locale}/llms.txt', [LlmsController::class, 'localized'])
         ->where('locale', $localePattern)
         ->middleware('set.locale');
 
-    // Root llms.txt → redirect to vi (302 = temporary, will be real when translated)
     Route::get('llms.txt', fn () => redirect('/vi/llms.txt', 302));
-
-    // Legacy scoped routes (kept for backward compat — ML-11 will clean up)
     Route::get('llms-full.txt', [LlmsController::class, 'full']);
     Route::get('llms-{slug}.txt', [LlmsController::class, 'scoped']);
 });
@@ -52,74 +48,136 @@ if (app()->isLocal() || app()->environment('staging')) {
     Route::get('test-seo-head', fn () => view('test-seo-head'));
 }
 
-// ── vi group: Vietnamese URL paths ──────────────────────────────────────────
-// set.locale reads {locale} param → sets app()->setLocale('vi')
-Route::prefix('{locale}')
-    ->where(['locale' => 'vi'])
-    ->middleware('set.locale')
+// ══════════════════════════════════════════════════════════════════════════════
+// TIẾNG VIỆT  /vi/*
+//
+// Hardcoded prefix "vi" (not a route param) → avoids URI collision with /en/*
+// Locale is injected into the route as a virtual parameter by SetLocale
+// middleware, so controllers can still type-hint `string $locale` normally.
+//
+// Route names: vi.{name}
+// ══════════════════════════════════════════════════════════════════════════════
+Route::prefix('vi')
+    ->middleware('set.locale:vi')
     ->group(function () {
 
-        Route::get('/', [HomeController::class, 'index'])->name('home');
+        Route::get('/', [HomeController::class, 'index'])
+            ->name('vi.index');
 
+        // ── Giải pháp (static marketing pages) ───────────────────────────────
+        Route::get('giai-phap/dali-casambi', [SolutionController::class, 'dali'])
+            ->name('vi.dali-casambi');
+
+        Route::get('giai-phap/wireless-casambi', [SolutionController::class, 'wireless'])
+            ->name('vi.wireless-casambi');
+
+        Route::get('giai-phap/theo-vai-tro', [SolutionController::class, 'byRole'])
+            ->name('vi.solutions-by-role');
+
+        // ── Giới thiệu ────────────────────────────────────────────────────────
+        Route::get('gioi-thieu', [AboutController::class, 'show'])
+            ->name('vi.about');
+
+        // ── Tìm kiếm autocomplete (trước tim-kiem để tránh slug collision) ───
+        Route::get('tim-kiem/goi-y', [ProductController::class, 'autocomplete'])
+            ->name('vi.product.autocomplete');
+
+        // ── Tìm kiếm ─────────────────────────────────────────────────────────
+        Route::get('tim-kiem', [SearchController::class, 'index'])
+            ->name('vi.search');
+
+        // ── Cửa hàng / Danh mục sản phẩm ─────────────────────────────────────
+        Route::get('cua-hang', [ProductController::class, 'index'])
+            ->name('vi.product.shop');
+
+        Route::get('danh-muc', [CategoryController::class, 'index'])
+            ->name('vi.product.category');
+
+        // ── Danh mục + Sản phẩm ───────────────────────────────────────────────
         Route::get('danh-muc/{slug}', [CategoryController::class, 'show'])
-            ->name('category.show');
+            ->name('vi.category.show');
 
         Route::get('san-pham/{slug}', [ProductController::class, 'show'])
-            ->name('product.show');
+            ->name('vi.product.show');
 
-        Route::get('tim-kiem', [SearchController::class, 'index'])
-            ->name('search');
-
+        // ── Blog ──────────────────────────────────────────────────────────────
         Route::get('bai-viet', [BlogController::class, 'index'])
-            ->name('blog.index');
+            ->name('vi.blog.index');
 
-        // chu-de MUST be before bai-viet/{slug} — no collision risk since different prefix
         Route::get('chu-de/{slug}', [BlogController::class, 'category'])
-            ->name('blog.category');
+            ->name('vi.blog.category');
 
         Route::get('bai-viet/{slug}', [BlogController::class, 'show'])
-            ->name('blog.show');
+            ->name('vi.blog.show');
 
-        // Static pages — catch-all, must be last
+        // ── Trang tĩnh — catch-all, phải đặt cuối cùng ───────────────────────
         Route::get('{slug}', [PageController::class, 'show'])
-            ->name('page.show');
+            ->name('vi.page.show');
     });
 
-// ── en group: English URL paths ──────────────────────────────────────────────
-Route::prefix('{locale}')
-    ->where(['locale' => 'en'])
-    ->middleware('set.locale')
+// ══════════════════════════════════════════════════════════════════════════════
+// ENGLISH  /en/*
+// Route names: en.{name}
+// ══════════════════════════════════════════════════════════════════════════════
+Route::prefix('en')
+    ->middleware('set.locale:en')
     ->group(function () {
 
-        Route::get('/', [HomeController::class, 'index'])->name('home.en');
+        Route::get('/', [HomeController::class, 'index'])
+            ->name('en.index');
 
+        // ── Solutions (static marketing pages) ───────────────────────────────
+        Route::get('solutions/dali-casambi', [SolutionController::class, 'dali'])
+            ->name('en.dali-casambi');
+
+        Route::get('solutions/wireless-casambi', [SolutionController::class, 'wireless'])
+            ->name('en.wireless-casambi');
+
+        Route::get('solutions/by-role', [SolutionController::class, 'byRole'])
+            ->name('en.solutions-by-role');
+
+        // ── About ─────────────────────────────────────────────────────────────
+        Route::get('about', [AboutController::class, 'show'])
+            ->name('en.about');
+
+        // ── Search autocomplete (trước search để tránh slug collision) ────────
+        Route::get('search/autocomplete', [ProductController::class, 'autocomplete'])
+            ->name('en.product.autocomplete');
+
+        // ── Search ────────────────────────────────────────────────────────────
+        Route::get('search', [SearchController::class, 'index'])
+            ->name('en.search');
+
+        // ── Shop / Category listing ───────────────────────────────────────────
+        Route::get('shop', [ProductController::class, 'index'])
+            ->name('en.product.shop');
+
+        Route::get('categories', [CategoryController::class, 'index'])
+            ->name('en.product.category');
+
+        // ── Categories + Products ─────────────────────────────────────────────
         Route::get('categories/{slug}', [CategoryController::class, 'show'])
-            ->name('category.show.en');
+            ->name('en.category.show');
 
         Route::get('products/{slug}', [ProductController::class, 'show'])
-            ->name('product.show.en');
+            ->name('en.product.show');
 
-        Route::get('search', [SearchController::class, 'index'])
-            ->name('search.en');
-
+        // ── Blog ──────────────────────────────────────────────────────────────
         Route::get('blog', [BlogController::class, 'index'])
-            ->name('blog.index.en');
+            ->name('en.blog.index');
 
-        // blog/category MUST be before blog/{slug} to avoid slug collision
         Route::get('blog/category/{slug}', [BlogController::class, 'category'])
-            ->name('blog.category.en');
+            ->name('en.blog.category');
 
         Route::get('blog/{slug}', [BlogController::class, 'show'])
-            ->name('blog.show.en');
+            ->name('en.blog.show');
 
-        // Static pages — catch-all, must be last
+        // ── Static pages — catch-all, must be last ────────────────────────────
         Route::get('{slug}', [PageController::class, 'show'])
-            ->name('page.show.en');
+            ->name('en.page.show');
     });
 
 // ── Fallback: no locale prefix → 301 to /vi/ ────────────────────────────────
-// Handles: /products/abc, /categories/xyz → /vi/products/abc
-// 301 = permanent (Google won't re-crawl no-locale URLs again)
 Route::fallback(function (Request $request) {
     $path = ltrim($request->path(), '/');
     return redirect('/vi/' . $path, 301);

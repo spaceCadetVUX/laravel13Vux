@@ -83,7 +83,7 @@ class ProductResource extends Resource
 
                             Forms\Components\TextInput::make('sku')
                                 ->label('SKU')
-                                ->required()
+                                ->required(fn (Get $get): bool => (bool) $get('is_active'))
                                 ->unique(table: Product::class, column: 'sku', ignoreRecord: true),
 
                             Forms\Components\Toggle::make('is_active')
@@ -177,7 +177,6 @@ class ProductResource extends Resource
                                         ])
                                         ->default('VND')
                                         ->native(false)
-                                        ->required()
                                         ->live()
                                         ->hint('Dùng trong JSON-LD schema (priceCurrency)')
                                         ->hintIcon('heroicon-o-code-bracket')
@@ -195,7 +194,7 @@ class ProductResource extends Resource
                                             'SGD' => 'S$', 'THB' => '฿',
                                             default => '₫',
                                         })
-                                        ->required()
+                                        ->required(fn (Get $get): bool => (bool) $get('is_active'))
                                         ->afterStateUpdated(fn ($state, Set $set) => $set('price', $state)),
 
                                     Forms\Components\TextInput::make('translations.vi.sale_price')
@@ -260,7 +259,7 @@ class ProductResource extends Resource
                                     Forms\Components\TextInput::make('stock_quantity')
                                         ->label('Stock Quantity')
                                         ->numeric()
-                                        ->required()
+                                        ->required(fn (Get $get): bool => (bool) $get('is_active'))
                                         ->columnSpanFull(),
                                 ]),
 
@@ -390,21 +389,43 @@ class ProductResource extends Resource
                                 ->relationship()
                                 ->label('')
                                 ->schema([
-                                    Forms\Components\TextInput::make('name')
-                                        ->label('Attribute')
-                                        ->placeholder('e.g. Material, Weight, Voltage')
-                                        ->required()
-                                        ->live(debounce: 300)
-                                        ->columnSpan(1),
+                                    Tabs::make('AttrLangTabs')
+                                        ->tabs([
+                                            Tab::make('🇻🇳 Tiếng Việt')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('name')
+                                                        ->label('Thuộc tính (vi)')
+                                                        ->placeholder('vd: Vật liệu, Khối lượng, Điện áp')
+                                                        ->required()
+                                                        ->live(debounce: 300)
+                                                        ->columnSpan(1),
 
-                                    Forms\Components\TextInput::make('value')
-                                        ->label('Value')
-                                        ->placeholder('e.g. Aluminum, 500g, 220V')
-                                        ->required()
-                                        ->columnSpan(1),
+                                                    Forms\Components\TextInput::make('value')
+                                                        ->label('Giá trị (vi)')
+                                                        ->placeholder('vd: Nhôm, 500g, 220V')
+                                                        ->required()
+                                                        ->columnSpan(1),
+                                                ])
+                                                ->columns(2),
+
+                                            Tab::make('🇬🇧 English')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('name_en')
+                                                        ->label('Attribute (en)')
+                                                        ->placeholder('e.g. Material, Weight, Voltage')
+                                                        ->columnSpan(1),
+
+                                                    Forms\Components\TextInput::make('value_en')
+                                                        ->label('Value (en)')
+                                                        ->placeholder('e.g. Aluminum, 500g, 220V')
+                                                        ->columnSpan(1),
+                                                ])
+                                                ->columns(2),
+                                        ])
+                                        ->columnSpanFull(),
                                 ])
                                 ->itemLabel(fn (array $state): ?string =>
-                                    filled($state['name'])
+                                    filled($state['name'] ?? '')
                                         ? ($state['name'] . (filled($state['value'] ?? '') ? ': ' . $state['value'] : ''))
                                         : null
                                 )
@@ -418,7 +439,6 @@ class ProductResource extends Resource
                                 ->reorderableWithDragAndDrop()
                                 ->addActionLabel('+ Add attribute')
                                 ->defaultItems(0)
-                                ->columns(2)
                                 ->columnSpanFull(),
                         ]),
 
@@ -728,12 +748,12 @@ class ProductResource extends Resource
                                                             Forms\Components\Select::make('robots')
                                                                 ->label('Robots')
                                                                 ->options([
-                                                                    'index, follow'     => 'index, follow (default)',
-                                                                    'noindex, follow'   => 'noindex, follow',
-                                                                    'index, nofollow'   => 'index, nofollow',
-                                                                    'noindex, nofollow' => 'noindex, nofollow',
+                                                                    'index,follow'     => 'index, follow (default)',
+                                                                    'noindex,follow'   => 'noindex,follow',
+                                                                    'index,nofollow'   => 'index,nofollow',
+                                                                    'noindex,nofollow' => 'noindex,nofollow',
                                                                 ])
-                                                                ->default('index, follow')
+                                                                ->default('index,follow')
                                                                 ->native(false),
                                                         ])
                                                         ->columns(2),
@@ -911,12 +931,12 @@ class ProductResource extends Resource
                                                             Forms\Components\Select::make('robots')
                                                                 ->label('Robots')
                                                                 ->options([
-                                                                    'index, follow'     => 'index, follow (default)',
-                                                                    'noindex, follow'   => 'noindex, follow',
-                                                                    'index, nofollow'   => 'index, nofollow',
-                                                                    'noindex, nofollow' => 'noindex, nofollow',
+                                                                    'index,follow'     => 'index, follow (default)',
+                                                                    'noindex,follow'   => 'noindex,follow',
+                                                                    'index,nofollow'   => 'index,nofollow',
+                                                                    'noindex,nofollow' => 'noindex,nofollow',
                                                                 ])
-                                                                ->default('index, follow')
+                                                                ->default('index,follow')
                                                                 ->native(false),
                                                         ])
                                                         ->columns(2),

@@ -1,12 +1,47 @@
 <?php
 
-if (! function_exists('route_locale')) {
+if (! function_exists('current_locale')) {
+    function current_locale(): string
+    {
+        return app()->getLocale();
+    }
+}
+
+if (! function_exists('switch_locale_url')) {
     /**
-     * Generate a URL for a named route with a specific locale prefix.
+     * Generate the equivalent URL for the given locale on the current page.
      *
-     * Usage in Blade:
-     *   {{ route_locale('product.show', 'en', ['slug' => $enSlug]) }}
+     * Priority:
+     *   1. $alternateUrls shared by the controller (dynamic pages — blog, product, category)
+     *   2. Swap locale prefix in the current route name (static pages)
+     *   3. Fallback to locale home
      */
+    function switch_locale_url(string $locale): string
+    {
+        $alternateUrls = view()->shared('alternateUrls');
+        if (is_array($alternateUrls) && isset($alternateUrls[$locale])) {
+            return $alternateUrls[$locale];
+        }
+
+        $route = request()->route();
+        if (! $route || ! $route->getName()) {
+            return route($locale . '.index');
+        }
+
+        $currentName = $route->getName();
+        $baseName    = preg_replace('/^(vi|en)\./', '', $currentName);
+
+        try {
+            // Pass all current route params + override locale so slug/id params are preserved
+            $params = array_merge($route->parameters(), ['locale' => $locale]);
+            return route($locale . '.' . $baseName, $params);
+        } catch (\Throwable) {
+            return route($locale . '.index');
+        }
+    }
+}
+
+if (! function_exists('route_locale')) {
     function route_locale(string $name, string $locale, array $params = []): string
     {
         return route($name, array_merge(['locale' => $locale], $params));
@@ -14,9 +49,6 @@ if (! function_exists('route_locale')) {
 }
 
 if (! function_exists('supported_locales')) {
-    /**
-     * Return the array of supported locales from config.
-     */
     function supported_locales(): array
     {
         return config('app.supported_locales', ['vi', 'en']);

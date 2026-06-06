@@ -45,7 +45,7 @@ class ProductImage extends Model
     protected function url(): Attribute
     {
         return Attribute::make(
-            get: fn () => Storage::url($this->path),
+            get: fn () => Storage::disk('public')->url($this->path),
         );
     }
 

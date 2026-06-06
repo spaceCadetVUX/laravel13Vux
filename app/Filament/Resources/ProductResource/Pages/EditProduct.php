@@ -58,7 +58,7 @@ class EditProduct extends EditRecord
             $data['slug']              = $vi['slug'] ?? $data['slug'] ?? null;
             $data['short_description'] = $vi['short_description'] ?? null;
             $data['description']       = $vi['description'] ?? null;
-            $data['price']             = $vi['price'] ?? $data['price'] ?? null;
+            $data['price']             = $vi['price'] ?? $data['price'] ?? 0;
             $data['sale_price']        = $vi['sale_price'] ?? null;
             $data['currency']          = $vi['currency'] ?? 'VND';
         }
@@ -83,13 +83,15 @@ class EditProduct extends EditRecord
                 continue;
             }
 
-            $record->translations()->updateOrCreate(
-                ['locale' => $locale],
-                collect($localeData)
-                    ->only(['name', 'slug', 'short_description', 'description', 'price', 'sale_price', 'currency'])
-                    ->filter(fn ($v) => $v !== null)
-                    ->toArray()
-            );
+            $numericFields = ['price', 'sale_price'];
+
+            $updateData = collect($localeData)
+                ->only(['name', 'slug', 'short_description', 'description', 'price', 'sale_price', 'currency'])
+                ->map(fn ($v, $k) => (in_array($k, $numericFields) && $v === '') ? null : $v)
+                ->filter(fn ($v, $k) => in_array($k, $numericFields) ? $v !== '' : ($v !== null && $v !== ''))
+                ->toArray();
+
+            $record->translations()->updateOrCreate(['locale' => $locale], $updateData);
         }
     }
 }

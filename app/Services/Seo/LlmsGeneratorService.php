@@ -20,6 +20,8 @@ class LlmsGeneratorService
         'blog_post'     => 'blog.show',
         'category'      => 'category.show',
         'blog_category' => 'blog.category',
+        'brand'         => 'brand.show',
+        'manufacturer'  => 'manufacturer.show',
     ];
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -175,10 +177,11 @@ class LlmsGeneratorService
             ?? $model->getAttribute('title') ?? $model->getAttribute('name') ?? '');
         $slug  = (string) ($translation?->slug ?? $model->getAttribute('slug') ?? '');
 
-        $routeName = self::ROUTE_NAMES[$morphAlias] ?? null;
-        $url       = $routeName && $slug
-            ? route($routeName, ['locale' => $locale, 'slug' => $slug])
-            : rtrim((string) config('app.url'), '/') . '/' . $slug;
+        $routeSuffix = self::ROUTE_NAMES[$morphAlias] ?? null;
+        $fullRoute   = $routeSuffix ? $locale . '.' . $routeSuffix : null;
+        $url         = $fullRoute && $slug && \Illuminate\Support\Facades\Route::has($fullRoute)
+            ? route($fullRoute, ['slug' => $slug])
+            : rtrim((string) config('app.url'), '/') . '/' . $locale . '/' . $slug;
 
         // ── Summary block ─────────────────────────────────────────────────────
         // Priority: ai_summary → short_description (products) / excerpt (blog posts) → empty

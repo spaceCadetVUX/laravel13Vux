@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "knxstore": {
+      "command": "node",
+      "args": ["C:/Users/vusu3/OneDrive/Desktop/per/laravel13Vux/mcp-server/dist/index.js"],
+      "env": {
+        "KNXSTORE_API_BASE": "http://127.0.0.1:8000/api/v1",
+        "KNXSTORE_API_TOKEN": "1|mktLFLVMOhWFbb9PolZYcv1YXuXydvPw1OVN77C37a87b10a"
+      }
+    }
+  }
+}

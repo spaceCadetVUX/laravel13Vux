@@ -79,11 +79,11 @@ class SeoMetaResource extends Resource
                             Forms\Components\Select::make('robots')
                                 ->label('Robots')
                                 ->options([
-                                    'index, follow'     => 'index, follow',
-                                    'noindex, nofollow' => 'noindex, nofollow',
-                                    'noindex, follow'   => 'noindex, follow',
+                                    'index,follow'     => 'index,follow',
+                                    'noindex,nofollow' => 'noindex,nofollow',
+                                    'noindex,follow'   => 'noindex,follow',
                                 ])
-                                ->default('index, follow'),
+                                ->default('index,follow'),
                         ])
                         ->columns(2),
 
@@ -177,9 +177,9 @@ class SeoMetaResource extends Resource
                     ->label('Robots')
                     ->badge()
                     ->color(fn ($state) => match ($state) {
-                        'index, follow'     => 'success',
-                        'noindex, nofollow' => 'danger',
-                        'noindex, follow'   => 'warning',
+                        'index,follow'     => 'success',
+                        'noindex,nofollow' => 'danger',
+                        'noindex,follow'   => 'warning',
                         default             => 'gray',
                     }),
 

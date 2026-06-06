@@ -46,7 +46,13 @@
       "Bash(php -l app/Http/Controllers/Api/V1/Catalog/ManufacturerController.php)",
       "Bash(php -l app/Repositories/Eloquent/ProductRepository.php)",
       "Bash(php -l app/Http/Resources/Api/Product/ProductDetailResource.php)",
-      "Bash(php -l app/Filament/Resources/ProductResource.php)"
+      "Bash(php -l app/Filament/Resources/ProductResource.php)",
+      "Bash(grep -n \"EditProduct\\\\|Pages\\\\\\\\\\\\\\\\Edit\\\\|getPages\\\\|EditRecord\" \"C:/Users/vusu3/OneDrive/Desktop/per/laravel13Vux/app/Filament/Resources/ProductResource.php\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/en/products/olfer-cbu-da-1p\")"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "knxstore"
+  ]
 }

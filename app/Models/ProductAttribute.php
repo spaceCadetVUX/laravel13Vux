@@ -10,7 +10,9 @@ class ProductAttribute extends Model
     protected $fillable = [
         'product_id',
         'name',
+        'name_en',
         'value',
+        'value_en',
         'unit',
         'sort_order',
     ];
