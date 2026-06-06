@@ -6729,14 +6729,14 @@ body.mob-filter-open {
   .nav-mega-products .nav-mega-all-products {
     grid-column: 1 / -1;
     grid-row: 1;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
     margin-bottom: 4px;
     padding-bottom: 4px;
   }
 
   .nav-mega-products .nav-mega-all-products a {
     font-weight: 600 !important;
-    color: #fff !important;
+    color: #0d0d0d !important;
   }
 }
 
@@ -6754,7 +6754,7 @@ body.mob-filter-open {
 
   .nav-mega-products .nav-mega-all-products {
     grid-column: 1 / -1;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
     margin-bottom: 4px;
   }
 }
