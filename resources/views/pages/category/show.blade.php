@@ -2,8 +2,9 @@
     $locale  = app()->getLocale();
     $appName = config('app.name');
 
-    $ogImage    = $fallbackImage ?? asset('assets/images/casambi/casambiblack.svg');
-    $shopBaseUrl = route(current_locale() . '.category.show', $translation->slug);
+    $ogImage           = $fallbackImage ?? asset('assets/images/casambi/casambiblack.svg');
+    $shopBaseUrl       = route(current_locale() . '.category.show', $translation->slug);
+    $activeFilterCount = array_sum(array_map('count', $activeValueSlugs)) + ($brandSlug ? 1 : 0);
 @endphp
 
 @extends('layouts.frontend')
@@ -63,112 +64,32 @@
 <div class="container pb-5">
     <div class="row gx-lg-5">
 
-        {{-- Sidebar --}}
-        <aside class="col-lg-2 shop-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="shopSidebar" aria-labelledby="shopSidebarLabel">
-            <div class="offcanvas-header d-lg-none border-bottom mb-3 px-4 pt-4">
-                <h5 class="offcanvas-title fw-bold" id="shopSidebarLabel">{{ $locale === 'vi' ? 'Bộ lọc' : 'Filters' }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#shopSidebar" aria-label="Close"></button>
-            </div>
-
-            <div class="offcanvas-body flex-column px-4 px-lg-0 pb-4">
-                <h5 class="fw-bold mb-4 fs-6 d-none d-lg-block">{{ $locale === 'vi' ? 'Bộ lọc' : 'Filters' }}</h5>
-
-                @foreach($filterGroups as $loop_group => $group)
-                @php
-                    $activeSlugsForGroup = $activeValueSlugs[$group->slug] ?? [];
-                    $hasActive           = count($activeSlugsForGroup) > 0;
-                    $groupLabel          = ($locale !== 'vi' && $group->name_en) ? $group->name_en : $group->name;
-                    $collapseId          = 'fg-collapse-' . $group->id;
-                    $isOpen              = $hasActive || $loop_group < 2;
-                @endphp
-                @if($group->activeValues->count())
-                <div class="filter-group mb-1">
-                    <button class="filter-group-toggle w-100 d-flex justify-content-between align-items-center"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#{{ $collapseId }}"
-                            aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
-                            aria-controls="{{ $collapseId }}">
-                        <span class="font-xs fw-bold text-uppercase letter-wide text-muted">{{ $groupLabel }}</span>
-                        <svg class="filter-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="collapse {{ $isOpen ? 'show' : '' }} pt-2 pb-3" id="{{ $collapseId }}">
-                        @foreach($group->activeValues as $value)
-                        @php
-                            $isChecked  = in_array($value->slug, $activeSlugsForGroup);
-                            $valueLabel = ($locale !== 'vi' && $value->name_en) ? $value->name_en : $value->name;
-                        @endphp
-                        <div class="form-check filter-check">
-                            <input class="form-check-input filter-checkbox"
-                                   type="checkbox"
-                                   id="fv-{{ $value->id }}"
-                                   data-group-slug="{{ $group->slug }}"
-                                   data-value-slug="{{ $value->slug }}"
-                                   {{ $isChecked ? 'checked' : '' }}>
-                            <label class="form-check-label" for="fv-{{ $value->id }}">{{ $valueLabel }}</label>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-                @endforeach
-
-                @if($brands->count())
-                <div class="filter-group mb-1">
-                    <button class="filter-group-toggle w-100 d-flex justify-content-between align-items-center"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#fg-collapse-brand"
-                            aria-expanded="{{ $brandSlug ? 'true' : 'false' }}"
-                            aria-controls="fg-collapse-brand">
-                        <span class="font-xs fw-bold text-uppercase letter-wide text-muted">Brand</span>
-                        <svg class="filter-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="collapse {{ $brandSlug ? 'show' : '' }} pt-2 pb-3" id="fg-collapse-brand">
-                        @foreach($brands as $b)
-                        @php
-                            $logoSrc = $b->logo ? asset('storage/' . $b->logo) : null;
-                        @endphp
-                        <div class="form-check filter-check d-flex align-items-center gap-2">
-                            <input class="form-check-input brand-checkbox"
-                                   type="checkbox"
-                                   id="brand-{{ $b->id }}"
-                                   data-slug="{{ $b->slug }}"
-                                   {{ $brandSlug === $b->slug ? 'checked' : '' }}>
-                            <label class="form-check-label d-flex align-items-center gap-2 w-100" for="brand-{{ $b->id }}">
-                                @if($logoSrc)
-                                    <img src="{{ $logoSrc }}" alt="{{ $b->name }}" style="height:16px;width:auto;max-width:40px;object-fit:contain;" loading="lazy" onerror="this.style.display='none'">
-                                @else
-                                    <span class="brand-filter-dot"></span>
-                                @endif
-                                <span>{{ $b->name }}</span>
-                            </label>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                <div class="filter-actions mt-4 d-flex flex-column gap-2">
-                    <button type="button" class="btn-dark-custom w-100 text-center" id="applyFiltersBtn">
-                        {{ $locale === 'vi' ? 'Áp dụng' : 'Apply Filters' }}
-                    </button>
-                    <button type="button" class="btn-outline-custom w-100 text-center" id="clearFiltersBtn">
-                        {{ $locale === 'vi' ? 'Xoá bộ lọc' : 'Clear All' }}
-                    </button>
-                </div>
-            </div>
-        </aside>
+        {{-- Desktop Sidebar (lg+) --}}
+        <div class="d-none d-lg-block col-lg-2">
+            <aside id="shopSidebarDesktop">
+                <h5 class="fw-bold mb-4 fs-6">{{ $locale === 'vi' ? 'Bộ lọc' : 'Filters' }}</h5>
+                @include('partials.filter-panel', [
+                    'idPrefix'    => '',
+                    'applyBtnId'  => 'applyFiltersBtn',
+                    'clearBtnId'  => 'clearFiltersBtn',
+                    'showActions' => true,
+                ])
+            </aside>
+        </div>
 
         {{-- Product grid --}}
-        <main class="col-lg-10">
+        <main class="col-12 col-lg-10">
             <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
                 <span class="font-xs fw-bold text-uppercase letter-wide text-muted">
                     {{ $products->total() }} {{ $locale === 'vi' ? 'sản phẩm' : 'products' }}
                 </span>
-                <button class="btn btn-outline-dark btn-sm rounded-0 text-uppercase letter-wide fw-bold font-xs px-3 d-lg-none"
-                        type="button" data-bs-toggle="offcanvas" data-bs-target="#shopSidebar">
-                    <i class="bi bi-sliders me-2"></i> {{ $locale === 'vi' ? 'Lọc' : 'Filter' }}
+                {{-- Mobile filter button --}}
+                <button class="mob-filter-btn d-lg-none" type="button" id="mobileFilterBtn" aria-haspopup="dialog" aria-expanded="false">
+                    <i class="bi bi-sliders me-1"></i>
+                    {{ $locale === 'vi' ? 'Lọc' : 'Filter' }}
+                    @if($activeFilterCount > 0)
+                    <span class="mob-filter-badge">{{ $activeFilterCount }}</span>
+                    @endif
                 </button>
             </div>
 
@@ -272,50 +193,159 @@
 </section>
 @endif
 
+{{-- ── Mobile Filter Overlay ────────────────────────────────────────────── --}}
+{{-- JS sẽ append element này thẳng vào <body> để tránh bị trap bởi parent transform --}}
+<div id="mobFilterOverlay" class="mob-filter-overlay" role="dialog" aria-modal="true" aria-hidden="true"
+     aria-label="{{ $locale === 'vi' ? 'Bộ lọc sản phẩm' : 'Product filters' }}">
+    {{-- Sticky header --}}
+    <div class="mob-filter-header">
+        <span class="fw-bold">
+            {{ $locale === 'vi' ? 'Bộ lọc' : 'Filters' }}
+            @if($activeFilterCount > 0)
+            <span class="badge bg-dark rounded-pill ms-1" style="font-size:10px;vertical-align:middle;">{{ $activeFilterCount }}</span>
+            @endif
+        </span>
+        {{-- Floating close button — luôn hiện, không bị scroll che --}}
+        <button class="mob-filter-fab" id="mobFilterClose" aria-label="{{ $locale === 'vi' ? 'Đóng' : 'Close' }}">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    {{-- Scrollable filter values wrapper --}}
+    <div class="mob-filter-body" id="mobFilterBody">
+        @include('partials.filter-panel', [
+            'idPrefix'    => 'mob-',
+            'showActions' => false,
+        ])
+    </div>
+    {{-- Sticky footer --}}
+    <div class="mob-filter-footer">
+        <button type="button" class="btn-outline-custom" id="mobClearFiltersBtn">
+            {{ $locale === 'vi' ? 'Xoá bộ lọc' : 'Clear All' }}
+        </button>
+        <button type="button" class="btn-dark-custom" id="mobApplyFiltersBtn">
+            {{ $locale === 'vi' ? 'Áp dụng' : 'Apply' }}
+        </button>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var shopBaseUrl = '{{ $shopBaseUrl }}';
 
-    function buildFilterUrl() {
+    function buildFilterUrl(container) {
         var params = new URLSearchParams();
-
-        document.querySelectorAll('.filter-checkbox:checked').forEach(function (el) {
+        container.querySelectorAll('.filter-checkbox:checked').forEach(function (el) {
             var groupSlug = el.dataset.groupSlug;
             var valueSlug = el.dataset.valueSlug;
             var existing  = params.get(groupSlug);
             params.set(groupSlug, existing ? existing + ',' + valueSlug : valueSlug);
         });
-
-        var checkedBrand = document.querySelector('.brand-checkbox:checked');
+        var checkedBrand = container.querySelector('.brand-checkbox:checked');
         if (checkedBrand) params.set('brand', checkedBrand.dataset.slug);
-
         var q = new URLSearchParams(window.location.search).get('q');
         if (q) params.set('q', q);
-
         var qs = params.toString();
         return qs ? shopBaseUrl + '?' + qs : shopBaseUrl;
     }
 
+    // ── Desktop filter ────────────────────────────────────────────────────
+    var desktopSidebar = document.getElementById('shopSidebarDesktop');
+
     var applyBtn = document.getElementById('applyFiltersBtn');
-    if (applyBtn) applyBtn.addEventListener('click', function () {
-        window.location.href = buildFilterUrl();
-    });
+    if (applyBtn && desktopSidebar) {
+        applyBtn.addEventListener('click', function () {
+            window.location.href = buildFilterUrl(desktopSidebar);
+        });
+    }
 
     var clearBtn = document.getElementById('clearFiltersBtn');
-    if (clearBtn) clearBtn.addEventListener('click', function () {
-        window.location.href = shopBaseUrl;
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            window.location.href = shopBaseUrl;
+        });
+    }
+
+    if (desktopSidebar) {
+        desktopSidebar.querySelectorAll('.brand-checkbox').forEach(function (el) {
+            el.addEventListener('change', function () {
+                if (this.checked) {
+                    desktopSidebar.querySelectorAll('.brand-checkbox').forEach(function (b) {
+                        if (b !== el) b.checked = false;
+                    });
+                }
+            });
+        });
+    }
+
+    // ── Mobile filter overlay ─────────────────────────────────────────────
+    var overlay   = document.getElementById('mobFilterOverlay');
+    var mobBody   = document.getElementById('mobFilterBody');
+    var openBtn   = document.getElementById('mobileFilterBtn');
+    var closeBtn  = document.getElementById('mobFilterClose');
+    var mobApply  = document.getElementById('mobApplyFiltersBtn');
+    var mobClear  = document.getElementById('mobClearFiltersBtn');
+    var header    = document.getElementById('header-sticky');
+    var scrollPos = 0;
+
+    // Move overlay thẳng vào <body> — tránh bị trap bởi parent transform/stacking context
+    if (overlay && overlay.parentNode !== document.body) {
+        document.body.appendChild(overlay);
+    }
+
+    function openMobileFilter() {
+        if (!overlay) return;
+        scrollPos = window.scrollY || window.pageYOffset;
+        document.documentElement.style.setProperty('--mob-scroll-pos', '-' + scrollPos + 'px');
+        document.body.classList.add('mob-filter-open');
+        if (header) header.style.visibility = 'hidden';
+        overlay.classList.add('active');
+        overlay.setAttribute('aria-hidden', 'false');
+        if (openBtn) openBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeMobileFilter() {
+        if (!overlay) return;
+        document.body.classList.remove('mob-filter-open');
+        document.documentElement.style.removeProperty('--mob-scroll-pos');
+        window.scrollTo(0, scrollPos);
+        if (header) header.style.visibility = '';
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (openBtn) openBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    if (openBtn)  openBtn.addEventListener('click', openMobileFilter);
+    if (closeBtn) closeBtn.addEventListener('click', closeMobileFilter);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay && overlay.classList.contains('active')) closeMobileFilter();
     });
 
-    document.querySelectorAll('.brand-checkbox').forEach(function (el) {
-        el.addEventListener('change', function () {
-            if (this.checked) {
-                document.querySelectorAll('.brand-checkbox').forEach(function (b) {
-                    if (b !== el) b.checked = false;
-                });
-            }
+    if (mobApply && mobBody) {
+        mobApply.addEventListener('click', function () {
+            closeMobileFilter();
+            window.location.href = buildFilterUrl(mobBody);
         });
-    });
+    }
+
+    if (mobClear) {
+        mobClear.addEventListener('click', function () {
+            closeMobileFilter();
+            window.location.href = shopBaseUrl;
+        });
+    }
+
+    if (mobBody) {
+        mobBody.querySelectorAll('.brand-checkbox').forEach(function (el) {
+            el.addEventListener('change', function () {
+                if (this.checked) {
+                    mobBody.querySelectorAll('.brand-checkbox').forEach(function (b) {
+                        if (b !== el) b.checked = false;
+                    });
+                }
+            });
+        });
+    }
 });
 </script>
 @endpush
