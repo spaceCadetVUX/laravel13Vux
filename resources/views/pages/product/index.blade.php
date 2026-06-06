@@ -42,8 +42,7 @@
         $seoRobots   = 'index, follow';
     }
 
-    $categoryPageUrl = route(current_locale() . '.product.category');
-    $shopBaseUrl     = route(current_locale() . '.product.shop');
+    $shopBaseUrl = route(current_locale() . '.product.shop');
 @endphp
 
 @extends('layouts.frontend')
@@ -118,105 +117,99 @@
     <div class="row gx-lg-5">
         <aside class="col-lg-2 shop-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="shopSidebar" aria-labelledby="shopSidebarLabel">
             <div class="offcanvas-header d-lg-none border-bottom mb-3 px-4 pt-4">
-                <h5 class="offcanvas-title fw-bold" id="shopSidebarLabel">Filters</h5>
+                <h5 class="offcanvas-title fw-bold" id="shopSidebarLabel">{{ $locale === 'vi' ? 'Bộ lọc' : 'Filters' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#shopSidebar" aria-label="Close"></button>
             </div>
 
             <div class="offcanvas-body flex-column px-4 px-lg-0 pb-4">
-                <h5 class="fw-bold mb-4 fs-6 d-none d-lg-block">Filters</h5>
+                <h5 class="fw-bold mb-4 fs-6 d-none d-lg-block">{{ $locale === 'vi' ? 'Bộ lọc' : 'Filters' }}</h5>
 
+                {{-- Filter Groups --}}
+                @foreach($filterGroups as $loop_group => $group)
                 @php
-                    $selectedSlugs = isset($activeSlugs) && is_array($activeSlugs) ? $activeSlugs : [];
-                    $sizeCategory  = null;
-                    if (isset($categories) && $categories instanceof \Illuminate\Support\Collection) {
-                        $sizeCategory = $categories->firstWhere('slug', 'size') ?: $categories->firstWhere('name', 'Size');
-                    }
+                    $activeSlugsForGroup = $activeValueSlugs[$group->slug] ?? [];
+                    $hasActive           = count($activeSlugsForGroup) > 0;
+                    $groupLabel          = ($locale !== 'vi' && $group->name_en) ? $group->name_en : $group->name;
+                    $collapseId          = 'fg-collapse-' . $group->id;
+                    $isOpen              = $hasActive || $loop_group < 2;
                 @endphp
-
-                @if($sizeCategory && $sizeCategory->children && $sizeCategory->children->count())
-                <div class="filter-group mb-4">
-                    <h6 class="filter-title font-xs fw-bold text-uppercase letter-wide text-muted mb-3">{{ $sizeCategory->name }}</h6>
-                    <div class="d-flex flex-wrap gap-2 size-filters">
-                        @foreach($sizeCategory->children as $child)
-                            @php $isChecked = in_array($child->slug, $selectedSlugs); @endphp
-                            <div>
-                                <input class="category-checkbox visually-hidden" type="checkbox" id="size-{{ $child->id }}" data-slug="{{ $child->slug }}" data-parent-slug="{{ $sizeCategory->slug }}" {{ $isChecked ? 'checked' : '' }}>
-                                <label for="size-{{ $child->id }}" class="size-btn{{ $isChecked ? ' active' : '' }}">{{ $child->name }}</label>
-                            </div>
+                @if($group->activeValues->count())
+                <div class="filter-group mb-1">
+                    <button class="filter-group-toggle w-100 d-flex justify-content-between align-items-center"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#{{ $collapseId }}"
+                            aria-expanded="{{ $isOpen ? 'true' : 'false' }}"
+                            aria-controls="{{ $collapseId }}">
+                        <span class="font-xs fw-bold text-uppercase letter-wide text-muted">{{ $groupLabel }}</span>
+                        <svg class="filter-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="collapse {{ $isOpen ? 'show' : '' }} pt-2 pb-3" id="{{ $collapseId }}">
+                        @foreach($group->activeValues as $value)
+                        @php
+                            $isChecked  = in_array($value->slug, $activeSlugsForGroup);
+                            $valueLabel = ($locale !== 'vi' && $value->name_en) ? $value->name_en : $value->name;
+                        @endphp
+                        <div class="form-check filter-check">
+                            <input class="form-check-input filter-checkbox"
+                                   type="checkbox"
+                                   id="fv-{{ $value->id }}"
+                                   data-group-slug="{{ $group->slug }}"
+                                   data-value-slug="{{ $value->slug }}"
+                                   {{ $isChecked ? 'checked' : '' }}>
+                            <label class="form-check-label" for="fv-{{ $value->id }}">{{ $valueLabel }}</label>
+                        </div>
                         @endforeach
                     </div>
                 </div>
                 @endif
+                @endforeach
 
-                @if(isset($categories) && $categories->count())
-                    @foreach($categories as $parent)
-                        @if($sizeCategory && $parent->id === $sizeCategory->id) @continue @endif
-                        @php
-                            $isColorParent = ($parent->type === 'color')
-                                || $parent->children->filter(fn($c) => !empty($c->color_code))->count() > 0;
-                        @endphp
-                        <div class="filter-group mb-4">
-                            <h6 class="filter-title font-xs fw-bold text-uppercase letter-wide text-muted mb-3">{{ $parent->name }}</h6>
-                            @if($parent->children && $parent->children->count())
-                                @if($isColorParent)
-                                    <div class="d-flex flex-wrap gap-2 color-filters">
-                                        @foreach($parent->children as $child)
-                                            @php
-                                                $isChecked = in_array($child->slug, $selectedSlugs);
-                                                $colorCode = $child->color_code ?: '#cccccc';
-                                                $isLight   = $colorCode === '#ffffff' || strtolower($colorCode) === 'white';
-                                            @endphp
-                                            <input class="category-checkbox visually-hidden" type="checkbox" id="color-cat-{{ $child->id }}" data-slug="{{ $child->slug }}" data-parent-slug="{{ $parent->slug }}" {{ $isChecked ? 'checked' : '' }}>
-                                            <label for="color-cat-{{ $child->id }}" class="color-btn{{ $isChecked ? ' active' : '' }}" title="{{ $child->name }} ({{ $colorCode }})"
-                                                @style(['background-color: ' . $colorCode, 'display: block', 'cursor: pointer', 'border: 1px solid #ccc' => $isLight])>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    @foreach($parent->children as $child)
-                                        @php $isChecked = in_array($child->slug, $selectedSlugs); @endphp
-                                        <div class="form-check filter-check">
-                                            <input class="form-check-input category-checkbox" type="checkbox" id="cat-{{ $child->id }}" data-slug="{{ $child->slug }}" data-parent-slug="{{ $parent->slug }}" {{ $isChecked ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="cat-{{ $child->id }}">{{ $child->name }}</label>
-                                        </div>
-                                    @endforeach
-                                @endif
+                {{-- Brand --}}
+                @if($brands->count())
+                <div class="filter-group mb-1">
+                    <button class="filter-group-toggle w-100 d-flex justify-content-between align-items-center"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#fg-collapse-brand"
+                            aria-expanded="{{ $brandSlug ? 'true' : 'false' }}"
+                            aria-controls="fg-collapse-brand">
+                        <span class="font-xs fw-bold text-uppercase letter-wide text-muted">Brand</span>
+                        <svg class="filter-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="collapse {{ $brandSlug ? 'show' : '' }} pt-2 pb-3" id="fg-collapse-brand">
+                    @foreach($brands as $b)
+                    @php
+                        $isBrandChecked = $brandSlug === $b->slug;
+                        $logoSrc = $b->logo ? asset('storage/' . $b->logo) : null;
+                    @endphp
+                    <div class="form-check filter-check d-flex align-items-center gap-2">
+                        <input class="form-check-input brand-checkbox"
+                               type="checkbox"
+                               id="brand-{{ $b->id }}"
+                               data-slug="{{ $b->slug }}"
+                               {{ $isBrandChecked ? 'checked' : '' }}>
+                        <label class="form-check-label d-flex align-items-center gap-2 w-100" for="brand-{{ $b->id }}">
+                            @if($logoSrc)
+                                <img src="{{ $logoSrc }}" alt="{{ $b->name }}" style="height:16px;width:auto;max-width:40px;object-fit:contain;" loading="lazy" onerror="this.style.display='none'">
+                            @else
+                                <span class="brand-filter-dot"></span>
                             @endif
-                        </div>
-                    @endforeach
-                @else
-                    <p class="text-muted small">No categories found.</p>
-                @endif
-
-                @if(isset($brands) && $brands->count())
-                @php $activeBrandSlugsFromQuery = isset($activeFilters['brand']) ? $activeFilters['brand'] : []; @endphp
-                <div class="filter-group mb-4">
-                    <h6 class="filter-title font-xs fw-bold text-uppercase letter-wide text-muted mb-3">Brand</h6>
-                    <div class="d-flex flex-column gap-1">
-                        @foreach($brands as $b)
-                        @php
-                            $isBrandChecked = in_array($b->slug, $activeBrandSlugsFromQuery);
-                            $logoSrc = $b->logo ? asset('storage/' . $b->logo) : null;
-                        @endphp
-                        <div class="form-check filter-check d-flex align-items-center gap-2">
-                            <input class="form-check-input category-checkbox" type="checkbox" id="brand-{{ $b->id }}" data-slug="{{ $b->slug }}" data-parent-slug="brand" {{ $isBrandChecked ? 'checked' : '' }}>
-                            <label class="form-check-label d-flex align-items-center gap-2 w-100" for="brand-{{ $b->id }}">
-                                @if($logoSrc)
-                                    <img src="{{ $logoSrc }}" alt="{{ $b->name }}" style="height:16px;width:auto;max-width:40px;object-fit:contain;" loading="lazy" onerror="this.style.display='none'">
-                                @else
-                                    <span class="brand-filter-dot"></span>
-                                @endif
-                                <span>{{ $b->name }}</span>
-                            </label>
-                        </div>
-                        @endforeach
+                            <span>{{ $b->name }}</span>
+                        </label>
                     </div>
-                </div>
+                    @endforeach
+                    </div>{{-- /.collapse --}}
+                </div>{{-- /.filter-group --}}
                 @endif
 
-                <div class="filter-actions mt-5 d-flex flex-column gap-2">
-                    <button type="button" class="btn-dark-custom w-100 text-center" id="applyFiltersBtn">Apply Filters</button>
-                    <button type="button" class="btn-outline-custom w-100 text-center" id="clearFiltersBtn">Clear All</button>
+                <div class="filter-actions mt-4 d-flex flex-column gap-2">
+                    <button type="button" class="btn-dark-custom w-100 text-center" id="applyFiltersBtn">
+                        {{ $locale === 'vi' ? 'Áp dụng' : 'Apply Filters' }}
+                    </button>
+                    <button type="button" class="btn-outline-custom w-100 text-center" id="clearFiltersBtn">
+                        {{ $locale === 'vi' ? 'Xoá bộ lọc' : 'Clear All' }}
+                    </button>
                 </div>
             </div>
         </aside>
@@ -281,40 +274,53 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var shopBaseUrl     = '{{ $shopBaseUrl }}';
-    var categoryPageUrl = '{{ $categoryPageUrl }}';
+    var shopBaseUrl = '{{ $shopBaseUrl }}';
 
-    function getCheckedGroups() {
-        var groups = {};
-        document.querySelectorAll('.category-checkbox:checked').forEach(function (el) {
-            var parentSlug = el.dataset.parentSlug;
-            var slug       = el.dataset.slug;
-            if (!parentSlug || !slug) return;
-            if (!groups[parentSlug]) groups[parentSlug] = [];
-            groups[parentSlug].push(slug);
-        });
-        return groups;
-    }
-
-    function buildFilterUrl(groups) {
-        if (Object.keys(groups).length === 0) return shopBaseUrl;
-        var existingParams = new URLSearchParams(window.location.search);
+    function buildFilterUrl() {
         var params = new URLSearchParams();
-        Object.keys(groups).forEach(function (key) {
-            existingParams.delete(key);
-            params.set(key, groups[key].join(','));
+
+        // Filter groups: ?protocol=knx,dali-2&voltage=24v-dc
+        document.querySelectorAll('.filter-checkbox:checked').forEach(function (el) {
+            var groupSlug = el.dataset.groupSlug;
+            var valueSlug = el.dataset.valueSlug;
+            var existing  = params.get(groupSlug);
+            params.set(groupSlug, existing ? existing + ',' + valueSlug : valueSlug);
         });
-        existingParams.forEach(function (val, key) {
-            if (!groups.hasOwnProperty(key)) params.append(key, val);
-        });
-        return categoryPageUrl + '?' + params.toString();
+
+        // Brand (single)
+        var checkedBrand = document.querySelector('.brand-checkbox:checked');
+        if (checkedBrand) params.set('brand', checkedBrand.dataset.slug);
+
+        // Keyword
+        var q = new URLSearchParams(window.location.search).get('q');
+        if (q) params.set('q', q);
+
+        var qs = params.toString();
+        return qs ? shopBaseUrl + '?' + qs : shopBaseUrl;
     }
 
+    // Apply
     var applyBtn = document.getElementById('applyFiltersBtn');
-    if (applyBtn) applyBtn.addEventListener('click', function () { window.location.href = buildFilterUrl(getCheckedGroups()); });
+    if (applyBtn) applyBtn.addEventListener('click', function () {
+        window.location.href = buildFilterUrl();
+    });
 
+    // Clear
     var clearBtn = document.getElementById('clearFiltersBtn');
-    if (clearBtn) clearBtn.addEventListener('click', function () { window.location.href = shopBaseUrl; });
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+        window.location.href = shopBaseUrl;
+    });
+
+    // Brand: uncheck others when one is checked
+    document.querySelectorAll('.brand-checkbox').forEach(function (el) {
+        el.addEventListener('change', function () {
+            if (this.checked) {
+                document.querySelectorAll('.brand-checkbox').forEach(function (b) {
+                    if (b !== el) b.checked = false;
+                });
+            }
+        });
+    });
 });
 </script>
 @endpush

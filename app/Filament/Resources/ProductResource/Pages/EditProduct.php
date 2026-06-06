@@ -47,6 +47,15 @@ class EditProduct extends EditRecord
             }
         }
 
+        // Pre-populate per-group CheckboxLists
+        $selectedIds = $record->filterValues()->pluck('filter_values.id')->toArray();
+        foreach (FilterGroup::active()->with('activeValues')->get() as $group) {
+            $groupValueIds = $group->activeValues->pluck('id')->toArray();
+            $data["filter_group_{$group->id}"] = array_values(
+                array_intersect($selectedIds, $groupValueIds)
+            );
+        }
+
         return $data;
     }
 
@@ -70,6 +79,19 @@ class EditProduct extends EditRecord
     protected function afterSave(): void
     {
         $this->saveTranslations();
+        $this->saveFilterValues();
+    }
+
+    private function saveFilterValues(): void
+    {
+        $allSelectedIds = [];
+
+        foreach (FilterGroup::active()->pluck('id') as $groupId) {
+            $selected = $this->data["filter_group_{$groupId}"] ?? [];
+            array_push($allSelectedIds, ...$selected);
+        }
+
+        $this->getRecord()->filterValues()->sync($allSelectedIds);
     }
 
     private function saveTranslations(): void

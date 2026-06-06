@@ -45,11 +45,6 @@ class FilterGroupResource extends Resource
                     Forms\Components\TextInput::make('name_en')
                         ->label('Name (en)'),
 
-                    Forms\Components\TextInput::make('sort_order')
-                        ->label('Sort order')
-                        ->numeric()
-                        ->default(0),
-
                     Forms\Components\Toggle::make('is_active')
                         ->label('Active')
                         ->default(true),
@@ -101,10 +96,6 @@ class FilterGroupResource extends Resource
                     ->counts('values')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
-                    ->sortable(),
-
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean()
@@ -115,6 +106,7 @@ class FilterGroupResource extends Resource
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
             ])
+            ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')->label('Active'),

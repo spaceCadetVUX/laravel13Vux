@@ -50,6 +50,7 @@ class Product extends Model
         'sku',
         'brand_id',
         'manufacturer_id',
+        'primary_category_id',
         'short_description',
         'description',
         'price',
@@ -155,6 +156,11 @@ class Product extends Model
     }
 
     // ── Relationships ─────────────────────────────────────────────────────────
+
+    public function primaryCategory(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'primary_category_id');
+    }
 
     public function brand(): BelongsTo
     {

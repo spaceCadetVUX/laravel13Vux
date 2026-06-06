@@ -418,6 +418,30 @@ class JsonldService
             }
         }
 
+        // ── category — all assigned categories as text array ─────────────────
+        // Google uses this for product classification in Shopping and rich results.
+        // Single category → plain string. Multiple → array of strings.
+        if (method_exists($model, 'categories')) {
+            $model->loadMissing('categories.translations');
+            $cats = $model->getRelationValue('categories');
+            if ($cats && $cats->isNotEmpty()) {
+                $catNames = $cats
+                    ->sortBy('sort_order')
+                    ->map(fn ($c): string => (string) (
+                        (method_exists($c, 'translation') ? $c->translation($locale)?->name : null)
+                        ?? $c->name
+                        ?? ''
+                    ))
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if (! empty($catNames)) {
+                    $payload['category'] = count($catNames) === 1 ? $catNames[0] : $catNames;
+                }
+            }
+        }
+
         // ── additionalProperty from product_attributes ────────────────────────
         // Maps to Schema.org PropertyValue — helps Google understand product specs.
         // Uses getRelationValue() to avoid conflict with Eloquent's $attributes magic.
@@ -579,36 +603,44 @@ class JsonldService
     }
 
     /**
-     * Build a BreadcrumbList payload for a product from its first category.
-     * Structure: Home → {Category} → {Product}
+     * Build a BreadcrumbList payload for a product.
+     * Structure: Home → Products → {Primary Category} → {Product}
      *
-     * Falls back to Home → Product if no categories are assigned.
-     * Breadcrumbs are built at save time as a best-effort approximation;
-     * the frontend may override with a more accurate render-time breadcrumb.
+     * Primary category = lowest sort_order among assigned categories.
+     * Falls back to Home → Products → Product if no categories are assigned.
+     * Multiple categories: only primary used in breadcrumb; all categories
+     * are injected into the Product schema body via the `category` field.
      */
     private function buildProductBreadcrumb(Model $model, string $locale = 'vi'): array
     {
-        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $baseUrl   = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+        $shopUrl   = LocaleUrl::listUrl('product', $locale);
+        $shopLabel = LocaleUrl::listLabel('product', $locale);
 
-        // Prefer locale-specific name and slug from translations.
         $t    = method_exists($model, 'translation') ? $model->translation($locale) : null;
         $name = (string) ($t?->name ?? $model->getAttribute('name') ?? '');
         $slug = (string) ($t?->slug ?? $model->getAttribute('slug') ?? '');
 
         $items = [
-            ['name' => 'Home', 'url' => $baseUrl],
+            ['name' => 'Home',      'url' => $baseUrl],
+            ['name' => $shopLabel,  'url' => $shopUrl],
         ];
 
-        // Use the first category as the middle breadcrumb level.
+        // Primary category: use primary_category_id if set, else first by sort_order.
         if (method_exists($model, 'categories')) {
             $model->loadMissing('categories.translations');
             $categories = $model->getRelationValue('categories');
 
             if ($categories && $categories->isNotEmpty()) {
-                $cat    = $categories->sortBy('sort_order')->first();
-                $catTr  = method_exists($cat, 'translation') ? $cat->translation($locale) : null;
-                $catName = (string) ($catTr?->name ?? $cat->name ?? '');
-                $catSlug = (string) ($catTr?->slug ?? $cat->slug ?? '');
+                $primaryId = $model->getAttribute('primary_category_id');
+                $primary   = $primaryId
+                    ? $categories->firstWhere('id', $primaryId) ?? $categories->sortBy('sort_order')->first()
+                    : $categories->sortBy('sort_order')->first();
+
+                $catTr   = method_exists($primary, 'translation') ? $primary->translation($locale) : null;
+                $catName = (string) ($catTr?->name ?? $primary->name ?? '');
+                $catSlug = (string) ($catTr?->slug ?? $primary->slug ?? '');
+
                 if (filled($catSlug)) {
                     $items[] = [
                         'name' => $catName,

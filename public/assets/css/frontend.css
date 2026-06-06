@@ -5717,6 +5717,34 @@ details[open] .blog-faq__question::after { content: '−'; }
   }
 }
 
+/* ── Filter group collapse toggle ───────────────────────── */
+.filter-group-toggle {
+  background: none;
+  border: none;
+  border-top: 1px solid #e9ecef;
+  padding: 10px 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.filter-group-toggle:first-child {
+  border-top: none;
+}
+
+.filter-group-toggle:hover .filter-chevron {
+  stroke: #000;
+}
+
+.filter-chevron {
+  stroke: #adb5bd;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.filter-group-toggle[aria-expanded="true"] .filter-chevron {
+  transform: rotate(180deg);
+}
+
 /* ── Filter checkboxes ───────────────────────────────────── */
 .filter-check {
   display: flex;

@@ -64,6 +64,27 @@ class ProductResource extends Resource
                                 ->preload()
                                 ->native(false)
                                 ->live()
+                                ->afterStateUpdated(function (Set $set, ?array $state) {
+                                    // Clear primary if it's no longer in the selected list
+                                    $set('primary_category_id', null);
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\Select::make('primary_category_id')
+                                ->label('Primary Category')
+                                ->helperText('Dùng cho breadcrumb JSON-LD. Chọn sau khi đã chọn Categories.')
+                                ->options(function (Get $get): array {
+                                    $ids = $get('categories');
+                                    if (empty($ids)) {
+                                        return [];
+                                    }
+                                    return \App\Models\Category::whereIn('id', $ids)
+                                        ->orderBy('sort_order')
+                                        ->pluck('name', 'id')
+                                        ->toArray();
+                                })
+                                ->native(false)
+                                ->nullable()
                                 ->columnSpanFull(),
 
                             Forms\Components\Select::make('brand_id')

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
-use App\Models\Category;
+use App\Models\FilterGroup;
 use App\Models\ProductTranslation;
 use Illuminate\Http\JsonResponse;
 use App\Services\Seo\JsonldService;
@@ -17,18 +17,24 @@ class ProductController extends Controller
 {
     public function index(string $locale): View
     {
-        $keyword       = (string) request()->query('q', '');
-        $brandSlug     = (string) request()->query('brand', '');
-        $activeFilters = [];
-        $activeSlugs   = [];
+        $keyword   = (string) request()->query('q', '');
+        $brandSlug = (string) request()->query('brand', '');
 
-        $reserved = ['q', 'brand', 'page', 'sort'];
-        foreach (request()->query() as $key => $value) {
-            if (! in_array($key, $reserved, true) && $value) {
-                $slugs = array_values(array_filter(array_map('trim', explode(',', (string) $value))));
+        // Load filter groups with their active values
+        $filterGroups = FilterGroup::active()
+            ->with('activeValues')
+            ->orderBy('sort_order')
+            ->get();
+
+        // Parse active filter values from query: ?protocol=knx,dali-2&voltage=24v-dc
+        // [group_slug => [value_slug, ...]]
+        $activeValueSlugs = [];
+        foreach ($filterGroups as $group) {
+            $raw = (string) request()->query($group->slug, '');
+            if ($raw) {
+                $slugs = array_values(array_filter(array_map('trim', explode(',', $raw))));
                 if ($slugs) {
-                    $activeFilters[$key] = $slugs;
-                    array_push($activeSlugs, ...$slugs);
+                    $activeValueSlugs[$group->slug] = $slugs;
                 }
             }
         }
@@ -37,18 +43,19 @@ class ProductController extends Controller
             ->whereHas('product', fn ($q) => $q->active())
             ->with(['product.thumbnail', 'product.brand']);
 
-        if (! empty($activeSlugs)) {
+        // Each active group is AND-ed; values within a group are OR-ed
+        foreach ($filterGroups as $group) {
+            if (empty($activeValueSlugs[$group->slug])) continue;
+            $valueSlugs = $activeValueSlugs[$group->slug];
             $query->whereHas(
-                'product.categories',
-                fn ($q) => $q->whereIn('slug', $activeSlugs)
+                'product.filterValues',
+                fn ($q) => $q->where('filter_group_id', $group->id)
+                             ->whereIn('filter_values.slug', $valueSlugs)
             );
         }
 
         if ($brandSlug) {
             $query->whereHas('product.brand', fn ($q) => $q->where('slug', $brandSlug));
-            if (! isset($activeFilters['brand'])) {
-                $activeFilters['brand'] = [$brandSlug];
-            }
         }
 
         if ($keyword) {
@@ -59,12 +66,6 @@ class ProductController extends Controller
         }
 
         $products = $query->orderBy('id', 'desc')->paginate(24)->withQueryString();
-
-        $categories = Category::active()
-            ->whereNull('parent_id')
-            ->with(['children' => fn ($q) => $q->active()->orderBy('sort_order')])
-            ->orderBy('sort_order')
-            ->get();
 
         $brands = Brand::active()
             ->orderBy('sort_order')
@@ -77,8 +78,8 @@ class ProductController extends Controller
         ]);
 
         return view('pages.product.index', compact(
-            'locale', 'products', 'categories', 'brands',
-            'activeFilters', 'activeSlugs', 'keyword'
+            'locale', 'products', 'filterGroups', 'brands',
+            'activeValueSlugs', 'brandSlug', 'keyword'
         ));
     }
 
