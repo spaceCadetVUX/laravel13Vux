@@ -266,11 +266,19 @@ class JsonldService
             ];
         }
 
-        return [
+        $pageUrl = $listElements[count($listElements) - 1]['item'] ?? null;
+
+        $schema = [
             '@context'        => 'https://schema.org',
             '@type'           => 'BreadcrumbList',
             'itemListElement' => $listElements,
         ];
+
+        if ($pageUrl) {
+            $schema['@id'] = $pageUrl . '#breadcrumb';
+        }
+
+        return $schema;
     }
 
     /**
@@ -730,8 +738,13 @@ class JsonldService
         $ancestors = array_reverse($ancestors); // now root → nearest parent
 
         // ── Build item list ───────────────────────────────────────────────────
+        $homeLabel      = $locale === 'vi' ? 'Trang chủ' : 'Home';
+        $solutionsLabel = $locale === 'vi' ? 'Giải pháp'  : 'Solutions';
+        $solutionsUrl   = LocaleUrl::listUrl('category', $locale);
+
         $items = [
-            ['name' => 'Home', 'url' => $baseUrl],
+            ['name' => $homeLabel,      'url' => $baseUrl],
+            ['name' => $solutionsLabel, 'url' => $solutionsUrl],
         ];
 
         foreach ($ancestors as $ancestor) {
@@ -792,6 +805,36 @@ class JsonldService
         // publisher — Organization block (same pattern as Article schemas).
         if (! isset($payload['publisher'])) {
             $payload['publisher'] = app(BusinessJsonldService::class)->publisherBlock();
+        }
+
+        // dateModified — freshness signal for Google.
+        $updatedAt = $model->getAttribute('updated_at');
+        if ($updatedAt instanceof \DateTimeInterface) {
+            $payload['dateModified'] = $updatedAt->format(\DateTimeInterface::ATOM);
+        }
+
+        // breadcrumb — link CollectionPage to its BreadcrumbList for cross-schema association.
+        if (isset($payload['@id'])) {
+            $payload['breadcrumb'] = ['@type' => 'BreadcrumbList', '@id' => $payload['@id'] . '#breadcrumb'];
+        }
+
+        // additionalProperty — key_facts from geoProfile as PropertyValue array.
+        $model->loadMissing('geoProfiles');
+        $geoProfile = $model->geoProfiles->firstWhere('locale', $locale);
+        $keyFacts   = (array) ($geoProfile?->key_facts ?? []);
+        if (! empty($keyFacts)) {
+            $props = [];
+            foreach ($keyFacts as $kf) {
+                if (! is_array($kf)) continue;
+                $label = trim((string) ($kf['label'] ?? ''));
+                $value = trim((string) ($kf['value'] ?? ''));
+                if (filled($label) && filled($value)) {
+                    $props[] = ['@type' => 'PropertyValue', 'name' => $label, 'value' => $value];
+                }
+            }
+            if (! empty($props)) {
+                $payload['additionalProperty'] = $props;
+            }
         }
 
         // numberOfItems + mainEntity ItemList — products belonging to this category.
@@ -1047,9 +1090,11 @@ class JsonldService
                 'label'             => 'FAQ Schema',
                 'locale'            => $locale,
                 'payload'           => [
-                    '@context'   => 'https://schema.org',
-                    '@type'      => 'FAQPage',
-                    'mainEntity' => $mainEntity,
+                    '@context'        => 'https://schema.org',
+                    '@type'           => 'FAQPage',
+                    '@id'             => LocaleUrl::for($morphAlias, (string) ($model->getAttribute('slug') ?? ''), $locale) . '#faq',
+                    'mainEntityOfPage'=> ['@type' => 'WebPage', '@id' => LocaleUrl::for($morphAlias, (string) ($model->getAttribute('slug') ?? ''), $locale)],
+                    'mainEntity'      => $mainEntity,
                 ],
                 'is_active'         => true,
                 'is_auto_generated' => true,

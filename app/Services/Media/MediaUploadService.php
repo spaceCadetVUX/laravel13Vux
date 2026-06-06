@@ -5,6 +5,7 @@ namespace App\Services\Media;
 use App\Models\Media;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MediaUploadService
 {
@@ -36,8 +37,15 @@ class MediaUploadService
         $fileSize     = (int) filesize($realPath);
 
         $directory = 'media/' . now()->format('Y/m');
-        $filename  = $hash . '.' . $extension;
-        $path      = $file->storeAs($directory, $filename, self::DISK);
+        $slugBase  = Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) ?: substr($hash, 0, 16);
+        $filename  = $slugBase . '.' . $extension;
+
+        // Collision: same name, different content → append short hash suffix
+        if (Storage::disk(self::DISK)->exists($directory . '/' . $filename)) {
+            $filename = $slugBase . '-' . substr($hash, 0, 8) . '.' . $extension;
+        }
+
+        $path = $file->storeAs($directory, $filename, self::DISK);
 
         // Build thumbnail from the already-stored path, not the temp location.
         $thumbPath = null;

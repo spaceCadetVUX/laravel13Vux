@@ -6560,3 +6560,120 @@ details[open] .blog-faq__question::after { content: '−'; }
   }
 }
 
+
+/* ── Category rich content ───────────────────────────────── */
+.category-rich-content {
+  padding: 64px 0 80px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.rich-content-body {
+  color: #2d2d2d;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.rich-content-body h1,
+.rich-content-body h2,
+.rich-content-body h3,
+.rich-content-body h4 {
+  font-weight: 700;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  line-height: 1.25;
+  color: #111;
+}
+
+.rich-content-body h2 { font-size: 1.5rem; }
+.rich-content-body h3 { font-size: 1.2rem; }
+
+.rich-content-body p { margin-bottom: 1.1em; }
+
+.rich-content-body ul,
+.rich-content-body ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.1em;
+}
+
+.rich-content-body li { margin-bottom: 0.35em; }
+
+.rich-content-body strong { font-weight: 700; }
+
+.rich-content-body a {
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rich-content-body blockquote {
+  border-left: 3px solid #ddd;
+  padding-left: 1rem;
+  color: #666;
+  margin: 1.5em 0;
+  font-style: italic;
+}
+
+.rich-content-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 1em 0;
+}
+
+/* ── Mega dropdown: Products ─────────────────────────────── */
+/* Desktop/tablet only — mobile offcanvas keeps vertical list */
+@media (min-width: 1200px) {
+  .tp-header-dropdown nav ul li .nav-mega-products {
+    display: grid !important;
+    /* Fill column-by-column, max 5 rows → expands into new column */
+    grid-template-rows: repeat(5, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 210px;
+    /* Cap at 4 columns */
+    max-width: calc(4 * 210px + 24px);
+    width: auto !important;
+    /* Keep left-aligned with the trigger */
+    left: 0;
+    padding: 8px;
+    gap: 0;
+  }
+
+  .tp-header-dropdown nav ul li .nav-mega-products li {
+    width: 100%;
+    padding: 0 4px;
+  }
+
+  /* "Tất cả sản phẩm" spans full first row visually — separator below */
+  .nav-mega-products .nav-mega-all-products {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+  }
+
+  .nav-mega-products .nav-mega-all-products a {
+    font-weight: 600 !important;
+    color: #fff !important;
+  }
+}
+
+/* Tablet: 2 columns max */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .tp-header-dropdown nav ul li .nav-mega-products {
+    display: grid !important;
+    grid-template-rows: repeat(5, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 200px;
+    max-width: calc(2 * 200px + 24px);
+    width: auto !important;
+    padding: 8px;
+  }
+
+  .nav-mega-products .nav-mega-all-products {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 4px;
+  }
+}

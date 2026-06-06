@@ -3,16 +3,21 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\CategoryTranslation;
+use App\Models\FilterGroup;
+use App\Models\ProductTranslation;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
 use App\Support\LocaleUrl;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Tiptap\Editor;
+use Tiptap\Extensions\StarterKit;
+use Tiptap\Nodes\Image as TiptapImage;
 
 class CategoryController extends Controller
 {
-    // TODO: implement category listing page
     public function index(string $locale): \Illuminate\Http\Response
     {
         return response("Categories — {$locale}", 200);
@@ -26,16 +31,13 @@ class CategoryController extends Controller
             ->first();
 
         if (! $translation) {
-            $viTranslation = CategoryTranslation::where('slug', $slug)
+            $alt = CategoryTranslation::where('slug', $slug)
                 ->whereIn('locale', config('app.supported_locales'))
                 ->where('locale', '!=', $locale)
                 ->first();
 
-            if ($viTranslation) {
-                return redirect(
-                    LocaleUrl::for('category', $viTranslation->slug, $viTranslation->locale),
-                    302
-                );
+            if ($alt) {
+                return redirect(LocaleUrl::for('category', $alt->slug, $alt->locale), 302);
             }
 
             abort(404);
@@ -46,21 +48,105 @@ class CategoryController extends Controller
             abort(404);
         }
 
-        $alternateUrls       = app(SeoService::class)->alternateUrls($category);
-        $seoMeta             = $translation;
-        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($category, $locale)
-            ->pluck('payload')
-            ->toArray();
+        // ── Products in this category ─────────────────────────────────────────
+        $keyword   = (string) request()->query('q', '');
+        $brandSlug = (string) request()->query('brand', '');
+
+        $filterGroups = FilterGroup::active()
+            ->with('activeValues')
+            ->orderBy('sort_order')
+            ->get();
+
+        $activeValueSlugs = [];
+        foreach ($filterGroups as $group) {
+            $raw = (string) request()->query($group->slug, '');
+            if ($raw) {
+                $slugs = array_values(array_filter(array_map('trim', explode(',', $raw))));
+                if ($slugs) $activeValueSlugs[$group->slug] = $slugs;
+            }
+        }
+
+        $productQuery = ProductTranslation::where('locale', $locale)
+            ->whereHas('product', fn ($q) => $q->active()
+                ->whereHas('categories', fn ($q2) => $q2->where('categories.id', $category->id))
+            )
+            ->with(['product.thumbnail', 'product.brand']);
+
+        foreach ($filterGroups as $group) {
+            if (empty($activeValueSlugs[$group->slug])) continue;
+            $valueSlugs = $activeValueSlugs[$group->slug];
+            $productQuery->whereHas(
+                'product.filterValues',
+                fn ($q) => $q->where('filter_group_id', $group->id)
+                             ->whereIn('filter_values.slug', $valueSlugs)
+            );
+        }
+
+        if ($brandSlug) {
+            $productQuery->whereHas('product.brand', fn ($q) => $q->where('slug', $brandSlug));
+        }
+
+        if ($keyword) {
+            $productQuery->where(fn ($q) =>
+                $q->where('name', 'ilike', "%{$keyword}%")
+                  ->orWhere('short_description', 'ilike', "%{$keyword}%")
+            );
+        }
+
+        $products = $productQuery->orderBy('id', 'desc')->paginate(24)->withQueryString();
+
+        $brands = Brand::active()->orderBy('sort_order')->orderBy('name')->get();
+
+        // ── FAQ ───────────────────────────────────────────────────────────────
+        $faqField    = 'faq_items_' . $locale;
+        $faqItems    = is_array($category->$faqField ?? null) ? $category->$faqField : [];
+        $faqEntities = array_filter(array_map(
+            fn($f) => (trim($f['question'] ?? '') && trim($f['answer'] ?? '')) ? $f : null,
+            $faqItems
+        ));
+
+        // ── Rich content HTML ─────────────────────────────────────────────────
+        $richContentHtml = null;
+        $rawContent      = $translation->rich_content;
+        if (! empty($rawContent) && is_array($rawContent)) {
+            try {
+                $richContentHtml = (new Editor(['extensions' => [
+                    new StarterKit,
+                    new TiptapImage,
+                ]]))->setContent($rawContent)->getHTML();
+                // Strip empty paragraphs only
+                if (trim(strip_tags($richContentHtml)) === '') {
+                    $richContentHtml = null;
+                }
+            } catch (\Throwable) {
+                $richContentHtml = null;
+            }
+        }
+
+        // ── SEO ───────────────────────────────────────────────────────────────
+        $alternateUrls  = app(SeoService::class)->alternateUrls($category);
+        $category->loadMissing('seoMetas');
+        $seoMeta        = $category->seoMeta($locale);
+        $jsonldSchemas  = app(JsonldService::class)->getActiveSchemas($category, $locale)
+            ->pluck('payload')->toArray();
         $fallbackTitle       = $translation->name;
         $fallbackDescription = $translation->description ?? '';
-        $fallbackImage       = null;
-        $ogType              = 'website';
+        $fallbackImage       = $category->image_path
+            ? asset('storage/' . $category->image_path)
+            : null;
+        $ogType     = 'website';
+        $currentUrl = request()->fullUrl();
 
         view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.category.show', compact(
-            'category', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
-            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
+            'category', 'translation', 'locale',
+            'products', 'filterGroups', 'brands', 'activeValueSlugs', 'brandSlug', 'keyword',
+            'faqItems', 'faqEntities',
+            'richContentHtml',
+            'alternateUrls', 'seoMeta', 'jsonldSchemas',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType', 'currentUrl'
         ));
     }
 }
+

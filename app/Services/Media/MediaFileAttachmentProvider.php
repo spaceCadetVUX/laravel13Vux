@@ -26,16 +26,21 @@ class MediaFileAttachmentProvider implements FileAttachmentProvider
     {
         $media = app(MediaUploadService::class)->upload($file, 'rich_content');
 
-        return (string) $media->id;
+        return $media->url;
     }
 
     /**
-     * Resolve stored media ID to public URL when the form saves.
+     * The stored value is already a URL — return it directly.
+     * Also handles legacy records that stored a numeric media ID.
      */
     public function getFileAttachmentUrl(mixed $file): ?string
     {
         if (! $file) {
             return null;
+        }
+
+        if (filter_var($file, FILTER_VALIDATE_URL)) {
+            return $file;
         }
 
         return Media::find($file)?->url;

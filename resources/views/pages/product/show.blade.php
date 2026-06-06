@@ -294,7 +294,10 @@
                     if ($rawDesc) {
                         $decoded = is_array($rawDesc) ? $rawDesc : json_decode($rawDesc, true);
                         if (json_last_error() === JSON_ERROR_NONE && isset($decoded['type'])) {
-                            $descHtml = (new \Tiptap\Editor)->setContent($decoded)->getHTML();
+                            $descHtml = (new \Tiptap\Editor(['extensions' => [
+                                new \Tiptap\Extensions\StarterKit,
+                                new \Tiptap\Nodes\Image,
+                            ]]))->setContent($decoded)->getHTML();
                         } else {
                             $descHtml = $rawDesc;
                         }

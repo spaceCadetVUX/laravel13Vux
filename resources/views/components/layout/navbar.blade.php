@@ -1,3 +1,10 @@
+@php
+    $navCategories = \App\Models\Category::active()
+        ->whereNull('parent_id')
+        ->with(['translations' => fn($q) => $q->where('locale', app()->getLocale())])
+        ->orderBy('sort_order')
+        ->get();
+@endphp
 <div id="header-sticky" class="tp-header-area tp-header-ptb tp-header-blur sticky-white-bg header-transparent tp-header-border">
         <div class="container container-1750">
             <div class="row align-items-center">
@@ -24,8 +31,27 @@
                                     <li>
                                         <a href="{{ route(current_locale() . '.solutions-by-role') }}">{{ __('nav.solutions') }}</a>
                                     </li>
-                                    <li>
+                                    <li class="has-dropdown">
                                         <a href="{{ route(current_locale() . '.product.shop') }}">{{ __('nav.products') }}</a>
+                                        <ul class="tp-submenu submenu nav-mega-products">
+                                            <li class="nav-mega-all-products">
+                                                <a href="{{ route(current_locale() . '.product.shop') }}">
+                                                    {{ __('nav.all_Products') }}
+                                                </a>
+                                            </li>
+                                            @foreach($navCategories as $navCat)
+                                            @php
+                                                $navCatTr   = $navCat->translations->first();
+                                                $navCatName = $navCatTr?->name ?? $navCat->name;
+                                                $navCatSlug = $navCatTr?->slug ?? $navCat->slug;
+                                            @endphp
+                                            <li>
+                                                <a href="{{ route(current_locale() . '.category.show', $navCatSlug) }}">
+                                                    {{ $navCatName }}
+                                                </a>
+                                            </li>
+                                            @endforeach
+                                        </ul>
                                     </li>
                                     <li>
                                         <a href="{{ route(current_locale() . '.blog.index') }}">{{ __('nav.blog') }}</a>
@@ -126,8 +152,23 @@
                             <li class="has-dropdown">
                                 <a href="{{ route(current_locale() . '.product.shop') }}">{{ __('nav.products') }}</a>
                                 <ul class="tp-submenu submenu">
-                                    <li><a href="{{ route(current_locale() . '.product.shop') }}">{{ __('nav.all_Products') }}</a></li>
-                                    <li><a href="{{ route(current_locale() . '.product.category') }}">{{ __('nav.category') }}</a></li>
+                                    <li>
+                                        <a href="{{ route(current_locale() . '.product.shop') }}">
+                                            {{ __('nav.all_Products') }}
+                                        </a>
+                                    </li>
+                                    @foreach($navCategories as $navCat)
+                                    @php
+                                        $navCatTr   = $navCat->translations->first();
+                                        $navCatName = $navCatTr?->name ?? $navCat->name;
+                                        $navCatSlug = $navCatTr?->slug ?? $navCat->slug;
+                                    @endphp
+                                    <li>
+                                        <a href="{{ route(current_locale() . '.category.show', $navCatSlug) }}">
+                                            {{ $navCatName }}
+                                        </a>
+                                    </li>
+                                    @endforeach
                                 </ul>
                             </li>
                             <li>
