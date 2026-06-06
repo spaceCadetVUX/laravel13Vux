@@ -114,7 +114,6 @@
                                 <div><i class="fa fa-image"></i><p class="mt-3">{{ __('common.no_image') }}</p></div>
                             </div>
                         @endif
-                        <div class="pd-zoom-hint"><i class="bi bi-zoom-in"></i></div>
                     </div>
                 </div>
 
@@ -138,31 +137,34 @@
             <div class="col-lg-5 fade-up">
                 <div class="pd-info">
 
-                    {{-- Categories badges --}}
+                    {{-- Categories --}}
                     @if($product->categories->isNotEmpty())
-                    <div class="d-flex flex-wrap gap-2 mb-3">
+                    <div class="pd-cat-tags mb-3">
                         @foreach($product->categories as $cat)
                             <a href="{{ route($locale . '.category.show', $cat->slug) }}"
-                               class="badge bg-light text-dark border text-decoration-none"
-                               style="font-size:.72rem;letter-spacing:.05em;">{{ $cat->name }}</a>
+                               class="pd-cat-tag text-decoration-none">{{ $cat->name }}</a>
                         @endforeach
                     </div>
                     @endif
 
                     <h1 class="pd-title">{{ $translation->name }}</h1>
 
-                    {{-- Meta row: SKU / Brand / Manufacturer --}}
-                    <div class="d-flex flex-wrap gap-3 mb-3" style="font-size:.82rem;color:#666;">
-                        <span>SKU: <strong>{{ $product->sku }}</strong></span>
-                        @if($product->brand)
-                            <span>{{ $isVi ? 'Hãng' : 'Brand' }}: <strong>{{ $product->brand->name }}</strong></span>
-                        @endif
+                    {{-- Meta row --}}
+                    <div class="pd-meta-rows mb-3">
+                        <div class="pd-meta-row">
+                            <span class="pd-meta-item">SKU: <strong>{{ $product->sku }}</strong></span>
+                            @if($product->brand)
+                                <span class="pd-meta-item">{{ $isVi ? 'Hãng' : 'Brand' }}: <strong>{{ $product->brand->name }}</strong></span>
+                            @endif
+                        </div>
                         @if($product->manufacturer)
-                            <span>{{ $isVi ? 'NSX' : 'Mfr' }}: <strong>{{ $product->manufacturer->name }}</strong>
+                        <div class="pd-meta-row mt-1">
+                            <span class="pd-meta-item">{{ $isVi ? 'Nhà sản xuất' : 'Manufacturer' }}: <strong>{{ $product->manufacturer->name }}</strong>
                                 @if($product->manufacturer->country)
                                     <span class="text-muted">({{ $product->manufacturer->country }})</span>
                                 @endif
                             </span>
+                        </div>
                         @endif
                     </div>
 
@@ -176,26 +178,23 @@
 
                     {{-- Price --}}
                     @if($displayPrice > 0)
-                    <div class="pd-price mb-3">
+                    @php
+                        $fmtPrice     = fn($v) => $currencySymbol === 'đ'
+                            ? number_format($v, 0, ',', '.') . 'đ'
+                            : $currencySymbol . number_format($v, 2, '.', ',');
+                        $discountPct  = $hasDiscount ? round((1 - $salePrice / $price) * 100) : 0;
+                    @endphp
+                    <div class="pd-price-block mb-3">
                         @if($hasDiscount)
-                            <span class="pd-price-current">
-                                {{ $currencySymbol === 'đ'
-                                    ? number_format($salePrice, 0, ',', '.') . 'đ'
-                                    : $currencySymbol . number_format($salePrice, 2, '.', ',') }}
-                            </span>
-                            <span class="pd-price-old ms-2">
-                                {{ $currencySymbol === 'đ'
-                                    ? number_format($price, 0, ',', '.') . 'đ'
-                                    : $currencySymbol . number_format($price, 2, '.', ',') }}
-                            </span>
-                            @php $discountPct = round((1 - $salePrice / $price) * 100); @endphp
-                            <span class="badge bg-danger ms-2" style="font-size:.75rem;">-{{ $discountPct }}%</span>
+                            <div class="pd-price-main">
+                                <span class="pd-price-sale">{{ $fmtPrice($salePrice) }}</span>
+                                <span class="pd-discount-pill">-{{ $discountPct }}%</span>
+                            </div>
+                            <div class="pd-price-orig">{{ $fmtPrice($price) }}</div>
                         @else
-                            <span class="pd-price-current">
-                                {{ $currencySymbol === 'đ'
-                                    ? number_format($price, 0, ',', '.') . 'đ'
-                                    : $currencySymbol . number_format($price, 2, '.', ',') }}
-                            </span>
+                            <div class="pd-price-main">
+                                <span class="pd-price-sale">{{ $fmtPrice($price) }}</span>
+                            </div>
                         @endif
                     </div>
                     @endif
@@ -314,8 +313,8 @@
                 <table class="pd-details-table">
                     @foreach($product->attributes as $attr)
                     <tr>
-                        <td>{{ $attr->name }}</td>
-                        <td>{{ $attr->value }}{{ $attr->unit ? ' ' . $attr->unit : '' }}</td>
+                        <td>{{ ($isVi ? null : $attr->name_en) ?: $attr->name }}</td>
+                        <td>{{ ($isVi ? null : $attr->value_en) ?: $attr->value }}{{ $attr->unit ? ' ' . $attr->unit : '' }}</td>
                     </tr>
                     @endforeach
                 </table>

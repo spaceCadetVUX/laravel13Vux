@@ -2771,6 +2771,97 @@ calibre-blog-grid .carousel-dot {
   margin: 1.1rem 0;
 }
 
+/* ── Product category tags ──────────────────────────────────── */
+.pd-cat-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pd-cat-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent, #e07b39);
+  padding: 0;
+}
+
+.pd-cat-tag:hover {
+  color: var(--color-black);
+}
+
+.pd-cat-tags .pd-cat-tag + .pd-cat-tag::before {
+  content: '/';
+  margin-right: 6px;
+  color: var(--color-text-muted, #999);
+  font-weight: 400;
+}
+
+/* ── Meta rows (SKU / Brand / Manufacturer) ─────────────────── */
+.pd-meta-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pd-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pd-meta-item {
+  font-size: 0.82rem;
+  color: #666;
+}
+
+.pd-meta-item strong {
+  color: #222;
+}
+
+/* ── Price block ────────────────────────────────────────────── */
+.pd-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pd-price-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pd-price-sale {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-black, #111);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.pd-price-orig {
+  font-size: 0.95rem;
+  color: #999;
+  text-decoration: line-through;
+  font-weight: 400;
+}
+
+.pd-discount-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #111;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
 .pd-description {
   font-size: 0.88rem;
   color: var(--color-text-muted);

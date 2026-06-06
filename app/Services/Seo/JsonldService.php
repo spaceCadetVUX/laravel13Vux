@@ -90,7 +90,7 @@ class JsonldService
             // Model-specific enrichments applied after placeholder resolution.
             if ($morphAlias === 'product') {
                 if ($schemaType === JsonldSchemaType::Product) {
-                    $resolved = $this->enrichProductSchema($resolved, $model);
+                    $resolved = $this->enrichProductSchema($resolved, $model, $locale);
                 }
 
                 if ($schemaType === JsonldSchemaType::BreadcrumbList) {
@@ -332,7 +332,7 @@ class JsonldService
      *   aggregateRating  → { @type: AggregateRating, ... } from approved reviews
      *   additionalProperty → [ { @type: PropertyValue, ... } ] from product_attributes
      */
-    private function enrichProductSchema(array $payload, Model $model): array
+    private function enrichProductSchema(array $payload, Model $model, string $locale = 'vi'): array
     {
         // ── Brand ─────────────────────────────────────────────────────────────
         if (method_exists($model, 'brand')) {
@@ -430,8 +430,8 @@ class JsonldService
                     $payload['additionalProperty'] = $attrs
                         ->map(fn ($a): array => [
                             '@type' => 'PropertyValue',
-                            'name'  => (string) $a->name,
-                            'value' => (string) $a->value,
+                            'name'  => (string) (($locale !== 'vi' && filled($a->name_en)) ? $a->name_en : $a->name),
+                            'value' => (string) (($locale !== 'vi' && filled($a->value_en)) ? $a->value_en : $a->value),
                         ])
                         ->values()
                         ->all();

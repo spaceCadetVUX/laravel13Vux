@@ -389,40 +389,28 @@ class ProductResource extends Resource
                                 ->relationship()
                                 ->label('')
                                 ->schema([
-                                    Tabs::make('AttrLangTabs')
-                                        ->tabs([
-                                            Tab::make('🇻🇳 Tiếng Việt')
-                                                ->schema([
-                                                    Forms\Components\TextInput::make('name')
-                                                        ->label('Thuộc tính (vi)')
-                                                        ->placeholder('vd: Vật liệu, Khối lượng, Điện áp')
-                                                        ->required()
-                                                        ->live(debounce: 300)
-                                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('name')
+                                        ->label('🇻🇳 Thuộc tính')
+                                        ->placeholder('vd: Vật liệu, Khối lượng, Điện áp')
+                                        ->required()
+                                        ->live(debounce: 300)
+                                        ->columnSpan(1),
 
-                                                    Forms\Components\TextInput::make('value')
-                                                        ->label('Giá trị (vi)')
-                                                        ->placeholder('vd: Nhôm, 500g, 220V')
-                                                        ->required()
-                                                        ->columnSpan(1),
-                                                ])
-                                                ->columns(2),
+                                    Forms\Components\TextInput::make('name_en')
+                                        ->label('🇬🇧 Attribute')
+                                        ->placeholder('e.g. Material, Weight, Voltage')
+                                        ->columnSpan(1),
 
-                                            Tab::make('🇬🇧 English')
-                                                ->schema([
-                                                    Forms\Components\TextInput::make('name_en')
-                                                        ->label('Attribute (en)')
-                                                        ->placeholder('e.g. Material, Weight, Voltage')
-                                                        ->columnSpan(1),
+                                    Forms\Components\TextInput::make('value')
+                                        ->label('🇻🇳 Giá trị')
+                                        ->placeholder('vd: Nhôm, 500g, 220V')
+                                        ->required()
+                                        ->columnSpan(1),
 
-                                                    Forms\Components\TextInput::make('value_en')
-                                                        ->label('Value (en)')
-                                                        ->placeholder('e.g. Aluminum, 500g, 220V')
-                                                        ->columnSpan(1),
-                                                ])
-                                                ->columns(2),
-                                        ])
-                                        ->columnSpanFull(),
+                                    Forms\Components\TextInput::make('value_en')
+                                        ->label('🇬🇧 Value')
+                                        ->placeholder('e.g. Aluminum, 500g, 220V')
+                                        ->columnSpan(1),
                                 ])
                                 ->itemLabel(fn (array $state): ?string =>
                                     filled($state['name'] ?? '')
@@ -439,6 +427,7 @@ class ProductResource extends Resource
                                 ->reorderableWithDragAndDrop()
                                 ->addActionLabel('+ Add attribute')
                                 ->defaultItems(0)
+                                ->columns(2)
                                 ->columnSpanFull(),
                         ]),
 

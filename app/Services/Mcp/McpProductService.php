@@ -454,7 +454,9 @@ class McpProductService
             ProductAttribute::create([
                 'product_id' => $product->id,
                 'name'       => $attr['name'],
+                'name_en'    => $attr['name_en'] ?? null,
                 'value'      => $attr['value'],
+                'value_en'   => $attr['value_en'] ?? null,
                 'unit'       => $attr['unit'] ?? null,
                 'sort_order' => $i,
             ]);
@@ -716,9 +718,11 @@ class McpProductService
                 : null,
             'categories'      => $categoriesOut,
             'attributes'      => $product->attributes->map(fn ($a) => [
-                'name'  => $a->name,
-                'value' => $a->value,
-                'unit'  => $a->unit,
+                'name'     => $a->name,
+                'name_en'  => $a->name_en,
+                'value'    => $a->value,
+                'value_en' => $a->value_en,
+                'unit'     => $a->unit,
             ])->all(),
             'translations'    => $translationsOut,
             'geo'             => $geoOut,

@@ -52,12 +52,16 @@ class JsonldSyncCommand extends Command
         $service = $useNow ? app(JsonldService::class) : null;
 
         /** @var Model $modelClass */
-        $modelClass::query()->chunkById(100, function ($records) use (&$count, $useNow, $service): void {
+        $locales = config('app.supported_locales', ['vi', 'en']);
+
+        $modelClass::query()->chunkById(100, function ($records) use (&$count, $useNow, $service, $locales): void {
             foreach ($records as $record) {
-                if ($useNow) {
-                    $service->syncForModel($record);
-                } else {
-                    dispatch(new SyncJsonldSchema($record))->onQueue('seo');
+                foreach ($locales as $locale) {
+                    if ($useNow) {
+                        $service->syncForModel($record, $locale);
+                    } else {
+                        dispatch(new SyncJsonldSchema($record, $locale))->onQueue('seo');
+                    }
                 }
                 $count++;
             }
@@ -80,12 +84,18 @@ class JsonldSyncCommand extends Command
             return self::FAILURE;
         }
 
+        $locales = config('app.supported_locales', ['vi', 'en']);
+
         if ($this->option('now')) {
-            app(JsonldService::class)->syncForModel($record);
-            $this->info("Synced 1 record (id={$id}) synchronously.");
+            foreach ($locales as $locale) {
+                app(JsonldService::class)->syncForModel($record, $locale);
+            }
+            $this->info("Synced 1 record (id={$id}) synchronously for all locales.");
         } else {
-            dispatch(new SyncJsonldSchema($record))->onQueue('seo');
-            $this->info("Synced 1 record (id={$id}) via queue.");
+            foreach ($locales as $locale) {
+                dispatch(new SyncJsonldSchema($record, $locale))->onQueue('seo');
+            }
+            $this->info("Synced 1 record (id={$id}) via queue for all locales.");
         }
 
         return self::SUCCESS;
