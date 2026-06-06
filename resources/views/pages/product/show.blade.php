@@ -177,12 +177,12 @@
                     </div>
 
                     {{-- Price --}}
-                    @if($displayPrice > 0)
+                    @if($product->show_price && $displayPrice > 0)
                     @php
-                        $fmtPrice     = fn($v) => $currencySymbol === 'đ'
+                        $fmtPrice    = fn($v) => $currencySymbol === 'đ'
                             ? number_format($v, 0, ',', '.') . 'đ'
                             : $currencySymbol . number_format($v, 2, '.', ',');
-                        $discountPct  = $hasDiscount ? round((1 - $salePrice / $price) * 100) : 0;
+                        $discountPct = $hasDiscount ? round((1 - $salePrice / $price) * 100) : 0;
                     @endphp
                     <div class="pd-price-block mb-3">
                         @if($hasDiscount)
@@ -190,7 +190,9 @@
                                 <span class="pd-price-sale">{{ $fmtPrice($salePrice) }}</span>
                                 <span class="pd-discount-pill">-{{ $discountPct }}%</span>
                             </div>
-                            <div class="pd-price-orig">{{ $fmtPrice($price) }}</div>
+                            @if($product->show_original_price)
+                                <div class="pd-price-orig">{{ $fmtPrice($price) }}</div>
+                            @endif
                         @else
                             <div class="pd-price-main">
                                 <span class="pd-price-sale">{{ $fmtPrice($price) }}</span>

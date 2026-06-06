@@ -141,9 +141,29 @@ class ProductController extends Controller
 
         $alternateUrls       = app(SeoService::class)->alternateUrls($product);
         $seoMeta             = $product->seoMeta($locale);
-        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($product, $locale)
+        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($product, $locale)
             ->pluck('payload')
             ->toArray();
+
+        // Strip price fields at read-time so the JSON-LD always reflects
+        // show_price instantly — regardless of whether the queue job has run.
+        if (! $product->show_price) {
+            $jsonldSchemas = array_map(function (array $schema) {
+                if (($schema['@type'] ?? '') !== 'Product' || ! isset($schema['offers'])) {
+                    return $schema;
+                }
+                $offers = $schema['offers'];
+                unset($offers['price'], $offers['priceCurrency'], $offers['lowPrice'], $offers['highPrice']);
+                if (isset($offers['offers'])) {
+                    $offers['offers'] = array_map(
+                        fn ($o) => array_diff_key($o, array_flip(['price', 'priceCurrency'])),
+                        $offers['offers']
+                    );
+                }
+                $schema['offers'] = $offers;
+                return $schema;
+            }, $jsonldSchemas);
+        }
         $fallbackTitle       = $translation->name;
         $fallbackDescription = $translation->short_description ?? '';
         $fallbackImage       = $product->thumbnail

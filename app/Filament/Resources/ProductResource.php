@@ -88,6 +88,11 @@ class ProductResource extends Resource
 
                             Forms\Components\Toggle::make('is_active')
                                 ->default(true),
+
+                            Forms\Components\Toggle::make('show_price')
+                                ->label('Hiển thị giá trên website')
+                                ->helperText('Tắt → ẩn toàn bộ giá, hiện nút "Liên hệ báo giá".')
+                                ->default(true),
                         ])
                         ->columns(2),
 
@@ -208,6 +213,13 @@ class ProductResource extends Resource
                                             default => '₫',
                                         })
                                         ->afterStateUpdated(fn ($state, Set $set) => $set('sale_price', $state)),
+
+                                    Forms\Components\Toggle::make('show_original_price')
+                                        ->label('Hiển thị giá gốc bị gạch')
+                                        ->helperText('Bật → hiện giá cũ gạch ngang bên cạnh giá khuyến mãi. Tắt → chỉ hiện giá KM.')
+                                        ->default(true)
+                                        ->inline(false)
+                                        ->columnSpanFull(),
                                 ])
                                 ->columns(2),
 

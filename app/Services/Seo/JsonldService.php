@@ -470,9 +470,27 @@ class JsonldService
      */
     private function buildOffersPayload(Model $model, array $payload): array
     {
-        $currency   = (string) ($payload['offers']['priceCurrency'] ?? config('seo.currency', 'VND'));
-        $productUrl = (string) ($payload['url'] ?? '');
-        $seller     = app(BusinessJsonldService::class)->publisherBlock();
+        $currency     = (string) ($payload['offers']['priceCurrency'] ?? config('seo.currency', 'VND'));
+        $productUrl   = (string) ($payload['url'] ?? '');
+        $seller       = app(BusinessJsonldService::class)->publisherBlock();
+        $priceHidden  = $model->getAttribute('show_price') === false;
+
+        $stockQty     = (int) ($model->getAttribute('stock_quantity') ?? 0);
+        $availability = $stockQty > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock';
+
+        // ── Price hidden: return minimal Offer without price fields ───────────
+        // Google requires structured data to match what's visible on the page.
+        // Omitting price/priceCurrency prevents a "content mismatch" policy violation.
+        if ($priceHidden) {
+            return [
+                '@type'        => 'Offer',
+                'availability' => $availability,
+                'url'          => $productUrl,
+                'seller'       => $seller,
+            ];
+        }
 
         // ── Try to load active variants ───────────────────────────────────────
         if (method_exists($model, 'activeVariants')) {
@@ -502,7 +520,6 @@ class JsonldService
                             'url'           => $productUrl,
                         ];
 
-                        // Combination label e.g. "Red / M" — requires loaded relation.
                         $label = $variant->combination_label;
                         if (filled($label)) {
                             $offer['name'] = $label;
@@ -512,8 +529,6 @@ class JsonldService
                     })->values()->all();
 
                     // ── Edge case: all variants same price ────────────────────
-                    // AggregateOffer with lowPrice = highPrice looks wrong in
-                    // search results ("500.000 ₫ – 500.000 ₫"). Use single Offer.
                     if ($lowPrice === $highPrice) {
                         $anyInStock = $variants->contains(
                             fn ($v): bool => ((int) $v->stock_quantity) > 0
@@ -533,7 +548,6 @@ class JsonldService
                     }
 
                     // ── Multiple prices → AggregateOffer ─────────────────────
-                    // Top-level availability = InStock if ANY variant has stock.
                     $anyInStock = $variants->contains(
                         fn ($v): bool => ((int) $v->stock_quantity) > 0
                     );
@@ -555,7 +569,6 @@ class JsonldService
         }
 
         // ── Fallback: simple product — single Offer ───────────────────────────
-        // Cast price to float (template substitution always produces strings).
         $singleOffer = $payload['offers'] ?? [];
         if (isset($singleOffer['price'])) {
             $singleOffer['price'] = (float) $singleOffer['price'];
