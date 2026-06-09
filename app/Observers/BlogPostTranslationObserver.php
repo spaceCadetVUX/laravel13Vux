@@ -36,10 +36,23 @@ class BlogPostTranslationObserver
             return;
         }
 
+        $blogPost = $translation->blogPost->load(['blogCategory.translations']);
+        $catTrans = $blogPost->blogCategory?->translations->where('locale', $locale)->first();
+        $catSlug  = $catTrans?->slug ?? $blogPost->blogCategory?->slug;
+
+        if ($catSlug) {
+            $localePath = $locale === 'vi' ? 'vi/bai-viet' : 'en/blog';
+            $fromPath   = "/{$localePath}/{$catSlug}/{$oldSlug}";
+            $toPath     = "/{$localePath}/{$catSlug}/{$newSlug}";
+        } else {
+            $fromPath = parse_url(LocaleUrl::for('blog_post', $oldSlug, $locale), PHP_URL_PATH);
+            $toPath   = parse_url(LocaleUrl::for('blog_post', $newSlug, $locale), PHP_URL_PATH);
+        }
+
         Redirect::updateOrCreate(
-            ['from_path' => parse_url(LocaleUrl::for('blog_post', $oldSlug, $locale), PHP_URL_PATH)],
+            ['from_path' => $fromPath],
             [
-                'to_path'   => parse_url(LocaleUrl::for('blog_post', $newSlug, $locale), PHP_URL_PATH),
+                'to_path'   => $toPath,
                 'type'      => RedirectType::Permanent,
                 'locale'    => $locale,
                 'is_active' => true,

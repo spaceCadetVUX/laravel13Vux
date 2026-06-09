@@ -25,12 +25,16 @@ class Setting
             // Brand / identity
             'site_name'            => $p->name ?? config('app.name'),
             'site_tagline'         => $p->tagline,
+            'site_tagline_en'      => $p->extra['site_tagline_en'] ?? null,
             'site_logo'            => $p->logo_path,
 
             // Contact
-            'contact_email'        => $p->email,
-            'contact_phone'        => $p->phone,
-            'contact_address'      => $p->address_line,
+            'contact_email'           => $p->email,
+            'contact_phone'           => $p->phone,
+            'contact_phone_display'   => $p->extra['contact_phone_display'] ?? $p->phone,
+            'contact_working_hours'   => $p->extra['contact_working_hours'] ?? null,
+            'contact_maps_url'        => $p->extra['contact_maps_url'] ?? null,
+            'contact_address'         => $p->address_line,
             'contact_city'         => $p->city,
             'contact_state'        => $p->state,
             'contact_country'      => $p->country,

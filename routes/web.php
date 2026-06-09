@@ -25,6 +25,7 @@ Route::get('health', HealthController::class);
 
 // ── SEO: Sitemap XML ─────────────────────────────────────────────────────────
 Route::get('sitemap.xml', [SitemapController::class, 'index']);
+Route::get('sitemap-static.xml', [SitemapController::class, 'static']);
 Route::get('sitemap-{locale}-{type}.xml', [SitemapController::class, 'child'])
     ->where(['locale' => 'vi|en', 'type' => 'products|product-categories|blog|blog-categories']);
 
@@ -107,8 +108,22 @@ Route::prefix('vi')
         Route::get('chu-de/{slug}', [BlogController::class, 'category'])
             ->name('vi.blog.category');
 
-        Route::get('bai-viet/{slug}', [BlogController::class, 'show'])
+        // Nested: /vi/bai-viet/{category_slug}/{slug}
+        Route::get('bai-viet/{category_slug}/{slug}', [BlogController::class, 'show'])
             ->name('vi.blog.show');
+
+        // Legacy flat URL → 301 to nested (SEO backward compat)
+        Route::get('bai-viet/{slug}', function (string $locale, string $slug) {
+            $translation = \App\Models\BlogPostTranslation::where('locale', 'vi')
+                ->where('slug', $slug)
+                ->with(['blogPost.blogCategory.translations'])
+                ->first();
+            if (! $translation) {
+                abort(404);
+            }
+            $post = $translation->blogPost;
+            return redirect(\App\Support\LocaleUrl::forBlogPost($post, 'vi'), 301);
+        })->name('vi.blog.show.legacy');
 
         // ── Trang tĩnh — catch-all, phải đặt cuối cùng ───────────────────────
         Route::get('{slug}', [PageController::class, 'show'])
@@ -166,11 +181,26 @@ Route::prefix('en')
         Route::get('blog', [BlogController::class, 'index'])
             ->name('en.blog.index');
 
+        // blog/category/{slug} MUST be declared before blog/{cat}/{slug} to avoid collision
         Route::get('blog/category/{slug}', [BlogController::class, 'category'])
             ->name('en.blog.category');
 
-        Route::get('blog/{slug}', [BlogController::class, 'show'])
+        // Nested: /en/blog/{category_slug}/{slug}
+        Route::get('blog/{category_slug}/{slug}', [BlogController::class, 'show'])
             ->name('en.blog.show');
+
+        // Legacy flat URL → 301 to nested (SEO backward compat)
+        Route::get('blog/{slug}', function (string $locale, string $slug) {
+            $translation = \App\Models\BlogPostTranslation::where('locale', 'en')
+                ->where('slug', $slug)
+                ->with(['blogPost.blogCategory.translations'])
+                ->first();
+            if (! $translation) {
+                abort(404);
+            }
+            $post = $translation->blogPost;
+            return redirect(\App\Support\LocaleUrl::forBlogPost($post, 'en'), 301);
+        })->name('en.blog.show.legacy');
 
         // ── Static pages — catch-all, must be last ────────────────────────────
         Route::get('{slug}', [PageController::class, 'show'])

@@ -210,27 +210,40 @@ class McpBlogCategoryService
     private function writeTranslations(BlogCategory $bc, array $translations, bool $overwrite): void
     {
         foreach ($translations as $locale => $trans) {
-            if (!in_array($locale, ['vi', 'en'], true)) continue;
+            if (! in_array($locale, ['vi', 'en'], true)) continue;
 
-            $tr = $bc->translations()->firstOrNew(['locale' => $locale]);
+            $existing = $bc->translations()->where('locale', $locale)->first();
 
-            if ($tr->exists && $tr->is_mcp_protected) continue;
+            if ($existing?->is_mcp_protected) continue;
 
-            foreach (['name', 'slug', 'description', 'rich_content'] as $field) {
-                if (!array_key_exists($field, $trans)) continue;
-                if (!$overwrite && $tr->exists && filled($tr->$field)) continue;
-                $tr->$field = $trans[$field];
-            }
+            $name = filled($trans['name'] ?? null) ? $trans['name'] : null;
 
-            if ($tr->isDirty()) {
-                if (!$tr->exists && empty($tr->name)) continue;
-                if (empty($tr->slug) && filled($tr->name)) {
-                    $tr->slug = \Illuminate\Support\Str::slug($tr->name);
+            // Need at least a name to create
+            if (! $existing && empty($name)) continue;
+
+            $slug = filled($trans['slug'] ?? null)
+                ? $trans['slug']
+                : (filled($name) ? \Illuminate\Support\Str::slug($name) : null);
+
+            if (empty($slug)) continue;
+
+            if (! $existing) {
+                $row = ['locale' => $locale, 'name' => $name, 'slug' => $slug];
+                if (array_key_exists('description', $trans))  $row['description']  = $trans['description'];
+                if (array_key_exists('rich_content', $trans)) $row['rich_content'] = $trans['rich_content'];
+                $bc->translations()->create($row);
+            } else {
+                $update = [];
+                foreach (['name' => $name, 'slug' => $slug] as $field => $value) {
+                    if (! $overwrite && filled($existing->$field)) continue;
+                    $update[$field] = $value;
                 }
-                if (empty($tr->slug)) continue;
-                $tr->blog_category_id = $bc->id;
-                $tr->locale           = $locale;
-                $tr->save();
+                foreach (['description', 'rich_content'] as $field) {
+                    if (! array_key_exists($field, $trans)) continue;
+                    if (! $overwrite && filled($existing->$field)) continue;
+                    $update[$field] = $trans[$field];
+                }
+                if (! empty($update)) $existing->update($update);
             }
         }
     }
@@ -256,7 +269,10 @@ class McpBlogCategoryService
                 $seoMeta->$field = $data[$field];
             }
 
-            if (blank($seoMeta->robots)) $seoMeta->robots = 'index, follow';
+            if (filled($seoMeta->robots)) {
+                $seoMeta->robots = str_replace(', ', ',', $seoMeta->robots);
+            }
+            if (blank($seoMeta->robots)) $seoMeta->robots = 'index,follow';
 
             $seoMeta->model_type = 'blog_category';
             $seoMeta->model_id   = (string) $bc->id;

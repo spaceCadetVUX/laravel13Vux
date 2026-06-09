@@ -696,7 +696,11 @@ class JsonldService
             }
         }
 
-        $items[] = ['name' => $title, 'url' => LocaleUrl::for('blog_post', $slug, $locale)];
+        $postUrl = ($model instanceof \App\Models\BlogPost)
+            ? LocaleUrl::forBlogPost($model, $locale)
+            : LocaleUrl::for('blog_post', $slug, $locale);
+
+        $items[] = ['name' => $title, 'url' => $postUrl];
 
         return $this->buildBreadcrumbSchema($items);
     }
@@ -957,13 +961,17 @@ class JsonldService
                             $postName = (string) ($t?->title ?? $post->getAttribute('title') ?? '');
                             $postSlug = (string) ($t?->slug ?? $post->getAttribute('slug') ?? '');
 
+                            $postUrl = ($post instanceof \App\Models\BlogPost && filled($postSlug))
+                                ? LocaleUrl::forBlogPost($post, $locale)
+                                : (filled($postSlug)
+                                    ? LocaleUrl::for('blog_post', $postSlug, $locale)
+                                    : rtrim((string) (config('seo.app_url') ?: config('app.url')), '/'));
+
                             return [
                                 '@type'    => 'ListItem',
                                 'position' => $index + 1,
                                 'name'     => $postName,
-                                'url'      => filled($postSlug)
-                                    ? LocaleUrl::for('blog_post', $postSlug, $locale)
-                                    : rtrim((string) (config('seo.app_url') ?: config('app.url')), '/'),
+                                'url'      => $postUrl,
                             ];
                         })->values()->all();
 

@@ -104,7 +104,7 @@
         <div class="col-md-6 col-lg-4">
             <div class="blog-card">
 
-                <a href="{{ route($bcLocale . '.blog.show', $blog->slug) }}" class="blog-card__img-wrap d-block">
+                <a href="{{ route($bcLocale . '.blog.show', [$blog->category_slug, $blog->slug]) }}" class="blog-card__img-wrap d-block">
                     @if($blog->featured_image)
                         <img src="{{ asset($blog->featured_image) }}" alt="{{ $blog->title }}" loading="lazy">
                     @else
@@ -122,7 +122,7 @@
                 @endif
 
                 <h2 class="blog-card__title">
-                    <a href="{{ route($bcLocale . '.blog.show', $blog->slug) }}">{{ Str::limit($blog->title, 65) }}</a>
+                    <a href="{{ route($bcLocale . '.blog.show', [$blog->category_slug, $blog->slug]) }}">{{ Str::limit($blog->title, 65) }}</a>
                 </h2>
 
                 @if($blog->excerpt)
@@ -130,7 +130,7 @@
                 @endif
 
                 <div class="d-flex align-items-center justify-content-between mt-auto">
-                    <a href="{{ route($bcLocale . '.blog.show', $blog->slug) }}" class="blog-card__read-more">
+                    <a href="{{ route($bcLocale . '.blog.show', [$blog->category_slug, $blog->slug]) }}" class="blog-card__read-more">
                         {{ $bcLocale === 'vi' ? 'Đọc thêm' : 'Read more' }}
                         <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                             <path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -189,5 +189,73 @@
     @endif
 
 </div>
+
+{{-- ── Category Description / Rich Content ─────────────────── --}}
+@if($translation->description || $translation->rich_content)
+@php
+    $richHtml = null;
+    if ($translation->rich_content) {
+        $decoded = json_decode($translation->rich_content, true);
+        if (json_last_error() === JSON_ERROR_NONE && isset($decoded['type'])) {
+            try {
+                $richHtml = (new \Tiptap\Editor([
+                    'extensions' => [
+                        new \Tiptap\Extensions\StarterKit,
+                        new \Tiptap\Nodes\Image,
+                    ],
+                ]))->setContent($decoded)->getHTML();
+                if (trim(strip_tags($richHtml)) === '') $richHtml = null;
+            } catch (\Throwable) {
+                $richHtml = null;
+            }
+        } else {
+            $richHtml = $translation->rich_content;
+        }
+    }
+@endphp
+<div class="container" style="padding-top: 2.5rem; padding-bottom: 1rem;">
+    <div style="max-width: 780px; margin: 0 auto;">
+        @if($translation->description)
+        <p class="text-muted" style="font-size: 1rem; line-height: 1.75;">{{ $translation->description }}</p>
+        @endif
+        @if($richHtml)
+        <div class="blog-rich-content mt-3">
+            {!! $richHtml !!}
+        </div>
+        @endif
+    </div>
+</div>
+@endif
+
+{{-- ── FAQ ──────────────────────────────────────────────────── --}}
+@if(!empty($faqs))
+<div class="container" style="padding-top: 1rem; padding-bottom: 2rem;">
+    <div style="max-width: 780px; margin: 0 auto;">
+        <h2 style="font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.25rem;">
+            {{ $bcLocale === 'vi' ? 'Câu hỏi thường gặp' : 'Frequently Asked Questions' }}
+        </h2>
+        <div class="accordion" id="faqAccordion">
+            @foreach($faqs as $i => $faq)
+            <div class="accordion-item border-0 border-bottom">
+                <h3 class="accordion-header">
+                    <button class="accordion-button {{ $i > 0 ? 'collapsed' : '' }} ps-0 fw-semibold"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#faq{{ $i }}"
+                            style="font-size: 0.9rem; background: none; box-shadow: none;">
+                        {{ $faq['question'] ?? '' }}
+                    </button>
+                </h3>
+                <div id="faq{{ $i }}" class="accordion-collapse collapse {{ $i === 0 ? 'show' : '' }}" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body ps-0 text-muted" style="font-size: 0.875rem; line-height: 1.7;">
+                        {{ $faq['answer'] ?? '' }}
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
 
 @endsection

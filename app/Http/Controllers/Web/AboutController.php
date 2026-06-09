@@ -26,6 +26,18 @@ class AboutController extends Controller
             'en' => route('en.about'),
         ]);
 
-        return view('pages.page.about', compact('data', 'locale'));
+        $ogRaw         = $data['ogImage'] ?? Setting::get('default_og_image');
+        $fallbackImage = $ogRaw
+            ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+            : null;
+
+        return view('pages.page.about', compact('data', 'locale') + [
+            'seoMeta'             => null,
+            'fallbackTitle'       => $data['seoTitle'],
+            'fallbackDescription' => $data['seoDescription'] ?: ($data['description'] ?? ''),
+            'fallbackImage'       => $fallbackImage,
+            'ogType'              => 'website',
+            'jsonldSchemas'       => [],
+        ]);
     }
 }

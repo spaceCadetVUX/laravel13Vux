@@ -177,11 +177,16 @@ class LlmsGeneratorService
             ?? $model->getAttribute('title') ?? $model->getAttribute('name') ?? '');
         $slug  = (string) ($translation?->slug ?? $model->getAttribute('slug') ?? '');
 
-        $routeSuffix = self::ROUTE_NAMES[$morphAlias] ?? null;
-        $fullRoute   = $routeSuffix ? $locale . '.' . $routeSuffix : null;
-        $url         = $fullRoute && $slug && \Illuminate\Support\Facades\Route::has($fullRoute)
-            ? route($fullRoute, ['slug' => $slug])
-            : rtrim((string) config('app.url'), '/') . '/' . $locale . '/' . $slug;
+        if ($morphAlias === 'blog_post' && $model instanceof \App\Models\BlogPost) {
+            $url = \App\Support\LocaleUrl::forBlogPost($model, $locale)
+                ?: rtrim((string) config('app.url'), '/') . '/' . $locale . '/' . $slug;
+        } else {
+            $routeSuffix = self::ROUTE_NAMES[$morphAlias] ?? null;
+            $fullRoute   = $routeSuffix ? $locale . '.' . $routeSuffix : null;
+            $url         = $fullRoute && $slug && \Illuminate\Support\Facades\Route::has($fullRoute)
+                ? route($fullRoute, ['slug' => $slug])
+                : rtrim((string) config('app.url'), '/') . '/' . $locale . '/' . $slug;
+        }
 
         // ── Summary block ─────────────────────────────────────────────────────
         // Priority: ai_summary → short_description (products) / excerpt (blog posts) → empty

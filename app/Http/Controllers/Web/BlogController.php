@@ -10,6 +10,7 @@ use App\Models\BlogPost;
 use App\Models\BlogPostTranslation;
 use App\Models\BlogTag;
 use App\Models\Setting;
+use App\Models\Seo\GeoEntityProfile;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
 use App\Support\LocaleUrl;
@@ -88,6 +89,7 @@ class BlogController extends Controller
             $post->title                    = $tr->title;
             $post->excerpt                  = $tr->excerpt;
             $post->category                 = $catTr?->name ?? $post?->blogCategory?->name;
+            $post->category_slug            = $catTr?->slug ?? $post?->blogCategory?->slug;
             $post->featured_image           = $rawImage ? 'storage/' . ltrim($rawImage, '/') : null;
             $post->formatted_published_date = $post?->published_at?->translatedFormat('d M, Y');
             return $post;
@@ -212,20 +214,29 @@ class BlogController extends Controller
             $post->title                    = $tr->title;
             $post->excerpt                  = $tr->excerpt;
             $post->category                 = $catTr?->name ?? $post?->blogCategory?->name;
+            $post->category_slug            = $catTr?->slug ?? $post?->blogCategory?->slug;
             $post->featured_image           = $rawImage ? 'storage/' . ltrim($rawImage, '/') : null;
             $post->formatted_published_date = $post?->published_at?->translatedFormat('d M, Y');
             return $post;
         });
 
+        $blogCategory->loadMissing('seoMetas');
+
+        $geoProfile = GeoEntityProfile::where('model_type', 'blog_category')
+            ->where('model_id', (string) $blogCategory->id)
+            ->where('locale', $locale)
+            ->first();
+        $faqs = $geoProfile?->faq ?? [];
+
         view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.blog.category', compact(
             'blogCategory', 'translation', 'blogs', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
-            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
-        ));
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType', 'faqs'
+        ) + ['noScrollSmoother' => true]);
     }
 
-    public function show(string $locale, string $slug): View|RedirectResponse
+    public function show(string $locale, string $categorySlug, string $slug): View|RedirectResponse
     {
         $translation = BlogPostTranslation::where('locale', $locale)
             ->where('slug', $slug)
@@ -236,13 +247,12 @@ class BlogController extends Controller
             $viTranslation = BlogPostTranslation::where('slug', $slug)
                 ->whereIn('locale', config('app.supported_locales'))
                 ->where('locale', '!=', $locale)
+                ->with(['blogPost.blogCategory.translations'])
                 ->first();
 
             if ($viTranslation) {
-                return redirect(
-                    LocaleUrl::for('blog_post', $viTranslation->slug, $viTranslation->locale),
-                    302
-                );
+                $post = $viTranslation->blogPost->load('blogCategory.translations');
+                return redirect(LocaleUrl::forBlogPost($post, $viTranslation->locale), 302);
             }
 
             abort(404);
@@ -262,23 +272,58 @@ class BlogController extends Controller
             'tags',
         ]);
 
+        // Validate category slug — redirect to canonical if wrong
+        $catTr              = $post->blogCategory?->translations->first();
+        $actualCategorySlug = $catTr?->slug ?? $post->blogCategory?->slug;
+
+        if ($post->blog_category_id && $actualCategorySlug && $categorySlug !== $actualCategorySlug) {
+            return redirect(LocaleUrl::forBlogPost($post, $locale), 301);
+        }
+
         $alternateUrls = app(SeoService::class)->alternateUrls($post);
         $seoMeta       = $post->seoMeta($locale);
         $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($post, $locale)
             ->pluck('payload')
             ->toArray();
 
+        // ── GEO / FAQs ────────────────────────────────────────────────────────
+        $geoProfile = GeoEntityProfile::where('model_type', 'blog_post')
+            ->where('model_id', (string) $post->id)
+            ->where('locale', $locale)
+            ->first();
+        $faqs = $geoProfile?->faq
+            ?? ($locale === 'vi' ? ($post->faq_items_vi ?? []) : ($post->faq_items_en ?? []));
+
         // ── Blog DTO ───────────────────────────────────────────────────────────
         $catTr    = $post->blogCategory?->translations->first();
         $rawImage = $post->featured_image;
-        $bodyText = $translation->body ?? '';
-        $readMins = max(1, (int) ceil(str_word_count(strip_tags($bodyText)) / 200));
+        $rawBody  = $translation->body ?? '';
+
+        // Convert Tiptap JSON → HTML if needed
+        $bodyHtml = $rawBody;
+        if (filled($rawBody)) {
+            $decoded = json_decode($rawBody, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($decoded['type'])) {
+                try {
+                    $bodyHtml = (new \Tiptap\Editor([
+                        'extensions' => [
+                            new \Tiptap\Extensions\StarterKit,
+                            new \Tiptap\Nodes\Image,
+                        ],
+                    ]))->setContent($decoded)->getHTML();
+                } catch (\Throwable) {
+                    $bodyHtml = $rawBody;
+                }
+            }
+        }
+
+        $readMins = max(1, (int) ceil(str_word_count(strip_tags($bodyHtml)) / 200));
 
         $blog = (object) [
             'title'                    => $translation->title,
             'slug'                     => $translation->slug,
             'excerpt'                  => $translation->excerpt,
-            'content'                  => $bodyText,
+            'content'                  => $bodyHtml,
             'category'                 => $catTr?->name ?? $post->blogCategory?->name,
             'category_slug'            => $catTr?->slug ?? $post->blogCategory?->slug,
             'featured_image'           => $rawImage ? 'storage/' . ltrim($rawImage, '/') : null,
@@ -288,7 +333,7 @@ class BlogController extends Controller
             'reading_time'             => $locale === 'vi' ? "{$readMins} phút đọc" : "{$readMins} min read",
             'author'                   => $post->author,
             'tags'                     => $post->tags->pluck('name')->all(),
-            'faqs'                     => $locale === 'vi' ? ($post->faq_items_vi ?? []) : ($post->faq_items_en ?? []),
+            'faqs'                     => $faqs,
             'seo_description'          => $seoMeta?->meta_description ?? $translation->excerpt,
             'canonical_url'            => url()->current(),
         ];
@@ -330,6 +375,7 @@ class BlogController extends Controller
                 $p->slug                     = $tr->slug;
                 $p->title                    = $tr->title;
                 $p->category                 = $cTr?->name ?? $p?->blogCategory?->name;
+                $p->category_slug            = $cTr?->slug ?? $p?->blogCategory?->slug;
                 $p->featured_image           = $rawImg ? 'storage/' . ltrim($rawImg, '/') : null;
                 $p->formatted_published_date = $p?->published_at?->translatedFormat('d M, Y');
                 return $p;
@@ -357,6 +403,7 @@ class BlogController extends Controller
                     $p->slug                     = $tr->slug;
                     $p->title                    = $tr->title;
                     $p->category                 = $cTr?->name ?? $p?->blogCategory?->name;
+                    $p->category_slug            = $cTr?->slug ?? $p?->blogCategory?->slug;
                     $p->featured_image           = $rawImg ? 'storage/' . ltrim($rawImg, '/') : null;
                     $p->formatted_published_date = $p?->published_at?->translatedFormat('d M, Y');
                     return $p;
@@ -372,6 +419,6 @@ class BlogController extends Controller
             'blog', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
             'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType',
             'categories', 'latestPosts', 'relatedPosts', 'allTags'
-        ));
+        ) + ['noScrollSmoother' => true]);
     }
 }

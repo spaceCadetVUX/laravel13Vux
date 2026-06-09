@@ -20,6 +20,12 @@ export function registerSprint3Tools(server) {
         seo: z.record(z.object({
             meta_title: z.string().optional().describe("SEO title (≤60 ký tự)"),
             meta_description: z.string().optional().describe("SEO description (≤160 ký tự)"),
+            meta_keywords: z.string().optional().describe("Keywords, phân cách bằng dấu phẩy"),
+            canonical_url: z.string().optional().describe("Canonical URL — để trống = tự sinh từ slug"),
+            og_title: z.string().optional().describe("OG title cho Facebook/Zalo"),
+            og_description: z.string().optional().describe("OG description"),
+            og_image: z.string().optional().describe("OG image path (từ media library)"),
+            robots: z.string().optional().describe("index,follow | noindex,follow | noindex,nofollow"),
         })).optional().describe('{"vi": {...}, "en": {...}}'),
         geo: z.record(z.object({
             ai_summary: z.string().optional().describe("Tóm tắt cho AI/GEO"),

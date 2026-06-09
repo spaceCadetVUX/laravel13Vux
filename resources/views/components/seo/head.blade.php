@@ -11,7 +11,7 @@
     $resolvedCurrentUrl  = $currentUrl ?: request()->fullUrl();
     $resolvedCanonical   = $seoMeta?->canonical_url ?: request()->url();
 @endphp
-<title>{{ $seoMeta?->meta_title ?? $fallbackTitle }} — {{ config('app.name') }}</title>
+<title>{{ $seoMeta?->meta_title ?? $fallbackTitle }} - {{ \App\Models\Setting::get('site_name') ?: config('app.name') }}</title>
 <meta name="description" content="{{ $seoMeta?->meta_description ?? $fallbackDescription }}">
 <meta name="robots" content="{{ $seoMeta?->robots ?? 'index, follow' }}">
 
@@ -52,7 +52,7 @@
 @foreach($ogLocaleAlternates as $altLocale)
 <meta property="og:locale:alternate" content="{{ $altLocale }}" />
 @endforeach
-<meta property="og:site_name"   content="{{ config('app.name') }}" />
+<meta property="og:site_name"   content="{{ \App\Models\Setting::get('site_name') ?: config('app.name') }}" />
 <meta property="og:title"       content="{{ $ogTitle }}" />
 <meta property="og:description" content="{{ $ogDescription }}" />
 <meta property="og:url"         content="{{ $resolvedCurrentUrl }}" />

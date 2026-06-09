@@ -38,7 +38,7 @@
         ? ['@type' => 'Person', 'name' => $authorName]
         : ['@type' => 'Organization', 'name' => 'Casambi Vietnam', '@id' => config('app.url') . '/#organization'];
 
-    $blogUrl = route(app()->getLocale() . '.blog.show', $blog->slug);
+    $blogUrl = route(app()->getLocale() . '.blog.show', [$blog->category_slug, $blog->slug]);
 
     $blogSchema = [
         '@context'         => 'https://schema.org',
@@ -92,10 +92,43 @@
 <script type="application/ld+json">{!! json_encode($faqSchema, $jsonFlags) !!}</script>
 @endif
 
+{{-- JSON-LD schemas from DB (BreadcrumbList, Article, etc. synced by Observer) --}}
+@foreach($jsonldSchemas as $schema)
+<script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+@endforeach
+
+{{-- Force dark nav on blog detail — no hero overlay, transparent white nav looks broken --}}
+<style>
+#header-sticky:not(.header-sticky) {
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+#header-sticky:not(.header-sticky) .tp-header-menu nav ul > li > a {
+    color: #0a0a0a !important;
+}
+#header-sticky:not(.header-sticky) .tp-header-menu nav ul > li > a:hover {
+    opacity: 0.65;
+}
+#header-sticky:not(.header-sticky) .logo-white {
+    display: none !important;
+}
+#header-sticky:not(.header-sticky) .logo-black {
+    display: inline-block !important;
+}
+#header-sticky:not(.header-sticky) .tp-search-open-btn {
+    color: #0a0a0a !important;
+}
+#header-sticky:not(.header-sticky) .tp-header-lang a {
+    color: #0a0a0a !important;
+}
+#header-sticky:not(.header-sticky) .tp-offcanvas-open-btn i {
+    background-color: #0a0a0a !important;
+}
+</style>
 @endpush
 
 @section('content')
-<div style="width:100%;height:100px;background-color:#0c0c0c;"></div>
+<div style="width:100%;height:72px;"></div>
 <div class="blog-detail-wrap">
     <div class="container">
         <div class="row gx-lg-5">
@@ -213,7 +246,7 @@
                         @foreach($relatedPosts as $related)
                         <div class="col-sm-6">
                             <div class="blog-card-mini">
-                                <a href="{{ route(current_locale() . '.blog.show', $related->slug) }}" class="blog-card-mini__img d-block">
+                                <a href="{{ route(current_locale() . '.blog.show', [$related->category_slug, $related->slug]) }}" class="blog-card-mini__img d-block">
                                     @if($related->featured_image)
                                     <img src="{{ asset($related->featured_image) }}" alt="{{ $related->title }}" loading="lazy">
                                     @else
@@ -223,8 +256,8 @@
                                 @if($related->category)
                                 <div class="blog-card-mini__cat">{{ $related->category }}</div>
                                 @endif
-                                <a href="{{ route(current_locale() . '.blog.show', $related->slug) }}" class="blog-card-mini__title d-block">{{ Str::limit($related->title, 65) }}</a>
-                                <a href="{{ route(current_locale() . '.blog.show', $related->slug) }}" class="blog-card-mini__read">
+                                <a href="{{ route(current_locale() . '.blog.show', [$related->category_slug, $related->slug]) }}" class="blog-card-mini__title d-block">{{ Str::limit($related->title, 65) }}</a>
+                                <a href="{{ route(current_locale() . '.blog.show', [$related->category_slug, $related->slug]) }}" class="blog-card-mini__read">
                                     {{ $bcLocale === 'vi' ? 'Đọc thêm' : 'Read more' }}
                                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </a>
@@ -277,7 +310,7 @@
                         <div class="d-flex flex-column gap-4">
                             @foreach($latestPosts as $latest)
                             <div class="blog-card">
-                                <a href="{{ route(current_locale() . '.blog.show', $latest->slug) }}" class="blog-card__img-wrap d-block">
+                                <a href="{{ route(current_locale() . '.blog.show', [$latest->category_slug, $latest->slug]) }}" class="blog-card__img-wrap d-block">
                                     @if($latest->featured_image)
                                         <img src="{{ asset($latest->featured_image) }}" alt="{{ $latest->title }}" loading="lazy">
                                     @else
@@ -291,10 +324,10 @@
                                 </div>
                                 @endif
                                 <h3 class="blog-card__title" style="font-size: 0.9rem;">
-                                    <a href="{{ route(current_locale() . '.blog.show', $latest->slug) }}">{{ Str::limit($latest->title, 60) }}</a>
+                                    <a href="{{ route(current_locale() . '.blog.show', [$latest->category_slug, $latest->slug]) }}">{{ Str::limit($latest->title, 60) }}</a>
                                 </h3>
                                 <div class="d-flex align-items-center justify-content-between mt-auto">
-                                    <a href="{{ route(current_locale() . '.blog.show', $latest->slug) }}" class="blog-card__read-more">
+                                    <a href="{{ route(current_locale() . '.blog.show', [$latest->category_slug, $latest->slug]) }}" class="blog-card__read-more">
                                         {{ $bcLocale === 'vi' ? 'Đọc thêm' : 'Read more' }}
                                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </a>

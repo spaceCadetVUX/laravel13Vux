@@ -265,7 +265,9 @@ class BlogPostResource extends Resource
                                                 ->label('Canonical URL (auto-generated)')
                                                 ->content(function ($record): string {
                                                     $slug = $record?->translations()->where('locale', 'vi')->value('slug');
-                                                    return $slug ? route('blog.show', ['locale' => 'vi', 'slug' => $slug]) : '—';
+                                                    if (! $slug) return '—';
+                                                    $record->loadMissing(['blogCategory.translations']);
+                                                    return \App\Support\LocaleUrl::forBlogPost($record, 'vi') ?: '—';
                                                 }),
 
                                             Group::make()
@@ -354,7 +356,9 @@ class BlogPostResource extends Resource
                                                 ->label('Canonical URL (auto-generated)')
                                                 ->content(function ($record): string {
                                                     $slug = $record?->translations()->where('locale', 'en')->value('slug');
-                                                    return $slug ? route('blog.show.en', ['locale' => 'en', 'slug' => $slug]) : '—';
+                                                    if (! $slug) return '—';
+                                                    $record->loadMissing(['blogCategory.translations']);
+                                                    return \App\Support\LocaleUrl::forBlogPost($record, 'en') ?: '—';
                                                 }),
 
                                             Group::make()

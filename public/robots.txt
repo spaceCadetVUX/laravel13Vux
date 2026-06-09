@@ -21,4 +21,4 @@ Disallow: /*?filter=
 Disallow: /*?page=
 
 # Sitemap
-Sitemap: https://knxstore.vn/sitemap.xml
+Sitemap: https://casambi.vn/sitemap.xml

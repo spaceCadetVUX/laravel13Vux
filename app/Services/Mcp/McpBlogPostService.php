@@ -283,31 +283,38 @@ class McpBlogPostService
     private function writeTranslations(BlogPost $post, array $translations, bool $overwrite, string $routeSlug = ''): void
     {
         foreach ($translations as $locale => $trans) {
-            if (!in_array($locale, ['vi', 'en'], true)) continue;
+            if (! in_array($locale, ['vi', 'en'], true)) continue;
 
-            $tr = $post->translations()->firstOrNew(['locale' => $locale]);
+            $existing = $post->translations()->where('locale', $locale)->first();
 
-            if ($tr->exists && $tr->is_mcp_protected) continue;
+            if ($existing?->is_mcp_protected) continue;
 
-            foreach (['title', 'slug', 'excerpt', 'body'] as $field) {
-                if (!array_key_exists($field, $trans)) continue;
-                if (!$overwrite && $tr->exists && filled($tr->$field)) continue;
-                $tr->$field = $trans[$field];
-            }
+            $title = filled($trans['title'] ?? null) ? $trans['title'] : null;
 
-            if (!$tr->exists && empty($tr->slug)) {
-                if ($locale === 'vi' && filled($routeSlug)) {
-                    $tr->slug = $routeSlug;
-                } elseif (filled($tr->title)) {
-                    $tr->slug = Str::slug($tr->title);
+            // Resolve slug
+            $slug = filled($trans['slug'] ?? null) ? $trans['slug'] : null;
+            if (! $slug && $locale === 'vi' && filled($routeSlug)) $slug = $routeSlug;
+            if (! $slug && filled($title))                          $slug = Str::slug($title);
+
+            if (! $existing) {
+                if (empty($title) || empty($slug)) continue;
+                $row = ['locale' => $locale, 'title' => $title, 'slug' => $slug];
+                if (array_key_exists('excerpt', $trans)) $row['excerpt'] = $trans['excerpt'];
+                if (array_key_exists('body', $trans))    $row['body']    = $trans['body'];
+                $post->translations()->create($row);
+            } else {
+                $update = [];
+                foreach (['title' => $title, 'slug' => $slug] as $field => $value) {
+                    if ($value === null) continue;
+                    if (! $overwrite && filled($existing->$field)) continue;
+                    $update[$field] = $value;
                 }
-            }
-
-            if ($tr->isDirty()) {
-                if (!$tr->exists && (empty($tr->title) || empty($tr->slug))) continue;
-                $tr->blog_post_id = $post->id;
-                $tr->locale       = $locale;
-                $tr->save();
+                foreach (['excerpt', 'body'] as $field) {
+                    if (! array_key_exists($field, $trans)) continue;
+                    if (! $overwrite && filled($existing->$field)) continue;
+                    $update[$field] = $trans[$field];
+                }
+                if (! empty($update)) $existing->update($update);
             }
         }
     }
@@ -333,7 +340,10 @@ class McpBlogPostService
                 $seoMeta->$field = $data[$field];
             }
 
-            if (blank($seoMeta->robots)) $seoMeta->robots = 'index, follow';
+            if (filled($seoMeta->robots)) {
+                $seoMeta->robots = str_replace(', ', ',', $seoMeta->robots);
+            }
+            if (blank($seoMeta->robots)) $seoMeta->robots = 'index,follow';
 
             $seoMeta->model_type = 'blog_post';
             $seoMeta->model_id   = $post->id;

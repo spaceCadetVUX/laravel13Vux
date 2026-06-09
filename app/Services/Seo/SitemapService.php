@@ -138,18 +138,29 @@ class SitemapService
             return;
         }
 
-        $url = LocaleUrl::for($morphAlias, $slug, $locale);
+        $isBlogPost = $morphAlias === 'blog_post' && $model instanceof \App\Models\BlogPost;
+        $url = $isBlogPost
+            ? \App\Support\LocaleUrl::forBlogPost($model, $locale)
+            : LocaleUrl::for($morphAlias, $slug, $locale);
+
+        if ($url === '') {
+            return;
+        }
 
         // Build alternate_urls for hreflang xlinks.
         $alternateUrls = [];
         foreach (config('app.supported_locales') as $altLocale) {
-            if ($hasTranslations) {
+            if ($isBlogPost) {
+                $altUrl = \App\Support\LocaleUrl::forBlogPost($model, $altLocale);
+                if ($altUrl !== '') {
+                    $alternateUrls[$altLocale] = $altUrl;
+                }
+            } elseif ($hasTranslations) {
                 $altTranslation = $model->translation($altLocale);
                 if ($altTranslation) {
                     $alternateUrls[$altLocale] = LocaleUrl::for($morphAlias, $altTranslation->slug, $altLocale);
                 }
             } else {
-                // Non-translated model — same slug, different locale prefix
                 $alternateUrls[$altLocale] = LocaleUrl::for($morphAlias, $slug, $altLocale);
             }
         }

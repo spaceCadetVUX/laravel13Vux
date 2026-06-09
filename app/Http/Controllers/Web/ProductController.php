@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\FilterGroup;
 use App\Models\ProductTranslation;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
@@ -77,10 +78,27 @@ class ProductController extends Controller
             'en' => route('en.product.shop'),
         ]);
 
+        $ogRaw         = Setting::get('default_og_image');
+        $fallbackImage = $ogRaw ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw)) : null;
+
+        $fallbackTitle = $locale === 'vi'
+            ? 'Tất cả sản phẩm — KNX, DALI-2, Casambi, Matter Smarthome'
+            : 'All Products — KNX, DALI-2, Casambi, Matter Smarthome';
+        $fallbackDescription = $locale === 'vi'
+            ? 'Khám phá toàn bộ danh mục thiết bị tự động hóa tòa nhà: KNX, DALI-2, Casambi, Matter, BACnet, Modbus tại KNXStore.vn.'
+            : 'Browse the full catalog of building automation devices: KNX, DALI-2, Casambi, Matter, BACnet, Modbus at KNXStore.vn.';
+
         return view('pages.product.index', compact(
             'locale', 'products', 'filterGroups', 'brands',
             'activeValueSlugs', 'brandSlug', 'keyword'
-        ));
+        ) + [
+            'seoMeta'             => null,
+            'fallbackTitle'       => $fallbackTitle,
+            'fallbackDescription' => $fallbackDescription,
+            'fallbackImage'       => $fallbackImage,
+            'ogType'              => 'website',
+            'jsonldSchemas'       => [],
+        ]);
     }
 
     public function autocomplete(string $locale): JsonResponse

@@ -245,7 +245,7 @@
                 @foreach($latestBlogs as $blog)
                 <div class="col-md-6 col-lg-4">
                     <div class="blog-card">
-                        <a href="{{ route(current_locale() . '.blog.show', $blog->slug) }}" class="blog-card__img-wrap d-block">
+                        <a href="{{ route(current_locale() . '.blog.show', [$blog->category_slug, $blog->slug]) }}" class="blog-card__img-wrap d-block">
                             @if($blog->featured_image)
                                 <img src="{{ asset($blog->featured_image) }}" alt="{{ $blog->title }}" loading="lazy">
                             @else
@@ -253,10 +253,10 @@
                             @endif
                         </a>
                         @if($blog->category)<div class="blog-card__category">{{ $blog->category }}</div>@endif
-                        <h2 class="blog-card__title"><a href="{{ route(current_locale() . '.blog.show', $blog->slug) }}">{{ Str::limit($blog->title, 65) }}</a></h2>
+                        <h2 class="blog-card__title"><a href="{{ route(current_locale() . '.blog.show', [$blog->category_slug, $blog->slug]) }}">{{ Str::limit($blog->title, 65) }}</a></h2>
                         @if($blog->excerpt)<p class="blog-card__excerpt">{{ strip_tags($blog->excerpt) }}</p>@endif
                         <div class="d-flex align-items-center justify-content-between mt-auto">
-                            <a href="{{ route(current_locale() . '.blog.show', $blog->slug) }}" class="blog-card__read-more">
+                            <a href="{{ route(current_locale() . '.blog.show', [$blog->category_slug, $blog->slug]) }}" class="blog-card__read-more">
                                 {{ $locale === 'vi' ? 'Đọc thêm' : 'Read more' }}
                                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </a>
@@ -308,17 +308,50 @@
     <!-- FAQ -->
     <section class="home-faq-section">
         <div class="container">
-            <h2 class="home-faq__title">{{ $locale === 'vi' ? 'Câu hỏi thường gặp' : 'Frequently Asked Questions' }}</h2>
-            <div class="home-faq__list">
-                @foreach($faqItems as $faq)
-                <details class="home-faq__item">
-                    <summary class="home-faq__question">{{ $faq['q'] }}</summary>
-                    <div class="home-faq__answer">{{ $faq['a'] }}</div>
-                </details>
-                @endforeach
+            <div class="home-faq__inner">
+
+                {{-- Left: sticky label + title --}}
+                <div class="home-faq__left">
+                    <span class="home-faq__label">FAQ</span>
+                    <h2 class="home-faq__title">
+                        {{ $locale === 'vi' ? 'Câu hỏi thường gặp' : 'Frequently Asked Questions' }}
+                    </h2>
+                    <p class="home-faq__desc">
+                        {{ $locale === 'vi'
+                            ? 'Những câu hỏi phổ biến về giải pháp chiếu sáng thông minh của chúng tôi.'
+                            : 'Common questions about our smart lighting solutions.' }}
+                    </p>
+                </div>
+
+                {{-- Right: accordion list --}}
+                <div class="home-faq__list">
+                    @foreach($faqItems as $i => $faq)
+                    <div class="home-faq__item{{ $i === 0 ? ' open' : '' }}">
+                        <button type="button" class="home-faq__question" onclick="toggleFaq(this)">
+                            <span class="home-faq__num">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</span>
+                            <span class="home-faq__q-text">{{ $faq['q'] }}</span>
+                            <span class="home-faq__icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="home-faq__answer"><p>{{ $faq['a'] }}</p></div>
+                    </div>
+                    @endforeach
+                </div>
+
             </div>
         </div>
     </section>
+    <script>
+    function toggleFaq(btn) {
+        var item = btn.closest('.home-faq__item');
+        var isOpen = item.classList.contains('open');
+        document.querySelectorAll('.home-faq__item.open').forEach(function(el) { el.classList.remove('open'); });
+        if (!isOpen) item.classList.add('open');
+    }
+    </script>
     @endif
 
     <style>

@@ -25,6 +25,35 @@ class SitemapController extends Controller
     }
 
     /**
+     * Serve static pages sitemap (sitemap-static.xml).
+     * Hardcoded list of pages not tied to any DB model.
+     */
+    public function static(): Response
+    {
+        $base = rtrim(config('app.url'), '/');
+
+        $pages = [
+            // Home
+            ['vi' => "$base/vi", 'en' => "$base/en", 'priority' => '1.0', 'changefreq' => 'daily'],
+            // About
+            ['vi' => "$base/vi/gioi-thieu", 'en' => "$base/en/about", 'priority' => '0.7', 'changefreq' => 'monthly'],
+            // Shop
+            ['vi' => "$base/vi/cua-hang", 'en' => "$base/en/shop", 'priority' => '0.8', 'changefreq' => 'daily'],
+            // Blog index
+            ['vi' => "$base/vi/bai-viet", 'en' => "$base/en/blog", 'priority' => '0.7', 'changefreq' => 'daily'],
+            // Solutions
+            ['vi' => "$base/vi/giai-phap/dali-casambi", 'en' => "$base/en/solutions/dali-casambi", 'priority' => '0.7', 'changefreq' => 'monthly'],
+            ['vi' => "$base/vi/giai-phap/wireless-casambi", 'en' => "$base/en/solutions/wireless-casambi", 'priority' => '0.7', 'changefreq' => 'monthly'],
+            ['vi' => "$base/vi/giai-phap/theo-vai-tro", 'en' => "$base/en/solutions/by-role", 'priority' => '0.6', 'changefreq' => 'monthly'],
+        ];
+
+        return response()
+            ->view('sitemap.static', compact('pages'))
+            ->header('Content-Type', 'application/xml; charset=UTF-8')
+            ->header('Cache-Control', 'public, max-age=86400');
+    }
+
+    /**
      * Serve a child sitemap (sitemap-{locale}-{type}.xml).
      * Renders live from sitemap_entries with hreflang xlinks.
      */

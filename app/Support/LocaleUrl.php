@@ -71,4 +71,42 @@ class LocaleUrl
         $locale ??= app()->getLocale();
         return (string) config("localeurl.list_labels.{$locale}.{$morphAlias}", $morphAlias);
     }
+
+    /**
+     * Build the canonical URL for a blog post using the nested category structure.
+     *
+     * URL structure:
+     *   VI: /vi/chu-de/{category_slug}/{post_slug}
+     *   EN: /en/blog/{category_slug}/{post_slug}
+     *
+     * Falls back to the flat `blog_post` prefix when the post has no category.
+     */
+    public static function forBlogPost(\App\Models\BlogPost $post, string $locale): string
+    {
+        $post->loadMissing(['translations', 'blogCategory.translations']);
+
+        $translation = $post->translations->where('locale', $locale)->first();
+        if (! $translation) {
+            return '';
+        }
+
+        $blogCategory = $post->blogCategory;
+        $catTrans     = $blogCategory?->translations->where('locale', $locale)->first();
+        $catSlug      = $catTrans?->slug ?? $blogCategory?->slug;
+
+        $baseUrl = rtrim((string) (config('seo.app_url') ?: config('app.url')), '/');
+
+        if ($catSlug) {
+            // /vi/bai-viet/{cat}/{post} or /en/blog/{cat}/{post}
+            $nestedBase = match ($locale) {
+                'vi'    => '/vi/bai-viet/',
+                'en'    => '/en/blog/',
+                default => '/vi/bai-viet/',
+            };
+            return $baseUrl . $nestedBase . $catSlug . '/' . $translation->slug;
+        }
+
+        // Fallback: flat URL — post has no category (should not happen for published posts)
+        return static::for('blog_post', $translation->slug, $locale);
+    }
 }

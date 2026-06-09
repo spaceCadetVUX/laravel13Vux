@@ -37,10 +37,22 @@ class BlogPostObserver
 
         $defaultLocale = config('app.fallback_locale', 'vi');
 
+        $blogPost->loadMissing(['blogCategory.translations']);
+        $catTrans = $blogPost->blogCategory?->translations->where('locale', $defaultLocale)->first();
+        $catSlug  = $catTrans?->slug ?? $blogPost->blogCategory?->slug;
+
+        if ($catSlug) {
+            $fromPath = "/vi/bai-viet/{$catSlug}/{$oldSlug}";
+            $toPath   = "/vi/bai-viet/{$catSlug}/{$newSlug}";
+        } else {
+            $fromPath = parse_url(LocaleUrl::for('blog_post', $oldSlug, $defaultLocale), PHP_URL_PATH);
+            $toPath   = parse_url(LocaleUrl::for('blog_post', $newSlug, $defaultLocale), PHP_URL_PATH);
+        }
+
         Redirect::updateOrCreate(
-            ['from_path' => parse_url(LocaleUrl::for('blog_post', $oldSlug, $defaultLocale), PHP_URL_PATH)],
+            ['from_path' => $fromPath],
             [
-                'to_path'   => parse_url(LocaleUrl::for('blog_post', $newSlug, $defaultLocale), PHP_URL_PATH),
+                'to_path'   => $toPath,
                 'type'      => RedirectType::Permanent,
                 'locale'    => $defaultLocale,
                 'is_active' => true,

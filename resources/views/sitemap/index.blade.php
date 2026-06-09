@@ -1,5 +1,8 @@
 {!! '<' . '?xml version="1.0" encoding="UTF-8"?' . '>' !!}
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <sitemap>
+        <loc>{{ rtrim(config('app.url'), '/') }}/sitemap-static.xml</loc>
+    </sitemap>
 @foreach($indexes as $index)
     <sitemap>
         <loc>{{ $index->url }}</loc>
