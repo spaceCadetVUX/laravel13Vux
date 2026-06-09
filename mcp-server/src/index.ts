@@ -41,8 +41,7 @@ if (HTTP_MODE) {
       const transport = new SSEServerTransport("/mcp/messages", res);
       sessions.set(transport.sessionId, transport);
       transport.onclose = () => sessions.delete(transport.sessionId);
-      await buildServer().connect(transport);
-      await transport.start();
+      await buildServer().connect(transport); // connect() calls start() internally
       return;
     }
 
