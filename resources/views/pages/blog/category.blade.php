@@ -2,54 +2,49 @@
 
 @push('head')
 @php $bcLocale = app()->getLocale(); @endphp
+
+{{-- BreadcrumbList JSON-LD --}}
 <x-breadcrumb-schema :items="[
-    ['name' => $bcLocale === 'vi' ? 'Trang chủ' : 'Home', 'url' => route($bcLocale . '.index')],
-    ['name' => $bcLocale === 'vi' ? 'Tin tức' : 'Blog'],
+    ['name' => $bcLocale === 'vi' ? 'Trang chủ' : 'Home',     'url' => route($bcLocale . '.index')],
+    ['name' => $bcLocale === 'vi' ? 'Tin tức'   : 'Blog',     'url' => route($bcLocale . '.blog.index')],
+    ['name' => $translation->name],
 ]" />
-@php
-    $jsonldCollectionPage = array_filter([
-        '@context'    => 'https://schema.org',
-        '@type'       => 'CollectionPage',
-        'name'        => $bcLocale === 'vi' ? 'Blog — Tin tức & Bài viết' : 'Blog — News & Articles',
-        'description' => $bcLocale === 'vi'
-            ? 'Cập nhật kiến thức, xu hướng và câu chuyện từ chúng tôi.'
-            : 'Insights, trends and stories from our team.',
-        'url'         => route($bcLocale . '.blog.index'),
-        'inLanguage'  => $bcLocale === 'vi' ? 'vi-VN' : 'en-US',
-        'isPartOf'    => [
-            '@type' => 'WebSite',
-            'url'   => url('/'),
-            'name'  => config('app.name'),
-        ],
-        'image' => $fallbackImage ?? null,
-    ]);
-@endphp
-<script type="application/ld+json">{!! json_encode($jsonldCollectionPage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+
+{{-- JSON-LD schemas from DB (CollectionPage, BreadcrumbList, etc.) --}}
+@foreach($jsonldSchemas as $schema)
+<script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+@endforeach
 @endpush
 
 @section('content')
 
 {{-- ── Hero ──────────────────────────────────────────────────── --}}
 <section class="shop-hero position-relative overflow-hidden">
-    <img src="{{ asset('images/casambi/bbc.jpg') }}" alt="Blog Hero Background" class="shop-hero-bg w-100 h-100 position-absolute top-0 start-0 object-fit-cover" style="z-index: 0; filter: brightness(1);">
+    <img src="{{ asset('images/casambi/bbc.jpg') }}" alt="{{ $translation->name }}" class="shop-hero-bg w-100 h-100 position-absolute top-0 start-0 object-fit-cover" style="z-index: 0; filter: brightness(1);">
     <div class="container position-relative h-100 d-flex align-items-center" style="z-index: 2;">
         <div>
-            <p class="font-xs text-white fw-bold letter-wide m-0" style="margin-bottom: 6px !important;">{{ $bcLocale === 'vi' ? 'TIN TỨC & BÀI VIẾT' : 'NEWS & ARTICLES' }}</p>
-            <p class="font-xs text-white-50 m-0" style="margin-bottom: 20px !important;">{{ $bcLocale === 'vi' ? 'Cập nhật kiến thức, xu hướng và câu chuyện từ chúng tôi' : 'Insights, trends and stories from our team' }}</p>
-            <h1 class="shop-hero-title text-white fw-black m-0" style="font-size: clamp(3rem, 8vw, 8rem); line-height: 0.9; letter-spacing: 0.05em; text-transform: uppercase;">
-                <span class="d-block" style="font-size: clamp(0.9rem, 1.5vw, 1.4rem); letter-spacing: 0.2em; font-weight: 500; margin-bottom: 4px; opacity: 0.75;">{{ $bcLocale === 'vi' ? 'CASAMBI' : 'CASAMBI' }}</span>
-                BLOG
+            <p class="font-xs text-white fw-bold letter-wide m-0" style="margin-bottom: 6px !important;">{{ $bcLocale === 'vi' ? 'DANH MỤC' : 'CATEGORY' }}</p>
+            <p class="font-xs text-white-50 m-0" style="margin-bottom: 20px !important;">
+                @if($translation->description)
+                    {{ Str::limit(strip_tags($translation->description), 100) }}
+                @else
+                    {{ $bcLocale === 'vi' ? 'Bài viết theo chủ đề' : 'Articles by topic' }}
+                @endif
+            </p>
+            <h1 class="shop-hero-title text-white fw-black m-0" style="font-size: clamp(2.5rem, 7vw, 7rem); line-height: 0.9; letter-spacing: 0.03em; text-transform: uppercase;">
+                <span class="d-block" style="font-size: clamp(0.9rem, 1.5vw, 1.4rem); letter-spacing: 0.2em; font-weight: 500; margin-bottom: 4px; opacity: 0.75;">{{ $bcLocale === 'vi' ? 'BLOG' : 'BLOG' }}</span>
+                {{ $translation->name }}
             </h1>
         </div>
     </div>
 </section>
 
-{{-- ── Search & Breadcrumb ─────────────────────────────────── --}}
+{{-- ── Search bar ───────────────────────────────────────────── --}}
 <section class="blog-hero" style="padding-top: 0; background: none;">
     <div class="container">
         <div class="blog-hero__inner" style="padding-top: 2rem;">
-            <form class="blog-hero__search" action="{{ route(current_locale() . '.blog.index') }}" method="GET">
-                <input type="text" name="q" placeholder="{{ $bcLocale === 'vi' ? 'Tìm kiếm bài viết...' : 'Search articles...' }}" value="{{ request('q') }}">
+            <form class="blog-hero__search" action="{{ route($bcLocale . '.blog.index') }}" method="GET">
+                <input type="text" name="q" placeholder="{{ $bcLocale === 'vi' ? 'Tìm kiếm bài viết...' : 'Search articles...' }}">
                 <button type="submit">
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                         <path d="M18.9999 19L14.6499 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -60,56 +55,56 @@
     </div>
 </section>
 
-{{-- ── Category Filter Pills ───────────────────────────────── --}}
-@if(isset($blogCategories) && $blogCategories->count() > 0)
+{{-- ── Category / Subcategory pills ────────────────────────── --}}
 <div class="blog-filter-bar">
     <div class="container">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="{{ route(current_locale() . '.blog.index') }}"
-               class="blog-filter-pill active">
+
+            {{-- All → back to blog index --}}
+            <a href="{{ route($bcLocale . '.blog.index') }}" class="blog-filter-pill">
                 {{ $bcLocale === 'vi' ? 'Tất cả' : 'All' }}
             </a>
-            @foreach($blogCategories as $rootCat)
-                <a href="{{ route(current_locale() . '.blog.category', $rootCat->slug) }}"
+
+            @if($blogCategory->parent_id)
+                {{-- Child category: show parent pill --}}
+                <a href="{{ route($bcLocale . '.blog.category', $blogCategory->parent->translations->first()?->slug ?? $blogCategory->parent->slug) }}"
                    class="blog-filter-pill">
-                    {{ $rootCat->name }}
-                    <span class="pill-count">({{ $rootCat->total_blog_count }})</span>
+                    {{ $blogCategory->parent->translations->first()?->name ?? $blogCategory->parent->name }}
                 </a>
-                @foreach($rootCat->children as $child)
-                    <a href="{{ route(current_locale() . '.blog.category', $child->slug) }}"
+                <a href="{{ route($bcLocale . '.blog.category', $translation->slug) }}"
+                   class="blog-filter-pill active">
+                    {{ $translation->name }}
+                    <span class="pill-count">({{ $blogs->total() }})</span>
+                </a>
+            @else
+                {{-- Root category: active + subcategory pills --}}
+                <a href="{{ route($bcLocale . '.blog.category', $translation->slug) }}"
+                   class="blog-filter-pill active">
+                    {{ $translation->name }}
+                    <span class="pill-count">({{ $blogs->total() }})</span>
+                </a>
+                @foreach($blogCategory->children as $child)
+                    <a href="{{ route($bcLocale . '.blog.category', $child->slug) }}"
                        class="blog-filter-pill">
                         {{ $child->name }}
                         <span class="pill-count">({{ $child->blog_count }})</span>
                     </a>
                 @endforeach
-            @endforeach
+            @endif
+
         </div>
     </div>
 </div>
-@else
-<div style="margin-bottom: 3rem;"></div>
-@endif
 
 {{-- ── Blog Grid ───────────────────────────────────────────── --}}
 <div class="container pb-5">
-
-    @if(isset($searchTerm) || isset($category))
-    <p class="font-xs text-uppercase letter-wide mb-4" style="color: var(--color-silver);">
-        @if(isset($searchTerm))
-            {{ $bcLocale === 'vi' ? 'Kết quả tìm kiếm:' : 'Results for:' }} "{{ $searchTerm }}" — {{ $blogs->total() }} {{ $bcLocale === 'vi' ? 'bài viết' : 'posts' }}
-        @elseif(isset($category))
-            {{ $bcLocale === 'vi' ? 'Danh mục:' : 'Category:' }} {{ $category }} — {{ $blogs->total() }} {{ $bcLocale === 'vi' ? 'bài viết' : 'posts' }}
-        @endif
-    </p>
-    @endif
 
     <div class="row g-4">
         @forelse($blogs as $blog)
         <div class="col-md-6 col-lg-4">
             <div class="blog-card">
 
-                {{-- Image --}}
-                <a href="{{ route(current_locale() . '.blog.show', $blog->slug) }}" class="blog-card__img-wrap d-block">
+                <a href="{{ route($bcLocale . '.blog.show', $blog->slug) }}" class="blog-card__img-wrap d-block">
                     @if($blog->featured_image)
                         <img src="{{ asset($blog->featured_image) }}" alt="{{ $blog->title }}" loading="lazy">
                     @else
@@ -117,7 +112,6 @@
                     @endif
                 </a>
 
-                {{-- Category --}}
                 @if($blog->category)
                 <div class="blog-card__category">
                     <svg width="11" height="11" viewBox="0 0 15 14" fill="none">
@@ -127,19 +121,16 @@
                 </div>
                 @endif
 
-                {{-- Title --}}
                 <h2 class="blog-card__title">
-                    <a href="{{ route(current_locale() . '.blog.show', $blog->slug) }}">{{ Str::limit($blog->title, 65) }}</a>
+                    <a href="{{ route($bcLocale . '.blog.show', $blog->slug) }}">{{ Str::limit($blog->title, 65) }}</a>
                 </h2>
 
-                {{-- Excerpt --}}
                 @if($blog->excerpt)
                 <p class="blog-card__excerpt">{{ strip_tags($blog->excerpt) }}</p>
                 @endif
 
-                {{-- Read More + Date --}}
                 <div class="d-flex align-items-center justify-content-between mt-auto">
-                    <a href="{{ route(current_locale() . '.blog.show', $blog->slug) }}" class="blog-card__read-more">
+                    <a href="{{ route($bcLocale . '.blog.show', $blog->slug) }}" class="blog-card__read-more">
                         {{ $bcLocale === 'vi' ? 'Đọc thêm' : 'Read more' }}
                         <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                             <path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -200,9 +191,3 @@
 </div>
 
 @endsection
-
-@push('scripts')
-<script>
-window.blogIndexRoute = "{{ route(current_locale() . '.blog.index') }}";
-</script>
-@endpush

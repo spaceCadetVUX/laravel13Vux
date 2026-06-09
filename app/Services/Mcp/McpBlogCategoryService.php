@@ -223,7 +223,11 @@ class McpBlogCategoryService
             }
 
             if ($tr->isDirty()) {
-                if (!$tr->exists && (empty($tr->name) || empty($tr->slug))) continue;
+                if (!$tr->exists && empty($tr->name)) continue;
+                if (empty($tr->slug) && filled($tr->name)) {
+                    $tr->slug = \Illuminate\Support\Str::slug($tr->name);
+                }
+                if (empty($tr->slug)) continue;
                 $tr->blog_category_id = $bc->id;
                 $tr->locale           = $locale;
                 $tr->save();

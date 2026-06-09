@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Enums\BlogPostStatus;
+use App\Models\BlogCategory;
 use App\Models\BlogCategoryTranslation;
+use App\Models\BlogPost;
 use App\Models\BlogPostTranslation;
+use App\Models\BlogTag;
+use App\Models\Setting;
 use App\Services\Seo\JsonldService;
 use App\Services\Seo\SeoService;
 use App\Support\LocaleUrl;
@@ -15,9 +19,116 @@ use Illuminate\Http\Response;
 
 class BlogController extends Controller
 {
-    public function index(string $locale): Response
+    public function index(string $locale): View
     {
-        return response("Blog index — {$locale}", 200);
+        $search         = request()->string('q')->toString() ?: null;
+        $categoryFilter = array_filter((array) request('blog_category', []));
+
+        // ── Category filter pills ──────────────────────────────────────────────
+        $blogCategories = BlogCategory::active()
+            ->whereNull('parent_id')
+            ->with([
+                'translations'          => fn ($q) => $q->where('locale', $locale),
+                'children'              => fn ($q) => $q->active()
+                    ->withCount(['posts as blog_count' => fn ($q) => $q->published()])
+                    ->with(['translations' => fn ($q) => $q->where('locale', $locale)]),
+            ])
+            ->withCount(['posts as root_count' => fn ($q) => $q->published()])
+            ->orderBy('sort_order')
+            ->get()
+            ->each(function ($cat) use ($locale) {
+                $tr        = $cat->translations->first();
+                $cat->name = $tr?->name ?? $cat->name;
+                $cat->slug = $tr?->slug ?? $cat->slug;
+                $cat->children->each(function ($child) use ($locale) {
+                    $tr          = $child->translations->first();
+                    $child->name = $tr?->name ?? $child->name;
+                    $child->slug = $tr?->slug ?? $child->slug;
+                });
+                $cat->total_blog_count = $cat->root_count + $cat->children->sum('blog_count');
+            });
+
+        // ── Blog posts query ───────────────────────────────────────────────────
+        $postsQuery = BlogPostTranslation::where('locale', $locale)
+            ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
+            ->where('blog_posts.status', BlogPostStatus::Published)
+            ->where('blog_posts.published_at', '<=', now())
+            ->whereNull('blog_posts.deleted_at')
+            ->select('blog_post_translations.*')
+            ->with([
+                'blogPost' => fn ($q) => $q->with([
+                    'blogCategory.translations' => fn ($q) => $q->where('locale', $locale),
+                ]),
+            ])
+            ->orderByDesc('blog_posts.published_at');
+
+        if ($search) {
+            $postsQuery->where(fn ($q) => $q
+                ->where('blog_post_translations.title', 'ilike', "%{$search}%")
+                ->orWhere('blog_post_translations.excerpt', 'ilike', "%{$search}%")
+            );
+        }
+
+        if ($categoryFilter) {
+            $postsQuery->whereExists(fn ($q) => $q
+                ->from('blog_category_translations')
+                ->whereColumn('blog_category_translations.blog_category_id', 'blog_posts.blog_category_id')
+                ->where('blog_category_translations.locale', $locale)
+                ->whereIn('blog_category_translations.slug', $categoryFilter)
+            );
+        }
+
+        $rawBlogs = $postsQuery->paginate(12)->withQueryString();
+
+        $blogs = $rawBlogs->through(function ($tr) {
+            $post                           = $tr->blogPost;
+            $catTr                          = $post?->blogCategory?->translations->first();
+            $rawImage                       = $post?->featured_image;
+            $post->slug                     = $tr->slug;
+            $post->title                    = $tr->title;
+            $post->excerpt                  = $tr->excerpt;
+            $post->category                 = $catTr?->name ?? $post?->blogCategory?->name;
+            $post->featured_image           = $rawImage ? 'storage/' . ltrim($rawImage, '/') : null;
+            $post->formatted_published_date = $post?->published_at?->translatedFormat('d M, Y');
+            return $post;
+        });
+
+        // Resolve display name for the active category filter label
+        $categoryName = null;
+        if ($categoryFilter) {
+            foreach ($blogCategories as $root) {
+                if (in_array($root->slug, $categoryFilter)) {
+                    $categoryName = $root->name;
+                    break;
+                }
+                $matched = $root->children->first(fn ($c) => in_array($c->slug, $categoryFilter));
+                if ($matched) {
+                    $categoryName = $matched->name;
+                    break;
+                }
+            }
+        }
+
+        view()->share('alternateUrls', [
+            'vi' => route('vi.blog.index'),
+            'en' => route('en.blog.index'),
+        ]);
+
+        return view('pages.blog.index', [
+            'blogs'               => $blogs,
+            'blogCategories'      => $blogCategories,
+            'searchTerm'          => $search,
+            'category'            => $categoryName,
+            'locale'              => $locale,
+            'seoMeta'             => null,
+            'jsonldSchemas'       => [],
+            'fallbackTitle'       => $locale === 'vi' ? 'Blog — Tin tức & Bài viết' : 'Blog — News & Articles',
+            'fallbackDescription' => $locale === 'vi' ? 'Cập nhật kiến thức, xu hướng và câu chuyện từ chúng tôi.' : 'Insights, trends and stories from our team.',
+            'fallbackImage'       => (($ogRaw = Setting::get('default_og_image')) && filled($ogRaw))
+                                        ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+                                        : null,
+            'ogType'              => 'website',
+        ]);
     }
 
     public function category(string $locale, string $slug): View|RedirectResponse
@@ -54,13 +165,62 @@ class BlogController extends Controller
             ->toArray();
         $fallbackTitle       = $translation->name;
         $fallbackDescription = $translation->description ?? '';
-        $fallbackImage       = null;
+        $fallbackImage       = (($ogRaw = Setting::get('default_og_image')) && filled($ogRaw))
+                                    ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+                                    : null;
         $ogType              = 'website';
+
+        // ── Subcategory pills ──────────────────────────────────────────────────
+        $blogCategory->loadMissing([
+            'children' => fn ($q) => $q->active()
+                ->withCount(['posts as blog_count' => fn ($q) => $q->published()])
+                ->with(['translations' => fn ($q) => $q->where('locale', $locale)])
+                ->orderBy('sort_order'),
+        ]);
+        $blogCategory->children->each(function ($child) use ($locale) {
+            $tr          = $child->translations->first();
+            $child->name = $tr?->name ?? $child->name;
+            $child->slug = $tr?->slug ?? $child->slug;
+        });
+
+        // ── Posts query (this category + direct children) ──────────────────────
+        $categoryIds = collect([$blogCategory->id])
+            ->merge($blogCategory->children->pluck('id'))
+            ->unique();
+
+        $rawPosts = BlogPostTranslation::where('blog_post_translations.locale', $locale)
+            ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
+            ->where('blog_posts.status', BlogPostStatus::Published)
+            ->where('blog_posts.published_at', '<=', now())
+            ->whereNull('blog_posts.deleted_at')
+            ->whereIn('blog_posts.blog_category_id', $categoryIds)
+            ->select('blog_post_translations.*')
+            ->with([
+                'blogPost' => fn ($q) => $q->with([
+                    'blogCategory.translations' => fn ($q) => $q->where('locale', $locale),
+                ]),
+            ])
+            ->orderByDesc('blog_posts.published_at')
+            ->paginate(12)
+            ->withQueryString();
+
+        $blogs = $rawPosts->through(function ($tr) {
+            $post                           = $tr->blogPost;
+            $catTr                          = $post?->blogCategory?->translations->first();
+            $rawImage                       = $post?->featured_image;
+            $post->slug                     = $tr->slug;
+            $post->title                    = $tr->title;
+            $post->excerpt                  = $tr->excerpt;
+            $post->category                 = $catTr?->name ?? $post?->blogCategory?->name;
+            $post->featured_image           = $rawImage ? 'storage/' . ltrim($rawImage, '/') : null;
+            $post->formatted_published_date = $post?->published_at?->translatedFormat('d M, Y');
+            return $post;
+        });
 
         view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.blog.category', compact(
-            'blogCategory', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'blogCategory', 'translation', 'blogs', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
             'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }
@@ -96,23 +256,122 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $alternateUrls       = app(SeoService::class)->alternateUrls($post);
-        $seoMeta             = $post->seoMeta($locale);
-        $jsonldSchemas       = app(JsonldService::class)->getActiveSchemas($post, $locale)
+        $post->loadMissing([
+            'author',
+            'blogCategory.translations' => fn ($q) => $q->where('locale', $locale),
+            'tags',
+        ]);
+
+        $alternateUrls = app(SeoService::class)->alternateUrls($post);
+        $seoMeta       = $post->seoMeta($locale);
+        $jsonldSchemas = app(JsonldService::class)->getActiveSchemas($post, $locale)
             ->pluck('payload')
             ->toArray();
+
+        // ── Blog DTO ───────────────────────────────────────────────────────────
+        $catTr    = $post->blogCategory?->translations->first();
+        $rawImage = $post->featured_image;
+        $bodyText = $translation->body ?? '';
+        $readMins = max(1, (int) ceil(str_word_count(strip_tags($bodyText)) / 200));
+
+        $blog = (object) [
+            'title'                    => $translation->title,
+            'slug'                     => $translation->slug,
+            'excerpt'                  => $translation->excerpt,
+            'content'                  => $bodyText,
+            'category'                 => $catTr?->name ?? $post->blogCategory?->name,
+            'category_slug'            => $catTr?->slug ?? $post->blogCategory?->slug,
+            'featured_image'           => $rawImage ? 'storage/' . ltrim($rawImage, '/') : null,
+            'published_at'             => $post->published_at,
+            'updated_at'               => $post->updated_at,
+            'formatted_published_date' => $post->published_at?->translatedFormat('d M, Y'),
+            'reading_time'             => $locale === 'vi' ? "{$readMins} phút đọc" : "{$readMins} min read",
+            'author'                   => $post->author,
+            'tags'                     => $post->tags->pluck('name')->all(),
+            'faqs'                     => $locale === 'vi' ? ($post->faq_items_vi ?? []) : ($post->faq_items_en ?? []),
+            'seo_description'          => $seoMeta?->meta_description ?? $translation->excerpt,
+            'canonical_url'            => url()->current(),
+        ];
+
         $fallbackTitle       = $translation->title;
         $fallbackDescription = $translation->excerpt ?? '';
-        $fallbackImage       = $post->featured_image
-            ? url('storage/' . ltrim($post->featured_image, '/'))
-            : null;
+        $fallbackImage       = $rawImage ? url('storage/' . ltrim($rawImage, '/')) : null;
         $ogType              = 'article';
+
+        // ── Sidebar: categories ────────────────────────────────────────────────
+        $categories = BlogCategory::active()
+            ->with(['translations' => fn ($q) => $q->where('locale', $locale)])
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($cat) {
+                $tr = $cat->translations->first();
+                return (object) [
+                    'name' => $tr?->name ?? $cat->name,
+                    'slug' => $tr?->slug ?? $cat->slug,
+                ];
+            });
+
+        // ── Sidebar: latest posts (excl. current) ─────────────────────────────
+        $latestPosts = BlogPostTranslation::where('blog_post_translations.locale', $locale)
+            ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
+            ->where('blog_posts.status', BlogPostStatus::Published)
+            ->where('blog_posts.published_at', '<=', now())
+            ->whereNull('blog_posts.deleted_at')
+            ->where('blog_post_translations.blog_post_id', '!=', $post->id)
+            ->select('blog_post_translations.*')
+            ->with(['blogPost.blogCategory.translations' => fn ($q) => $q->where('locale', $locale)])
+            ->orderByDesc('blog_posts.published_at')
+            ->limit(5)
+            ->get()
+            ->map(function ($tr) {
+                $p      = $tr->blogPost;
+                $cTr    = $p?->blogCategory?->translations->first();
+                $rawImg = $p?->featured_image;
+                $p->slug                     = $tr->slug;
+                $p->title                    = $tr->title;
+                $p->category                 = $cTr?->name ?? $p?->blogCategory?->name;
+                $p->featured_image           = $rawImg ? 'storage/' . ltrim($rawImg, '/') : null;
+                $p->formatted_published_date = $p?->published_at?->translatedFormat('d M, Y');
+                return $p;
+            });
+
+        // ── Related posts (same category, excl. current) ──────────────────────
+        $relatedPosts = collect();
+        if ($post->blog_category_id) {
+            $relatedPosts = BlogPostTranslation::where('blog_post_translations.locale', $locale)
+                ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
+                ->where('blog_posts.status', BlogPostStatus::Published)
+                ->where('blog_posts.published_at', '<=', now())
+                ->whereNull('blog_posts.deleted_at')
+                ->where('blog_posts.blog_category_id', $post->blog_category_id)
+                ->where('blog_post_translations.blog_post_id', '!=', $post->id)
+                ->select('blog_post_translations.*')
+                ->with(['blogPost.blogCategory.translations' => fn ($q) => $q->where('locale', $locale)])
+                ->orderByDesc('blog_posts.published_at')
+                ->limit(4)
+                ->get()
+                ->map(function ($tr) {
+                    $p      = $tr->blogPost;
+                    $cTr    = $p?->blogCategory?->translations->first();
+                    $rawImg = $p?->featured_image;
+                    $p->slug                     = $tr->slug;
+                    $p->title                    = $tr->title;
+                    $p->category                 = $cTr?->name ?? $p?->blogCategory?->name;
+                    $p->featured_image           = $rawImg ? 'storage/' . ltrim($rawImg, '/') : null;
+                    $p->formatted_published_date = $p?->published_at?->translatedFormat('d M, Y');
+                    return $p;
+                });
+        }
+
+        // ── Sidebar: tags ─────────────────────────────────────────────────────
+        $allTags = BlogTag::whereHas('posts', fn ($q) => $q->published())->pluck('name');
 
         view()->share('alternateUrls', $alternateUrls);
 
         return view('pages.blog.show', compact(
-            'post', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
-            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
+            'blog', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
+            'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType',
+            'categories', 'latestPosts', 'relatedPosts', 'allTags'
         ));
     }
 }

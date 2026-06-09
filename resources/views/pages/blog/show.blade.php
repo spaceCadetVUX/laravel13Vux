@@ -7,8 +7,8 @@
         ['name' => $bcLocale === 'vi' ? 'Trang chủ' : 'Home', 'url' => route($bcLocale . '.index')],
         ['name' => $bcLocale === 'vi' ? 'Tin tức' : 'Blog',   'url' => route($bcLocale . '.blog.index')],
     ];
-    if ($blog->category) {
-        $bcItems[] = ['name' => $blog->category, 'url' => route($bcLocale . '.blog.category', ['category' => $blog->category])];
+    if ($blog->category && $blog->category_slug) {
+        $bcItems[] = ['name' => $blog->category, 'url' => route($bcLocale . '.blog.category', $blog->category_slug)];
     }
     $bcItems[] = ['name' => $blog->title];
 @endphp
@@ -108,9 +108,9 @@
                     <a href="{{ route(current_locale() . '.index') }}">{{ $bcLocale === 'vi' ? 'Trang chủ' : 'Home' }}</a>
                     <span class="sep">›</span>
                     <a href="{{ route(current_locale() . '.blog.index') }}">Blog</a>
-                    @if($blog->category)
+                    @if($blog->category && $blog->category_slug)
                     <span class="sep">›</span>
-                    <a href="{{ route(current_locale() . '.blog.category', ['category' => $blog->category]) }}">{{ $blog->category }}</a>
+                    <a href="{{ route(current_locale() . '.blog.category', $blog->category_slug) }}">{{ $blog->category }}</a>
                     @endif
                     <span class="sep">›</span>
                     <span class="current">{{ Str::limit($blog->title, 40) }}</span>
@@ -259,9 +259,9 @@
                         <ul class="sidebar-cat-list">
                             @foreach($categories as $cat)
                             <li>
-                                <a href="{{ route(current_locale() . '.blog.category', $cat) }}"
-                                   class="{{ url()->current() == route(current_locale() . '.blog.category', $cat) ? 'active' : '' }}">
-                                    <span>{{ $cat }}</span>
+                                <a href="{{ route(current_locale() . '.blog.category', $cat->slug) }}"
+                                   class="{{ url()->current() == route(current_locale() . '.blog.category', $cat->slug) ? 'active' : '' }}">
+                                    <span>{{ $cat->name }}</span>
                                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </a>
                             </li>
