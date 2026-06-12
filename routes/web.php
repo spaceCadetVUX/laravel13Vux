@@ -184,26 +184,27 @@ Route::prefix('en')
         Route::get('blog', [BlogController::class, 'index'])
             ->name('en.blog.index');
 
-        // blog/category/{slug} MUST be declared before blog/{cat}/{slug} to avoid collision
-        Route::get('blog/category/{slug}', [BlogController::class, 'category'])
-            ->name('en.blog.category');
+        // Legacy: old /en/blog/category/{slug} → /en/blog/{slug} (301)
+        // Must be declared before blog/{category_slug}/{slug} to avoid collision
+        Route::get('blog/category/{slug}', fn(string $locale, string $slug) => redirect("/{$locale}/blog/{$slug}", 301));
 
-        // Nested: /en/blog/{category_slug}/{slug}
+        // Blog post: /en/blog/{category_slug}/{post_slug}
         Route::get('blog/{category_slug}/{slug}', [BlogController::class, 'show'])
             ->name('en.blog.show');
 
-        // Legacy flat URL → 301 to nested (SEO backward compat)
+        // Blog category + legacy flat post redirect: /en/blog/{slug}
         Route::get('blog/{slug}', function (string $locale, string $slug) {
+            // Legacy flat post URL → redirect to nested (301, SEO backward compat)
             $translation = \App\Models\BlogPostTranslation::where('locale', 'en')
                 ->where('slug', $slug)
                 ->with(['blogPost.blogCategory.translations'])
                 ->first();
-            if (! $translation) {
-                abort(404);
+            if ($translation) {
+                return redirect(\App\Support\LocaleUrl::forBlogPost($translation->blogPost, 'en'), 301);
             }
-            $post = $translation->blogPost;
-            return redirect(\App\Support\LocaleUrl::forBlogPost($post, 'en'), 301);
-        })->name('en.blog.show.legacy');
+            // Serve as blog category page
+            return app(\App\Http\Controllers\Web\BlogController::class)->category($locale, $slug);
+        })->name('en.blog.category');
 
         // ── Static pages — catch-all, must be last ────────────────────────────
         Route::get('{slug}', [PageController::class, 'show'])
