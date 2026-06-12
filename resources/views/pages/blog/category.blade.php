@@ -14,6 +14,35 @@
 @foreach($jsonldSchemas as $schema)
 <script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
 @endforeach
+
+{{-- Force white nav on category pages — same pattern as blog/show.blade.php --}}
+<style>
+#header-sticky:not(.header-sticky) {
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+#header-sticky:not(.header-sticky) .tp-header-menu nav ul > li > a {
+    color: #0a0a0a !important;
+}
+#header-sticky:not(.header-sticky) .tp-header-menu nav ul > li > a:hover {
+    opacity: 0.65;
+}
+#header-sticky:not(.header-sticky) .logo-white {
+    display: none !important;
+}
+#header-sticky:not(.header-sticky) .logo-black {
+    display: inline-block !important;
+}
+#header-sticky:not(.header-sticky) .tp-search-open-btn {
+    color: #0a0a0a !important;
+}
+#header-sticky:not(.header-sticky) .tp-header-lang a {
+    color: #0a0a0a !important;
+}
+#header-sticky:not(.header-sticky) .tp-offcanvas-open-btn i {
+    background-color: #0a0a0a !important;
+}
+</style>
 @endpush
 
 @section('content')

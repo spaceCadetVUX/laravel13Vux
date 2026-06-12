@@ -104,8 +104,12 @@ Route::prefix('vi')
         Route::get('bai-viet', [BlogController::class, 'index'])
             ->name('vi.blog.index');
 
-        Route::get('chu-de/{slug}', [BlogController::class, 'category'])
+        Route::get('blog/{slug}', [BlogController::class, 'category'])
             ->name('vi.blog.category');
+
+        // Legacy: redirect old /vi/chu-de/{slug} → /vi/blog/{slug}
+        Route::get('chu-de/{slug}', fn(string $locale, string $slug) => redirect("/{$locale}/blog/{$slug}", 301));
+
 
         // Nested: /vi/bai-viet/{category_slug}/{slug}
         Route::get('bai-viet/{category_slug}/{slug}', [BlogController::class, 'show'])
