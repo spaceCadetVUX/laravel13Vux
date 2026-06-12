@@ -28,7 +28,7 @@ class AboutController extends Controller
 
         $ogRaw         = $data['ogImage'] ?? Setting::get('default_og_image');
         $fallbackImage = $ogRaw
-            ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+            ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset('storage/' . ltrim($ogRaw, '/')))
             : null;
 
         return view('pages.page.about', compact('data', 'locale') + [

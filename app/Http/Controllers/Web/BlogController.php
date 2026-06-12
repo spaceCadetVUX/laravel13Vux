@@ -127,7 +127,7 @@ class BlogController extends Controller
             'fallbackTitle'       => $locale === 'vi' ? 'Blog — Tin tức & Bài viết' : 'Blog — News & Articles',
             'fallbackDescription' => $locale === 'vi' ? 'Cập nhật kiến thức, xu hướng và câu chuyện từ chúng tôi.' : 'Insights, trends and stories from our team.',
             'fallbackImage'       => (($ogRaw = Setting::get('default_og_image')) && filled($ogRaw))
-                                        ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+                                        ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset('storage/' . ltrim($ogRaw, '/')))
                                         : null,
             'ogType'              => 'website',
         ]);
@@ -168,7 +168,7 @@ class BlogController extends Controller
         $fallbackTitle       = $translation->name;
         $fallbackDescription = $translation->description ?? '';
         $fallbackImage       = (($ogRaw = Setting::get('default_og_image')) && filled($ogRaw))
-                                    ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+                                    ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset('storage/' . ltrim($ogRaw, '/')))
                                     : null;
         $ogType              = 'website';
 

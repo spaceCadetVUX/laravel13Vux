@@ -45,7 +45,7 @@ class HomeController extends Controller
 
         $ogRaw         = Setting::get('default_og_image');
         $fallbackImage = $ogRaw
-            ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw))
+            ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset('storage/' . ltrim($ogRaw, '/')))
             : null;
 
         $seoMeta = null;

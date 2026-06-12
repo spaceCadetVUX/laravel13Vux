@@ -79,7 +79,7 @@ class ProductController extends Controller
         ]);
 
         $ogRaw         = Setting::get('default_og_image');
-        $fallbackImage = $ogRaw ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset($ogRaw)) : null;
+        $fallbackImage = $ogRaw ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset('storage/' . ltrim($ogRaw, '/'))) : null;
 
         $fallbackTitle = $locale === 'vi'
             ? 'Tất cả sản phẩm — KNX, DALI-2, Casambi, Matter Smarthome'
