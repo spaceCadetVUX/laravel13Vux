@@ -35,11 +35,15 @@ const API_KEY = process.env["MCP_API_KEY"] ?? "";
 if (HTTP_MODE) {
     const sessions = new Map();
     const http = createServer(async (req, res) => {
-        // Auth
-        if (API_KEY && req.headers["x-api-key"] !== API_KEY) {
-            res.writeHead(401, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Unauthorized" }));
-            return;
+        // Auth — accept X-Api-Key or Authorization: Bearer <key>
+        if (API_KEY) {
+            const xKey = req.headers["x-api-key"];
+            const bearer = (req.headers["authorization"] ?? "").toString().replace(/^Bearer\s+/i, "");
+            if (xKey !== API_KEY && bearer !== API_KEY) {
+                res.writeHead(401, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "Unauthorized" }));
+                return;
+            }
         }
         if (req.url !== "/mcp") {
             res.writeHead(404);
