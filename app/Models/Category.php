@@ -112,7 +112,7 @@ class Category extends Model
         return $this->hasMany(CategoryTranslation::class);
     }
 
-    public function translation(string $locale = null): ?CategoryTranslation
+    public function translation(?string $locale = null): ?CategoryTranslation
     {
         $locale ??= app()->getLocale();
 

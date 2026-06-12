@@ -87,7 +87,7 @@ class BlogCategory extends Model
         return $this->hasMany(BlogCategoryTranslation::class);
     }
 
-    public function translation(string $locale = null): ?BlogCategoryTranslation
+    public function translation(?string $locale = null): ?BlogCategoryTranslation
     {
         $locale ??= app()->getLocale();
 

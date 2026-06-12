@@ -22,7 +22,7 @@ trait HasLlmsEntry
         return $this->llmsEntries()->where('locale', 'en');
     }
 
-    public function llmsEntry(string $locale = null): ?LlmsEntry
+    public function llmsEntry(?string $locale = null): ?LlmsEntry
     {
         $locale ??= app()->getLocale();
         return $this->llmsEntries->firstWhere('locale', $locale)

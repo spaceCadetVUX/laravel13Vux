@@ -12,7 +12,7 @@ trait HasSitemapEntry
         return $this->morphMany(SitemapEntry::class, 'model', 'model_type', 'model_id');
     }
 
-    public function sitemapEntry(string $locale = null): ?SitemapEntry
+    public function sitemapEntry(?string $locale = null): ?SitemapEntry
     {
         $locale ??= app()->getLocale();
         return $this->sitemapEntries->firstWhere('locale', $locale)

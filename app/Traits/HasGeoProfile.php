@@ -27,7 +27,7 @@ trait HasGeoProfile
             ->withDefault(['locale' => 'en']);
     }
 
-    public function geoProfile(string $locale = null): ?GeoEntityProfile
+    public function geoProfile(?string $locale = null): ?GeoEntityProfile
     {
         $locale ??= app()->getLocale();
         return $this->geoProfiles->firstWhere('locale', $locale)

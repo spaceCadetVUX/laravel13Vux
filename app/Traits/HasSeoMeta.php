@@ -27,7 +27,7 @@ trait HasSeoMeta
             ->withDefault(['locale' => 'en']);
     }
 
-    public function seoMeta(string $locale = null): ?SeoMeta
+    public function seoMeta(?string $locale = null): ?SeoMeta
     {
         $locale ??= app()->getLocale();
         return $this->seoMetas->firstWhere('locale', $locale)

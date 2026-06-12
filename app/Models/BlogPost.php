@@ -160,7 +160,7 @@ class BlogPost extends Model
         return $this->hasMany(BlogPostTranslation::class);
     }
 
-    public function translation(string $locale = null): ?BlogPostTranslation
+    public function translation(?string $locale = null): ?BlogPostTranslation
     {
         $locale ??= app()->getLocale();
 

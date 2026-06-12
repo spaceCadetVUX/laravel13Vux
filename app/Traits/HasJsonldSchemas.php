@@ -29,7 +29,7 @@ trait HasJsonldSchemas
             ->orderBy('sort_order');
     }
 
-    public function jsonldSchema(string $locale = null): ?JsonldSchema
+    public function jsonldSchema(?string $locale = null): ?JsonldSchema
     {
         $locale ??= app()->getLocale();
         return $this->jsonldSchemas->firstWhere('locale', $locale)

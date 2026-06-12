@@ -252,7 +252,7 @@ class Product extends Model
      * Lấy translation theo locale. Nếu không có → fallback về vi.
      * Dùng in-memory collection khi đã eager-load, query DB khi chưa.
      */
-    public function translation(string $locale = null): ?ProductTranslation
+    public function translation(?string $locale = null): ?ProductTranslation
     {
         $locale ??= app()->getLocale();
 
@@ -268,7 +268,7 @@ class Product extends Model
     /**
      * Giá theo locale — admin nhập riêng. Fallback về products.price.
      */
-    public function localizedPrice(string $locale = null): string
+    public function localizedPrice(?string $locale = null): string
     {
         return $this->translation($locale)?->price ?? $this->price;
     }
@@ -276,7 +276,7 @@ class Product extends Model
     /**
      * Đơn vị tiền theo locale. Fallback về config default_currency.
      */
-    public function localizedCurrency(string $locale = null): string
+    public function localizedCurrency(?string $locale = null): string
     {
         return $this->translation($locale)?->currency ?? config('app.default_currency', 'VND');
     }
