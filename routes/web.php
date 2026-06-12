@@ -15,9 +15,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // ── Root: detect preferred locale → redirect ─────────────────────────────────
-Route::get('/', function (Request $request) {
-    $preferred = $request->getPreferredLanguage(config('app.supported_locales')) ?? 'vi';
-    return redirect("/{$preferred}/", 302);
+Route::get('/', function () {
+    return redirect('/vi/', 302);
 });
 
 // ── System: Health Check ─────────────────────────────────────────────────────

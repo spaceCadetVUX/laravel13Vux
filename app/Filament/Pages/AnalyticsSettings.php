@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\BusinessProfile;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -34,10 +35,11 @@ class AnalyticsSettings extends Page
         $extra = (array) (BusinessProfile::instance()->extra ?? []);
 
         $this->form->fill([
-            'ga4_id'     => $extra['ga4_id']     ?? null,
-            'gtm_id'     => $extra['gtm_id']     ?? null,
-            'gsc_meta'   => $extra['gsc_meta']   ?? null,
-            'ga4_active' => (bool) ($extra['ga4_active'] ?? true),
+            'ga4_id'           => $extra['ga4_id']           ?? null,
+            'gtm_id'           => $extra['gtm_id']           ?? null,
+            'gsc_meta'         => $extra['gsc_meta']         ?? null,
+            'ga4_active'       => (bool) ($extra['ga4_active'] ?? true),
+            'default_og_image' => $extra['default_og_image'] ?? null,
         ]);
     }
 
@@ -47,6 +49,22 @@ class AnalyticsSettings extends Page
     {
         return $schema
             ->schema([
+
+                Section::make('Default OG Image')
+                    ->icon('heroicon-o-photo')
+                    ->description('Ảnh mặc định khi share trang web lên Facebook, Zalo, Telegram... Khuyến nghị 1200×630px, ≤1MB.')
+                    ->schema([
+                        FileUpload::make('default_og_image')
+                            ->label('OG Image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('og')
+                            ->imagePreviewHeight('180')
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->maxSize(2048)
+                            ->helperText('Định dạng: JPG, PNG, WebP. Kích thước tối đa 2MB. Tỉ lệ lý tưởng 1.91:1 (1200×630px).')
+                            ->columnSpanFull(),
+                    ]),
 
                 Section::make('Google Analytics 4')
                     ->icon('heroicon-o-chart-bar')
@@ -120,16 +138,17 @@ class AnalyticsSettings extends Page
         $profile = BusinessProfile::instance();
         $extra   = (array) ($profile->extra ?? []);
 
-        $extra['ga4_id']     = filled($data['ga4_id'])   ? trim($data['ga4_id'])   : null;
-        $extra['gtm_id']     = filled($data['gtm_id'])   ? trim($data['gtm_id'])   : null;
-        $extra['gsc_meta']   = filled($data['gsc_meta']) ? trim($data['gsc_meta']) : null;
-        $extra['ga4_active'] = (bool) ($data['ga4_active'] ?? true);
+        $extra['ga4_id']           = filled($data['ga4_id'])   ? trim($data['ga4_id'])   : null;
+        $extra['gtm_id']           = filled($data['gtm_id'])   ? trim($data['gtm_id'])   : null;
+        $extra['gsc_meta']         = filled($data['gsc_meta']) ? trim($data['gsc_meta']) : null;
+        $extra['ga4_active']       = (bool) ($data['ga4_active'] ?? true);
+        $extra['default_og_image'] = $data['default_og_image'] ?? null;
 
         $profile->extra = $extra;
         $profile->saveQuietly();
 
         Notification::make()
-            ->title('Đã lưu Analytics & Search Console settings')
+            ->title('Đã lưu settings')
             ->success()
             ->send();
     }
