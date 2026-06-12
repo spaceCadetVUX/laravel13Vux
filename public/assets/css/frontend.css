@@ -5106,6 +5106,9 @@ calibre-blog-grid .carousel-dot {
   border-collapse: collapse;
   margin: 1.5rem 0;
   font-size: 0.88rem;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .blog-article-content table th,
@@ -5113,11 +5116,18 @@ calibre-blog-grid .carousel-dot {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--color-border);
   vertical-align: top;
+  word-break: break-word;
+  min-width: 100px;
 }
 
 .blog-article-content table th {
   background: var(--color-off-white);
   font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.blog-article-content table tr:nth-child(even) td {
+  background: #fafafa;
 }
 
 .blog-article-content .table-responsive { overflow-x: auto; }
