@@ -231,6 +231,10 @@
                     'extensions' => [
                         new \Tiptap\Extensions\StarterKit,
                         new \Tiptap\Nodes\Image,
+                        new \Tiptap\Nodes\Table,
+                        new \Tiptap\Nodes\TableRow,
+                        new \Tiptap\Nodes\TableHeader,
+                        new \Tiptap\Nodes\TableCell,
                     ],
                 ]))->setContent($decoded)->getHTML();
                 if (trim(strip_tags($richHtml)) === '') $richHtml = null;

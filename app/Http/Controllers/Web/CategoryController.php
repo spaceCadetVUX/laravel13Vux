@@ -113,6 +113,10 @@ class CategoryController extends Controller
                 $richContentHtml = (new Editor(['extensions' => [
                     new StarterKit,
                     new TiptapImage,
+                    new \Tiptap\Nodes\Table,
+                    new \Tiptap\Nodes\TableRow,
+                    new \Tiptap\Nodes\TableHeader,
+                    new \Tiptap\Nodes\TableCell,
                 ]]))->setContent($rawContent)->getHTML();
                 // Strip empty paragraphs only
                 if (trim(strip_tags($richContentHtml)) === '') {
