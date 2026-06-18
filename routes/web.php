@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 // ── Root: detect preferred locale → redirect ─────────────────────────────────
 Route::get('/', function () {
-    return redirect('/vi/', 302);
+    return redirect('/vi/', 301);
 });
 
 // ── System: Health Check ─────────────────────────────────────────────────────
