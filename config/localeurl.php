@@ -25,7 +25,7 @@ return [
             'product'       => '/vi/san-pham/',
             'category'      => '/vi/danh-muc/',
             'blog_post'     => '/vi/bai-viet/',
-            'blog_category' => '/vi/chu-de/',
+            'blog_category' => '/vi/blog/',
         ],
         'en' => [
             'brand'         => '/en/brands/',
