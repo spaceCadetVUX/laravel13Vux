@@ -40,6 +40,22 @@ class BlogPostRepository extends BaseRepository
         return $query->paginate($perPage);
     }
 
+    /**
+     * Paginated published posts for a specific blog category.
+     */
+    public function paginateByCategory(
+        \App\Models\BlogCategory $category,
+        int $perPage = 12,
+        string $direction = 'desc',
+    ): \Illuminate\Contracts\Pagination\LengthAwarePaginator {
+        return $this->query()
+            ->published()
+            ->with(['author', 'blogCategory', 'tags'])
+            ->where('blog_category_id', $category->id)
+            ->orderBy('published_at', $direction)
+            ->paginate($perPage);
+    }
+
     // ── Detail ────────────────────────────────────────────────────────────────
 
     /**
@@ -50,7 +66,14 @@ class BlogPostRepository extends BaseRepository
         /** @var BlogPost|null */
         return $this->query()
             ->published()
-            ->with(['author', 'blogCategory', 'tags', 'seoMetas', 'activeSchemas'])
+            ->with([
+                'author',
+                'blogCategory.translations',
+                'tags',
+                'translations',
+                'seoMetas',
+                'activeSchemas',
+            ])
             ->where('slug', $slug)
             ->first();
     }

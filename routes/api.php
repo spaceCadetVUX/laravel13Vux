@@ -99,11 +99,12 @@ Route::prefix('v1')->group(function () {
     });
 
     // ── Blog (S51) ────────────────────────────────────────────────────────
-    // blog/categories and blog/tags must come before blog/{slug}
-    Route::get('blog',            [BlogPostController::class, 'index']);
-    Route::get('blog/categories', [BlogCategoryController::class, 'index']);
-    Route::get('blog/tags',       [BlogTagController::class, 'index']);
-    Route::get('blog/{slug}',     [BlogPostController::class, 'show']);
+    // Literal routes must come before blog/{slug} wildcard
+    Route::get('blog',                   [BlogPostController::class,     'index']);
+    Route::get('blog/categories',        [BlogCategoryController::class, 'index']);
+    Route::get('blog/categories/{slug}', [BlogCategoryController::class, 'show']);
+    Route::get('blog/tags',              [BlogTagController::class,      'index']);
+    Route::get('blog/{slug}',            [BlogPostController::class,     'show']);
 
     // ── Blog Comments (S52) ───────────────────────────────────────────────────
     Route::get('blog/{slug}/comments', [BlogCommentController::class, 'index']);
