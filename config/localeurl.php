@@ -33,7 +33,7 @@ return [
             'product'       => '/en/products/',
             'category'      => '/en/categories/',
             'blog_post'     => '/en/blog/',
-            'blog_category' => '/en/blog/category/',
+            'blog_category' => '/en/blog/',
         ],
     ],
 
