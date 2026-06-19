@@ -40,7 +40,7 @@
 
     {{-- Footer --}}
     <div class="pc-footer">
-        <span class="pc-cta">{{ $locale ?? app()->getLocale() === 'vi' ? 'Xem chi tiết' : 'View details' }}</span>
+        <span class="pc-cta">{{ app()->getLocale() === 'en' ? 'View details' : 'Xem chi tiết' }}</span>
         <span class="pc-arrow">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </span>
