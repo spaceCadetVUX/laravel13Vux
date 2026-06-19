@@ -45,7 +45,7 @@ class ProductController extends Controller
             ->with([
                 'product.thumbnail',
                 'product.brand',
-                'product.categories' => fn ($q) => $q->orderBy('sort_order')->limit(1),
+                'product.categories' => fn ($q) => $q->orderBy('sort_order'),
                 'product.categories.translations' => fn ($q) => $q->where('locale', $locale),
             ]);
 
