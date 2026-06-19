@@ -70,7 +70,12 @@ class CategoryController extends Controller
             ->whereHas('product', fn ($q) => $q->active()
                 ->whereHas('categories', fn ($q2) => $q2->where('categories.id', $category->id))
             )
-            ->with(['product.thumbnail', 'product.brand']);
+            ->with([
+                'product.thumbnail',
+                'product.brand',
+                'product.categories' => fn ($q) => $q->orderBy('sort_order'),
+                'product.categories.translations' => fn ($q) => $q->where('locale', $locale),
+            ]);
 
         foreach ($filterGroups as $group) {
             if (empty($activeValueSlugs[$group->slug])) continue;

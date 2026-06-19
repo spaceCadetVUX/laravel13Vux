@@ -370,8 +370,8 @@
                             'name'     => $rp->name,
                             'price'    => $rpPrice > 0 ? number_format($rpPrice, 0, ',', '.') . 'đ' : null,
                             'oldPrice' => $rpOldPrice ? number_format($rpOldPrice, 0, ',', '.') . 'đ' : null,
-                            'tag'      => null,
-                            'tagLabel' => null,
+                            'onSale'   => ($rp->sale_price > 0 && $rp->sale_price < $rp->price),
+                            'discount' => ($rp->sale_price > 0 && $rp->price > 0 && $rp->sale_price < $rp->price) ? round((1 - $rp->sale_price / $rp->price) * 100) : null,
                         ])
                     </div>
                     @endforeach

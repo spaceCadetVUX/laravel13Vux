@@ -216,8 +216,8 @@
                                 'name'     => $product->name,
                                 'price'    => ($product->sale_price > 0 && $product->sale_price < $product->price) ? number_format($product->sale_price, 0, ',', '.') . 'đ' : ($product->price > 0 ? number_format($product->price, 0, ',', '.') . 'đ' : null),
                                 'oldPrice' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? number_format($product->price, 0, ',', '.') . 'đ' : null,
-                                'tag'      => $product->featured ? 'badge-featured' : ($product->sale_price && $product->sale_price < $product->price ? 'badge-sale' : null),
-                                'tagLabel' => $product->featured ? __('shop.labels.badge_featured') : ($product->sale_price && $product->sale_price < $product->price ? __('shop.labels.badge_sale') : null),
+                                'onSale'   => ($product->sale_price > 0 && $product->sale_price < $product->price),
+                                'discount' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? round((1 - $product->sale_price / $product->price) * 100) : null,
                             ])
                         </div>
                         @endforeach
