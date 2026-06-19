@@ -228,7 +228,7 @@
                 <p class="text-muted mb-0">{{ __('shop.labels.no_products_message') }}</p>
             </div>
             @else
-            <div class="row row-cols-2 row-cols-md-3 g-3 g-lg-4 gx-lg-5">
+            <div class="row row-cols-2 row-cols-md-3 g-4">
                 @foreach($products as $product)
                 <div class="col">
                     @include('components.product.card', [
@@ -239,6 +239,7 @@
                         'price'    => (($product->sale_price > 0 && $product->sale_price < $product->price) ? number_format($product->sale_price, 0, ',', '.') . 'đ' : ($product->price > 0 ? number_format($product->price, 0, ',', '.') . 'đ' : null)),
                         'oldPrice' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? number_format($product->price, 0, ',', '.') . 'đ' : null,
                         'onSale'   => ($product->sale_price > 0 && $product->sale_price < $product->price),
+                        'discount' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? round((1 - $product->sale_price / $product->price) * 100) : null,
                     ])
                 </div>
                 @endforeach

@@ -1546,111 +1546,149 @@ calibre-blog-grid .carousel-dot {
 }
 
 /* Product card */
-/* ── Product Card (Option A — Minimal) ───────────────────── */
+/* ── Product Card ─────────────────────────────────────────── */
 .pc-wrap {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
   text-decoration: none;
   color: inherit;
-  outline: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: box-shadow 0.28s ease, transform 0.28s ease;
 }
 
-.pc-wrap:hover { color: inherit; text-decoration: none; }
+.pc-wrap:hover {
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  transform: translateY(-3px);
+}
 
 /* Image area */
 .pc-img-area {
   position: relative;
-  background: #fff;
-  border: 1px solid #ebebeb;
-  border-radius: 4px;
+  background: #f7f7f7;
   overflow: hidden;
-  margin-bottom: 0.85rem;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.pc-wrap:hover .pc-img-area {
-  border-color: var(--color-orange, #ff5623);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
 }
 
 .pc-img {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 3;
   object-fit: contain;
   display: block;
-  padding: 18px;
-  transition: transform 0.35s ease;
+  padding: 24px;
+  transition: transform 0.38s ease;
 }
 
 .pc-wrap:hover .pc-img {
-  transform: scale(1.04);
+  transform: scale(1.05);
 }
 
-/* Sale badge */
+/* Discount badge — black pill, top-left */
 .pc-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  background: var(--color-orange, #ff5623);
+  top: 14px;
+  left: 14px;
+  background: #111;
   color: #fff;
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 2px;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-radius: 999px;
 }
 
 /* Info block */
 .pc-info {
-  padding: 0 2px;
+  padding: 16px 20px 8px;
+  flex: 1;
 }
 
 .pc-brand {
   display: block;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-silver);
-  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #999;
+  margin-bottom: 5px;
+  letter-spacing: 0.02em;
 }
 
 .pc-name {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--color-dark);
-  margin: 0 0 6px;
-  line-height: 1.4;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111;
+  margin: 0 0 12px;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  transition: color 0.2s ease;
-}
-
-.pc-wrap:hover .pc-name {
-  color: var(--color-black);
 }
 
 .pc-price-row {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .pc-price {
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-black);
+  color: #111;
 }
 
 .pc-old-price {
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   font-weight: 400;
-  color: var(--color-silver);
+  color: #aaa;
   text-decoration: line-through;
+}
+
+/* Footer: CTA + arrow */
+.pc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 18px;
+  margin-top: auto;
+}
+
+.pc-cta {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #444;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  padding: 6px 16px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.pc-wrap:hover .pc-cta {
+  border-color: #111;
+  color: #111;
+}
+
+.pc-arrow {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.pc-wrap:hover .pc-arrow {
+  background: #111;
+  border-color: #111;
+  color: #fff;
 }
 
 /* Section divider */
