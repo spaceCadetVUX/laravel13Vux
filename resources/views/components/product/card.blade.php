@@ -3,6 +3,7 @@
     'name',
     'price'     => null,
     'oldPrice'  => null,
+    'category'  => null,
     'brand'     => null,
     'onSale'    => false,
     'discount'  => null,
@@ -11,7 +12,6 @@
 ])
 
 <a href="{{ $url ?? '#' }}" class="pc-wrap" aria-label="{{ $name }}">
-    {{-- Image area --}}
     <div class="pc-img-area">
         <img src="{{ $image ?: asset('images/casambi/product-placeholder.jpg') }}"
              alt="{{ $alt ?? $name }}"
@@ -22,27 +22,25 @@
         @endif
     </div>
 
-    {{-- Info --}}
-    <div class="pc-info">
-        @if($brand)
-            <span class="pc-brand">{{ $brand }}</span>
-        @endif
+    <div class="pc-body">
+        <span class="pc-category">{{ $category ?? $brand }}</span>
         <p class="pc-name">{{ $name }}</p>
-        @if($price)
-            <div class="pc-price-row">
-                <span class="pc-price">{{ $price }}</span>
-                @if($oldPrice)
-                    <span class="pc-old-price">{{ $oldPrice }}</span>
+        <div class="pc-bottom">
+            <div class="pc-price-col">
+                @if($price)
+                    <span class="pc-price">{{ $price }}</span>
+                    @if($oldPrice)
+                        <span class="pc-old-price">{{ $oldPrice }}</span>
+                    @endif
                 @endif
             </div>
-        @endif
-    </div>
-
-    {{-- Footer --}}
-    <div class="pc-footer">
-        <span class="pc-cta">{{ app()->getLocale() === 'en' ? 'View details' : 'Xem chi tiết' }}</span>
-        <span class="pc-arrow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </span>
+            <button class="pc-cart-btn" onclick="event.preventDefault()" aria-label="Thêm vào giỏ">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <path d="M16 10a4 4 0 01-8 0"/>
+                </svg>
+            </button>
+        </div>
     </div>
 </a>

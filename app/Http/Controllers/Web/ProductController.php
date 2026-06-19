@@ -42,7 +42,12 @@ class ProductController extends Controller
 
         $query = ProductTranslation::where('locale', $locale)
             ->whereHas('product', fn ($q) => $q->active())
-            ->with(['product.thumbnail', 'product.brand']);
+            ->with([
+                'product.thumbnail',
+                'product.brand',
+                'product.categories' => fn ($q) => $q->orderBy('sort_order')->limit(1),
+                'product.categories.translations' => fn ($q) => $q->where('locale', $locale),
+            ]);
 
         // Each active group is AND-ed; values within a group are OR-ed
         foreach ($filterGroups as $group) {

@@ -235,7 +235,7 @@
                         'url'      => route(current_locale() . '.product.show', $product->slug),
                         'image'    => $product->product->thumbnail?->url ?? asset('images/casambi/product-placeholder.jpg'),
                         'name'     => $product->name,
-                        'brand'    => $product->product->brand?->name,
+                        'category' => $product->product->categories->first()?->translations->first()?->name ?? $product->product->brand?->name,
                         'price'    => (($product->sale_price > 0 && $product->sale_price < $product->price) ? number_format($product->sale_price, 0, ',', '.') . 'đ' : ($product->price > 0 ? number_format($product->price, 0, ',', '.') . 'đ' : null)),
                         'oldPrice' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? number_format($product->price, 0, ',', '.') . 'đ' : null,
                         'onSale'   => ($product->sale_price > 0 && $product->sale_price < $product->price),
