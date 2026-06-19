@@ -268,12 +268,12 @@ class BlogController extends Controller
 
         $post->loadMissing([
             'author',
-            'blogCategory.translations' => fn ($q) => $q->where('locale', $locale),
+            'blogCategory.translations',
             'tags',
         ]);
 
         // Validate category slug — redirect to canonical if wrong
-        $catTr              = $post->blogCategory?->translations->first();
+        $catTr              = $post->blogCategory?->translations->firstWhere('locale', $locale);
         $actualCategorySlug = $catTr?->slug ?? $post->blogCategory?->slug;
 
         if ($post->blog_category_id && $actualCategorySlug && $categorySlug !== $actualCategorySlug) {
@@ -295,7 +295,7 @@ class BlogController extends Controller
             ?? ($locale === 'vi' ? ($post->faq_items_vi ?? []) : ($post->faq_items_en ?? []));
 
         // ── Blog DTO ───────────────────────────────────────────────────────────
-        $catTr    = $post->blogCategory?->translations->first();
+        $catTr    = $post->blogCategory?->translations->firstWhere('locale', $locale);
         $rawImage = $post->featured_image;
         $rawBody  = $translation->body ?? '';
 

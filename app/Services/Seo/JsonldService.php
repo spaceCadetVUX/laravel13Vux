@@ -1174,8 +1174,13 @@ class JsonldService
                     $person['jobTitle'] = $author->title;
                 }
 
+                $sameAs = $author->same_as;
+
                 if (filled($author->slug)) {
                     $person['url'] = $baseUrl . '/authors/' . $author->slug;
+                } elseif (! empty($sameAs)) {
+                    // Fallback: use first social/web profile URL so Google can anchor the author identity
+                    $person['url'] = $sameAs[0];
                 }
 
                 if ($avatarUrl = $author->avatar_url) {
@@ -1186,7 +1191,6 @@ class JsonldService
                     $person['description'] = $author->bio;
                 }
 
-                $sameAs = $author->same_as;
                 if (! empty($sameAs)) {
                     $person['sameAs'] = count($sameAs) === 1 ? $sameAs[0] : $sameAs;
                 }
