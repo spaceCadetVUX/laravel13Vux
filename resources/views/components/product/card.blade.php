@@ -1,35 +1,39 @@
 @props([
     'image',
     'name',
-    'price',
-    'oldPrice' => null,
-    'tag' => null,
-    'tagLabel' => null,
-    'quickAddText' => __('index.products.quick_add'),
-    'alt' => null,
-    'url' => null,
+    'price'     => null,
+    'oldPrice'  => null,
+    'brand'     => null,
+    'onSale'    => false,
+    'alt'       => null,
+    'url'       => null,
 ])
 
-<div {{ isset($attributes) ? $attributes->merge(['class' => 'product-card']) : 'class="product-card"' }}>
-    <a href="{{ $url ?? '#' }}" class="product-card-link" aria-label="{{ $name }}">
-        <div class="product-img-wrap">
-            <img src="{{ $image ?: asset('images/casambi/product-placeholder.jpg') }}"
-                 alt="{{ $alt ?? $name }}"
-                 onerror="this.src='{{ asset('images/casambi/product-placeholder.jpg') }}'"
-                 class="product-card-img">
-            <a href="{{ $url ?? '#' }}" class="product-quick-add">{{ $quickAddText }}</a>
-            @if($tag && $tagLabel)
-                <span class="product-tag {{ $tag }}">{{ $tagLabel }}</span>
-            @endif
-        </div>
-        <p class="product-name">{{ $name }}</p>
-        @if($price)
-        <div class="product-price-row">
-            <span class="product-price-current">{{ $price }}</span>
-            @if($oldPrice)
-                <span class="product-price-old">{{ $oldPrice }}</span>
-            @endif
-        </div>
+<a href="{{ $url ?? '#' }}" class="pc-wrap" aria-label="{{ $name }}">
+    {{-- Image area --}}
+    <div class="pc-img-area">
+        <img src="{{ $image ?: asset('images/casambi/product-placeholder.jpg') }}"
+             alt="{{ $alt ?? $name }}"
+             onerror="this.src='{{ asset('images/casambi/product-placeholder.jpg') }}'"
+             class="pc-img">
+        @if($onSale)
+            <span class="pc-badge">{{ __('shop.labels.badge_sale') }}</span>
         @endif
-    </a>
-</div>
+    </div>
+
+    {{-- Info --}}
+    <div class="pc-info">
+        @if($brand)
+            <span class="pc-brand">{{ $brand }}</span>
+        @endif
+        <p class="pc-name">{{ $name }}</p>
+        @if($price)
+            <div class="pc-price-row">
+                <span class="pc-price">{{ $price }}</span>
+                @if($oldPrice)
+                    <span class="pc-old-price">{{ $oldPrice }}</span>
+                @endif
+            </div>
+        @endif
+    </div>
+</a>

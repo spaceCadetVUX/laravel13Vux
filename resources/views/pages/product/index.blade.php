@@ -235,10 +235,10 @@
                         'url'      => route(current_locale() . '.product.show', $product->slug),
                         'image'    => $product->product->thumbnail?->url ?? asset('images/casambi/product-placeholder.jpg'),
                         'name'     => $product->name,
+                        'brand'    => $product->product->brand?->name,
                         'price'    => (($product->sale_price > 0 && $product->sale_price < $product->price) ? number_format($product->sale_price, 0, ',', '.') . 'đ' : ($product->price > 0 ? number_format($product->price, 0, ',', '.') . 'đ' : null)),
                         'oldPrice' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? number_format($product->price, 0, ',', '.') . 'đ' : null,
-                        'tag'      => ($product->sale_price && $product->sale_price < $product->price ? 'badge-sale' : null),
-                        'tagLabel' => ($product->sale_price && $product->sale_price < $product->price ? __('shop.labels.badge_sale') : null),
+                        'onSale'   => ($product->sale_price > 0 && $product->sale_price < $product->price),
                     ])
                 </div>
                 @endforeach
