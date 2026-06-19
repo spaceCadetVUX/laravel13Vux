@@ -16,7 +16,7 @@
             <img src="{{ $image ?: asset('images/casambi/product-placeholder.jpg') }}"
                  alt="{{ $alt ?? $name }}"
                  onerror="this.src='{{ asset('images/casambi/product-placeholder.jpg') }}'"
-                 style="width:100%;aspect-ratio:1/1;object-fit:contain;display:block;background:#f8f8f8;padding:12px;">
+                 class="product-card-img">
             <a href="{{ $url ?? '#' }}" class="product-quick-add">{{ $quickAddText }}</a>
             @if($tag && $tagLabel)
                 <span class="product-tag {{ $tag }}">{{ $tagLabel }}</span>

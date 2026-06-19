@@ -1639,22 +1639,29 @@ calibre-blog-grid .carousel-dot {
   margin-left: 0.4rem;
 }
 
+.product-card-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  display: block;
+}
+
 .product-price-row {
   display: flex;
   align-items: baseline;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
 }
 
 .product-price-current {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-black);
 }
 
 .product-price-old {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 400;
   color: var(--color-silver);
   text-decoration: line-through;
