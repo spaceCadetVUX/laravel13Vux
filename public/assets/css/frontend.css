@@ -1639,6 +1639,27 @@ calibre-blog-grid .carousel-dot {
   margin-left: 0.4rem;
 }
 
+.product-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.1rem;
+}
+
+.product-price-current {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-black);
+}
+
+.product-price-old {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-silver);
+  text-decoration: line-through;
+}
+
 /* Section divider */
 .products-divider {
   height: 1px;

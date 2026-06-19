@@ -16,13 +16,20 @@
             <img src="{{ $image ?: asset('images/casambi/product-placeholder.jpg') }}"
                  alt="{{ $alt ?? $name }}"
                  onerror="this.src='{{ asset('images/casambi/product-placeholder.jpg') }}'"
-                 style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;">
+                 style="width:100%;aspect-ratio:1/1;object-fit:contain;display:block;background:#f8f8f8;padding:12px;">
             <a href="{{ $url ?? '#' }}" class="product-quick-add">{{ $quickAddText }}</a>
             @if($tag && $tagLabel)
                 <span class="product-tag {{ $tag }}">{{ $tagLabel }}</span>
             @endif
         </div>
         <p class="product-name">{{ $name }}</p>
-        {{-- Price hidden intentionally --}}
+        @if($price)
+        <div class="product-price-row">
+            <span class="product-price-current">{{ $price }}</span>
+            @if($oldPrice)
+                <span class="product-price-old">{{ $oldPrice }}</span>
+            @endif
+        </div>
+        @endif
     </a>
 </div>

@@ -190,9 +190,7 @@
                                 <span class="pd-price-sale">{{ $fmtPrice($salePrice) }}</span>
                                 <span class="pd-discount-pill">-{{ $discountPct }}%</span>
                             </div>
-                            @if($product->show_original_price)
-                                <div class="pd-price-orig">{{ $fmtPrice($price) }}</div>
-                            @endif
+                            <div class="pd-price-orig">{{ $fmtPrice($price) }}</div>
                         @else
                             <div class="pd-price-main">
                                 <span class="pd-price-sale">{{ $fmtPrice($price) }}</span>
