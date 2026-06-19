@@ -6663,7 +6663,7 @@ body.mob-filter-open {
   color: #2d2d2d;
   font-size: 1rem;
   line-height: 1.8;
-  font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .rich-content-body h1,
@@ -6743,7 +6743,7 @@ body.mob-filter-open {
 
 /* ── Blog category rich content ──────────────────────────── */
 .blog-rich-content {
-  font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
   color: #2d2d2d;
   font-size: 1rem;
   line-height: 1.8;
