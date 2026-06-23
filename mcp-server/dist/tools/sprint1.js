@@ -69,10 +69,12 @@ export function registerSprint1Tools(server) {
             answer: z.string().describe("Câu trả lời tiếng Anh"),
         })).optional().describe("[Deprecated — dùng geo.en.faq thay thế]"),
         attributes: z.array(z.object({
-            name: z.string().describe("Tên thuộc tính, e.g. 'Số kênh'"),
-            value: z.string().describe("Giá trị, e.g. '4'"),
+            name: z.string().describe("Tên thuộc tính tiếng Việt, e.g. 'Số kênh'"),
+            name_en: z.string().nullable().optional().describe("Attribute name in English, e.g. 'Channels'"),
+            value: z.string().describe("Giá trị tiếng Việt, e.g. '4'"),
+            value_en: z.string().nullable().optional().describe("Attribute value in English, e.g. '4'"),
             unit: z.string().nullable().optional().describe("Đơn vị, e.g. 'kênh', null nếu không có"),
-        })).optional().describe("Thông số kỹ thuật dạng key-value"),
+        })).optional().describe("Thông số kỹ thuật dạng key-value — hỗ trợ song ngữ VN + EN"),
     }, async ({ slug, ...body }) => ok(await api("PUT", `/mcp/products/${slug}`, body)));
     server.tool("activate_product", "Activate product sau khi readiness pass. Observer tự sync JSON-LD + Sitemap.", {
         slug: z.string().describe("Product slug"),

@@ -51,7 +51,8 @@
       "Bash(curl -s \"http://127.0.0.1:8000/en/products/olfer-cbu-da-1p\")",
       "Bash(php -l app/Filament/Resources/FilterGroupResource.php)",
       "Bash(Select-String -Path \"vendor\\\\filament\\\\forms\\\\src\\\\Components\\\\FileUpload.php\" -Pattern \"saveUploadedFileUsing|dehydrateState|resolveFile\")",
-      "Bash(Select-Object -First 30)"
+      "Bash(Select-Object -First 30)",
+      "Skill(run)"
     ]
   },
   "enableAllProjectMcpServers": true,
