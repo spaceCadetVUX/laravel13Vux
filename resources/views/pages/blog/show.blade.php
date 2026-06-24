@@ -112,14 +112,6 @@
 @endif
 @endforeach
 
-{{-- Lock body scroll so the two columns scroll independently --}}
-<style>
-@media (min-width: 992px) {
-    html, body { height: 100%; overflow: hidden; }
-    #page-wrapper, #page-content { height: 100%; overflow: hidden; }
-}
-</style>
-
 {{-- Force dark nav on blog detail — no hero overlay, transparent white nav looks broken --}}
 <style>
 #header-sticky:not(.header-sticky) {
@@ -151,12 +143,13 @@
 @endpush
 
 @section('content')
+<div style="width:100%;height:72px;"></div>
 <div class="blog-detail-wrap">
-    <div class="container h-100">
-        <div class="row gx-lg-5 h-100">
+    <div class="container">
+        <div class="row gx-lg-5">
 
             {{-- ── Main Article ── --}}
-            <main class="col-lg-8 blog-detail-main-col">
+            <main class="col-lg-8">
 
                 {{-- Breadcrumb --}}
                 <nav class="blog-breadcrumb" aria-label="breadcrumb">
@@ -303,7 +296,7 @@
             </main>
 
             {{-- ── Sidebar ── --}}
-            <aside class="col-lg-4 blog-detail-side-col">
+            <aside class="col-lg-4 mt-5 mt-lg-0">
                 <div class="blog-sidebar">
 
                     {{-- Search --}}

@@ -5050,56 +5050,8 @@ calibre-blog-grid .carousel-dot {
    ============================================================ */
 
 .blog-detail-wrap {
-  height: calc(100vh - var(--nav-height));
-  overflow: hidden;
-  padding: 0;
-}
-
-.blog-detail-main-col {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-top: calc(var(--nav-height) + 2rem);
-  padding-bottom: 4rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
-}
-.blog-detail-main-col::-webkit-scrollbar { width: 4px; }
-.blog-detail-main-col::-webkit-scrollbar-track { background: transparent; }
-.blog-detail-main-col::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
-
-.blog-detail-side-col {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-top: calc(var(--nav-height) + 2rem);
-  padding-bottom: 4rem;
-  border-left: 1px solid var(--color-border);
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
-}
-.blog-detail-side-col::-webkit-scrollbar { width: 4px; }
-.blog-detail-side-col::-webkit-scrollbar-track { background: transparent; }
-.blog-detail-side-col::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
-
-@media (max-width: 991px) {
-  .blog-detail-wrap {
-    height: auto;
-    overflow: visible;
-  }
-  .blog-detail-main-col,
-  .blog-detail-side-col {
-    height: auto;
-    overflow: visible;
-    padding-top: 1.5rem;
-    padding-bottom: 2rem;
-  }
-  .blog-detail-side-col {
-    border-left: none;
-    border-top: 1px solid var(--color-border);
-    margin-top: 1rem;
-    padding-top: 2rem;
-  }
+  padding-top: calc(var(--nav-height) + 3rem);
+  padding-bottom: 5rem;
 }
 
 /* Breadcrumb */
@@ -5587,7 +5539,8 @@ details[open] .blog-faq__question::after { content: '−'; }
 
 /* ── Blog Sidebar ──────────────────────────────────────────── */
 .blog-sidebar {
-  position: static;
+  position: sticky;
+  top: calc(var(--nav-height) + 1.5rem);
 }
 
 .sidebar-section {
