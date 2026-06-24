@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Enums\BlogPostStatus;
+use App\Models\BlogPostTranslation;
 use App\Models\Setting;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 
 class SolutionController extends Controller
 {
@@ -12,6 +15,34 @@ class SolutionController extends Controller
     {
         $raw = Setting::get('default_og_image');
         return $raw ? (str_starts_with($raw, 'http') ? $raw : asset($raw)) : null;
+    }
+
+    private function latestBlogs(string $locale, int $limit = 3): Collection
+    {
+        return BlogPostTranslation::where('blog_post_translations.locale', $locale)
+            ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
+            ->where('blog_posts.status', BlogPostStatus::Published)
+            ->where('blog_posts.published_at', '<=', now())
+            ->whereNull('blog_posts.deleted_at')
+            ->select('blog_post_translations.*')
+            ->with(['blogPost.blogCategory.translations' => fn ($q) => $q->where('locale', $locale)])
+            ->orderByDesc('blog_posts.published_at')
+            ->limit($limit)
+            ->get()
+            ->map(function ($tr) {
+                $p   = $tr->blogPost;
+                $cTr = $p?->blogCategory?->translations->first();
+                $img = $p?->featured_image;
+                return (object) [
+                    'title'                    => $tr->title,
+                    'slug'                     => $tr->slug,
+                    'excerpt'                  => $tr->excerpt,
+                    'category'                 => $cTr?->name ?? $p?->blogCategory?->name,
+                    'category_slug'            => $cTr?->slug ?? $p?->blogCategory?->slug,
+                    'featured_image'           => $img ? 'storage/' . ltrim($img, '/') : null,
+                    'formatted_published_date' => $p?->published_at?->translatedFormat('d M, Y'),
+                ];
+            });
     }
 
     public function dali(string $locale): View
@@ -33,6 +64,7 @@ class SolutionController extends Controller
             'fallbackImage'      => $this->ogImage(),
             'ogType'             => 'website',
             'jsonldSchemas'      => [],
+            'latestBlogs'        => $this->latestBlogs($locale),
         ]);
     }
 
@@ -55,6 +87,7 @@ class SolutionController extends Controller
             'fallbackImage'      => $this->ogImage(),
             'ogType'             => 'website',
             'jsonldSchemas'      => [],
+            'latestBlogs'        => $this->latestBlogs($locale),
         ]);
     }
 

@@ -379,4 +379,43 @@
 </script>
 @endpush
 
+@if(!empty($latestBlogs) && $latestBlogs->isNotEmpty())
+<section class="home-latest-blogs">
+    <div class="container">
+        <div class="hcp-header" style="margin-bottom:24px;">
+            <a href="{{ route(current_locale() . '.blog.index') }}" class="hcp-title">{{ $locale === 'vi' ? 'Bài viết mới nhất' : 'Latest Articles' }}</a>
+            <a href="{{ route(current_locale() . '.blog.index') }}" class="blog-view-all">
+                {{ $locale === 'vi' ? 'Xem tất cả' : 'View all' }}
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+        </div>
+        <div class="row g-4">
+            @foreach($latestBlogs as $blog)
+            <div class="col-md-6 col-lg-4">
+                <div class="blog-card">
+                    <a href="{{ route(current_locale() . '.blog.show', [$blog->category_slug, $blog->slug]) }}" class="blog-card__img-wrap d-block">
+                        @if($blog->featured_image)
+                            <img src="{{ asset($blog->featured_image) }}" alt="{{ $blog->title }}" loading="lazy">
+                        @else
+                            <div class="blog-card__img-placeholder"></div>
+                        @endif
+                    </a>
+                    @if($blog->category)<div class="blog-card__category">{{ $blog->category }}</div>@endif
+                    <h2 class="blog-card__title"><a href="{{ route(current_locale() . '.blog.show', [$blog->category_slug, $blog->slug]) }}">{{ Str::limit($blog->title, 65) }}</a></h2>
+                    @if($blog->excerpt)<p class="blog-card__excerpt">{{ strip_tags($blog->excerpt) }}</p>@endif
+                    <div class="d-flex align-items-center justify-content-between mt-auto">
+                        <a href="{{ route(current_locale() . '.blog.show', [$blog->category_slug, $blog->slug]) }}" class="blog-card__read-more">
+                            {{ $locale === 'vi' ? 'Đọc thêm' : 'Read more' }}
+                            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 11L11 1M11 1H1M11 1V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </a>
+                        <div class="blog-card__date">{{ $blog->formatted_published_date }}</div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+@endif
+
 @endsection
