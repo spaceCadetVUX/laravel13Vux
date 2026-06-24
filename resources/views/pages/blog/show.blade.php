@@ -93,8 +93,11 @@
 @endif
 
 {{-- JSON-LD schemas from DB (BreadcrumbList, Article, etc. synced by Observer) --}}
+{{-- Skip FAQPage if already output inline above to avoid duplicates --}}
 @foreach($jsonldSchemas as $schema)
+@if(($schema['@type'] ?? '') !== 'FAQPage' || !$faqSchema)
 <script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+@endif
 @endforeach
 
 {{-- Force dark nav on blog detail — no hero overlay, transparent white nav looks broken --}}
