@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Enums\BlogPostStatus;
+use App\Models\BlogPostTranslation;
 use App\Models\BusinessProfile;
 use App\Models\Setting;
 use App\Services\Seo\BusinessJsonldService;
@@ -52,8 +54,33 @@ class HomeController extends Controller
         $seoMeta = null;
         $ogType  = 'website';
 
+        $latestBlogs = BlogPostTranslation::where('blog_post_translations.locale', $locale)
+            ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
+            ->where('blog_posts.status', BlogPostStatus::Published)
+            ->where('blog_posts.published_at', '<=', now())
+            ->whereNull('blog_posts.deleted_at')
+            ->select('blog_post_translations.*')
+            ->with(['blogPost.blogCategory.translations' => fn ($q) => $q->where('locale', $locale)])
+            ->orderByDesc('blog_posts.published_at')
+            ->limit(3)
+            ->get()
+            ->map(function ($tr) {
+                $p    = $tr->blogPost;
+                $cTr  = $p?->blogCategory?->translations->first();
+                $img  = $p?->featured_image;
+                return (object) [
+                    'title'                  => $tr->title,
+                    'slug'                   => $tr->slug,
+                    'excerpt'                => $tr->excerpt,
+                    'category'               => $cTr?->name ?? $p?->blogCategory?->name,
+                    'category_slug'          => $cTr?->slug ?? $p?->blogCategory?->slug,
+                    'featured_image'         => $img ? 'storage/' . ltrim($img, '/') : null,
+                    'formatted_published_date' => $p?->published_at?->translatedFormat('d M, Y'),
+                ];
+            });
+
         return view('pages.home.index', compact(
-            'locale', 'businessSchemas', 'faqItems',
+            'locale', 'businessSchemas', 'faqItems', 'latestBlogs',
             'seoMeta', 'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType'
         ));
     }

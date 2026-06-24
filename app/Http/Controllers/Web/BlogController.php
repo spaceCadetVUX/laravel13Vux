@@ -361,16 +361,16 @@ class BlogController extends Controller
             });
 
         // ── Sidebar: latest posts (excl. current) ─────────────────────────────
-        $latestPosts = BlogPostTranslation::where('blog_post_translations.locale', $locale)
+        $sidebarPostsBase = BlogPostTranslation::where('blog_post_translations.locale', $locale)
             ->join('blog_posts', 'blog_posts.id', '=', 'blog_post_translations.blog_post_id')
             ->where('blog_posts.status', BlogPostStatus::Published)
             ->where('blog_posts.published_at', '<=', now())
             ->whereNull('blog_posts.deleted_at')
             ->where('blog_post_translations.blog_post_id', '!=', $post->id)
-            ->select('blog_post_translations.*')
+            ->select('blog_post_translations.*', 'blog_posts.published_at as post_published_at', 'blog_posts.featured_image as post_featured_image')
             ->with(['blogPost.blogCategory.translations' => fn ($q) => $q->where('locale', $locale)])
             ->orderByDesc('blog_posts.published_at')
-            ->limit(5)
+            ->limit(13)
             ->get()
             ->map(function ($tr) {
                 $p      = $tr->blogPost;
@@ -384,6 +384,9 @@ class BlogController extends Controller
                 $p->formatted_published_date = $p?->published_at?->translatedFormat('d M, Y');
                 return $p;
             });
+
+        $latestPosts   = $sidebarPostsBase->take(3);
+        $morePostsList = $sidebarPostsBase->slice(3);
 
         // ── Related posts (same category, excl. current) ──────────────────────
         $relatedPosts = collect();
@@ -422,7 +425,7 @@ class BlogController extends Controller
         return view('pages.blog.show', compact(
             'blog', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
             'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType',
-            'categories', 'latestPosts', 'relatedPosts', 'allTags'
+            'categories', 'latestPosts', 'morePostsList', 'relatedPosts', 'allTags'
         ) + ['noScrollSmoother' => true]);
     }
 }

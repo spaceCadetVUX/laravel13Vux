@@ -367,6 +367,23 @@
                     </div>
                     @endif
 
+                    {{-- More posts compact list --}}
+                    @if(isset($morePostsList) && $morePostsList->count() > 0)
+                    <div class="sidebar-section">
+                        <h4 class="sidebar-section__title">{{ $bcLocale === 'vi' ? 'Các bài viết khác' : 'More articles' }}</h4>
+                        <ul class="sidebar-post-list">
+                            @foreach($morePostsList as $more)
+                            <li class="sidebar-post-list__item">
+                                <a href="{{ route(current_locale() . '.blog.show', [$more->category_slug, $more->slug]) }}" class="sidebar-post-list__link">
+                                    <span class="sidebar-post-list__title">{{ Str::limit($more->title, 55) }}</span>
+                                    <span class="sidebar-post-list__date">{{ $more->formatted_published_date }}</span>
+                                </a>
+                            </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+
                     {{-- Tags --}}
                     @if(isset($allTags) && $allTags->count() > 0)
                     <div class="sidebar-section">
