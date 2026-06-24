@@ -108,7 +108,7 @@ class ProductController extends Controller
 
     public function autocomplete(string $locale): JsonResponse
     {
-        $q = trim(request()->get('q', ''));
+        $q = trim(request()->query('q', ''));
 
         if (strlen($q) < 2) {
             return response()->json(['products' => [], 'total' => 0, 'hasMore' => false]);
@@ -135,9 +135,7 @@ class ProductController extends Controller
         $products = $translations->map(fn ($t) => [
             'name'      => $t->name,
             'url'       => route($locale . '.product.show', $t->slug),
-            'image_url' => $t->product->thumbnail?->url
-                            ? asset('storage/' . ltrim($t->product->thumbnail->url, '/'))
-                            : null,
+            'image_url' => $t->product->thumbnail?->url ?? null,
             'brand'     => $t->product->brand?->name,
             'sku'       => $t->product->sku ?? null,
         ]);
