@@ -49,11 +49,20 @@ class BusinessProfileResource extends Resource
                                 ->placeholder('Company Ltd.'),
 
                             Forms\Components\TextInput::make('tagline')
-                                ->label('Tagline')
-                                ->placeholder('Short slogan'),
+                                ->label('🇻🇳 Tagline')
+                                ->placeholder('Khẩu hiệu ngắn'),
+
+                            Forms\Components\TextInput::make('extra.tagline_en')
+                                ->label('🇬🇧 Tagline (EN)')
+                                ->placeholder('Short slogan in English'),
 
                             Forms\Components\Textarea::make('description')
-                                ->label('Description')
+                                ->label('🇻🇳 Description')
+                                ->rows(4)
+                                ->columnSpanFull(),
+
+                            Forms\Components\Textarea::make('extra.description_en')
+                                ->label('🇬🇧 Description (EN)')
                                 ->rows(4)
                                 ->columnSpanFull(),
 

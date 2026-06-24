@@ -73,8 +73,8 @@ class BusinessJsonldService
     {
         $profile = BusinessProfile::instance();
         $schemas = [
-            $this->organization($profile),
-            $this->website($profile),
+            $this->organization($profile, $locale),
+            $this->website($profile, $locale),
         ];
 
         if (filled($profile->address_line) || filled($profile->city)) {
@@ -90,7 +90,7 @@ class BusinessJsonldService
         return $schemas;
     }
 
-    private function organization(BusinessProfile $p): array
+    private function organization(BusinessProfile $p, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) config('app.url'), '/');
 
@@ -103,7 +103,9 @@ class BusinessJsonldService
         ];
 
         if (filled($p->legal_name))   $schema['legalName']    = $p->legal_name;
-        $desc = $p->description ?? $p->tagline ?? null;
+        $desc = $locale === 'en'
+            ? ($p->extra['description_en'] ?? $p->extra['tagline_en'] ?? null)
+            : ($p->description ?? $p->tagline ?? null);
         if (filled($desc))            $schema['description']  = $desc;
         if (filled($p->email))        $schema['email']        = $p->email;
         if (filled($p->phone))        $schema['telephone']    = $p->phone;
@@ -131,16 +133,24 @@ class BusinessJsonldService
         return $schema;
     }
 
-    private function website(BusinessProfile $p): array
+    private function website(BusinessProfile $p, string $locale = 'vi'): array
     {
         $baseUrl = rtrim((string) config('app.url'), '/');
+        $tagline = $locale === 'en'
+            ? ($p->extra['tagline_en'] ?? $p->tagline ?? null)
+            : ($p->tagline ?? null);
 
-        return [
-            '@context'        => 'https://schema.org',
-            '@type'           => 'WebSite',
-            '@id'             => $baseUrl . '/#website',
-            'name'            => $p->name,
-            'url'             => $baseUrl,
+        $schema = [
+            '@context' => 'https://schema.org',
+            '@type'    => 'WebSite',
+            '@id'      => $baseUrl . '/#website',
+            'name'     => $p->name,
+            'url'      => $baseUrl,
+        ];
+
+        if (filled($tagline)) $schema['description'] = $tagline;
+
+        return array_merge($schema, [
             'potentialAction' => [
                 '@type'       => 'SearchAction',
                 'target'      => [
@@ -149,7 +159,7 @@ class BusinessJsonldService
                 ],
                 'query-input' => 'required name=search_term_string',
             ],
-        ];
+        ]);
     }
 
     private function localBusiness(BusinessProfile $p): array
