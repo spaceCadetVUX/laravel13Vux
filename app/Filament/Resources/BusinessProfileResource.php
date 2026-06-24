@@ -74,6 +74,15 @@ class BusinessProfileResource extends Resource
                                 ->label('Logo Path / URL')
                                 ->columnSpanFull(),
 
+                            Forms\Components\FileUpload::make('extra.og_image')
+                                ->label('Default OG Image (Facebook / Zalo share)')
+                                ->helperText('Ảnh hiển thị khi share link trang chủ. Khuyến nghị: 1200×630px.')
+                                ->image()
+                                ->disk('public')
+                                ->directory('og')
+                                ->imagePreviewHeight('120')
+                                ->columnSpanFull(),
+
                             Forms\Components\TextInput::make('currency')
                                 ->label('Currency')
                                 ->default('VND'),

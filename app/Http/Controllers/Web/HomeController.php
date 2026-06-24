@@ -43,7 +43,7 @@ class HomeController extends Controller
             ?? ($locale === 'vi' ? 'Phân phối và tư vấn giải pháp chiếu sáng thông minh KNX, DALI-2, Casambi tại Việt Nam.'
                                  : 'Distributor and consultant for smart lighting solutions in Vietnam.');
 
-        $ogRaw         = Setting::get('default_og_image');
+        $ogRaw = $profile->extra['og_image'] ?? Setting::get('default_og_image');
         $fallbackImage = $ogRaw
             ? (str_starts_with($ogRaw, 'http') ? $ogRaw : asset('storage/' . ltrim($ogRaw, '/')))
             : null;
