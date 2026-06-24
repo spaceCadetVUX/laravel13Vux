@@ -4933,6 +4933,11 @@ calibre-blog-grid .carousel-dot {
   color: var(--color-dark);
   line-height: 1.4;
   margin-bottom: 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .blog-card__title a {
