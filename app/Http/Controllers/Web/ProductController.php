@@ -108,7 +108,45 @@ class ProductController extends Controller
 
     public function autocomplete(string $locale): JsonResponse
     {
-        return response()->json([]);
+        $q = trim(request()->get('q', ''));
+
+        if (strlen($q) < 2) {
+            return response()->json(['products' => [], 'total' => 0, 'hasMore' => false]);
+        }
+
+        $query = ProductTranslation::where('locale', $locale)
+            ->where(fn ($w) => $w
+                ->where('name', 'ilike', '%' . $q . '%')
+                ->orWhere('slug', 'ilike', '%' . $q . '%')
+            )
+            ->whereHas('product', fn ($p) => $p->where('is_active', true))
+            ->with(['product.thumbnail', 'product.brand'])
+            ->limit(8);
+
+        $translations = $query->get();
+        $total        = ProductTranslation::where('locale', $locale)
+            ->where(fn ($w) => $w
+                ->where('name', 'ilike', '%' . $q . '%')
+                ->orWhere('slug', 'ilike', '%' . $q . '%')
+            )
+            ->whereHas('product', fn ($p) => $p->where('is_active', true))
+            ->count();
+
+        $products = $translations->map(fn ($t) => [
+            'name'      => $t->name,
+            'url'       => route($locale . '.product.show', $t->slug),
+            'image_url' => $t->product->thumbnail?->url
+                            ? asset('storage/' . ltrim($t->product->thumbnail->url, '/'))
+                            : null,
+            'brand'     => $t->product->brand?->name,
+            'sku'       => $t->product->sku ?? null,
+        ]);
+
+        return response()->json([
+            'products' => $products,
+            'total'    => $total,
+            'hasMore'  => $total > 8,
+        ]);
     }
 
     public function show(string $locale, string $slug): View|RedirectResponse
