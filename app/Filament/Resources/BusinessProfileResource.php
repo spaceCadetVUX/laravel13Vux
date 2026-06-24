@@ -45,7 +45,11 @@ class BusinessProfileResource extends Resource
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('legal_name')
-                                ->label('Legal Name')
+                                ->label('🇻🇳 Legal Name')
+                                ->placeholder('Công ty Cổ phần...'),
+
+                            Forms\Components\TextInput::make('extra.legal_name_en')
+                                ->label('🇬🇧 Legal Name (EN)')
                                 ->placeholder('Company Ltd.'),
 
                             Forms\Components\TextInput::make('tagline')

@@ -102,7 +102,10 @@ class BusinessJsonldService
             'url'      => $baseUrl,
         ];
 
-        if (filled($p->legal_name))   $schema['legalName']    = $p->legal_name;
+        $legalName = $locale === 'en'
+            ? ($p->extra['legal_name_en'] ?? $p->legal_name ?? null)
+            : ($p->legal_name ?? null);
+        if (filled($legalName))        $schema['legalName']    = $legalName;
         $desc = $locale === 'en'
             ? ($p->extra['description_en'] ?? $p->extra['tagline_en'] ?? null)
             : ($p->description ?? $p->tagline ?? null);
