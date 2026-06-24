@@ -103,7 +103,7 @@
             @else
             <div class="row row-cols-2 row-cols-md-3 g-4">
                 @foreach($products as $product)
-                <div class="col">
+                <div class="col d-flex">
                     @include('components.product.card', [
                         'url'      => route(current_locale() . '.product.show', $product->slug),
                         'image'    => $product->product->thumbnail?->url ?? asset('images/casambi/product-placeholder.jpg'),
