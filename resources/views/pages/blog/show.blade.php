@@ -143,13 +143,12 @@
 @endpush
 
 @section('content')
-<div style="width:100%;height:72px;"></div>
 <div class="blog-detail-wrap">
-    <div class="container">
-        <div class="row gx-lg-5">
+    <div class="container h-100">
+        <div class="row gx-lg-5 h-100">
 
             {{-- ── Main Article ── --}}
-            <main class="col-lg-8">
+            <main class="col-lg-8 blog-detail-main-col">
 
                 {{-- Breadcrumb --}}
                 <nav class="blog-breadcrumb" aria-label="breadcrumb">
@@ -296,7 +295,7 @@
             </main>
 
             {{-- ── Sidebar ── --}}
-            <aside class="col-lg-4 mt-5 mt-lg-0">
+            <aside class="col-lg-4 blog-detail-side-col">
                 <div class="blog-sidebar">
 
                     {{-- Search --}}
