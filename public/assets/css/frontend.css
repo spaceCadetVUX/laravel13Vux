@@ -3423,16 +3423,16 @@ calibre-blog-grid .carousel-dot {
 }
 
 /* ── Tables — scrollable on small screens ──────────────────── */
+.pd-full-description {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .pd-full-description table {
   width: 100%;
   max-width: 100%;
   border-collapse: collapse;
   margin-bottom: 1rem;
   font-size: 0.875rem;
-  /* wrap overflowing table in scroll on mobile */
-  display: block;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 .pd-full-description table td,
 .pd-full-description table th {
