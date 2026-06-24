@@ -23,7 +23,8 @@ class HomeController extends Controller
         $profile         = BusinessProfile::instance();
 
         // FAQ items for the visible FAQ section on the page
-        $faqItems = collect((array) ($profile->extra['faq'] ?? []))
+        $faqKey   = $locale === 'en' ? 'faq_en' : 'faq';
+        $faqItems = collect((array) ($profile->extra[$faqKey] ?? []))
             ->map(fn ($f) => ['q' => $f['question'] ?? '', 'a' => $f['answer'] ?? ''])
             ->filter(fn ($f) => filled($f['q']))
             ->values()

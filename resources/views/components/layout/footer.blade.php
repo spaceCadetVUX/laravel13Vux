@@ -10,7 +10,16 @@
                     <a href="{{ route(current_locale() . '.index') }}" class="d-inline-block mb-3">
                         <img src="{{ asset('images/casambi/casambiwhite.svg') }}" alt="logo casambi" style="width: 200px; height: auto;">
                     </a>
-                    <p class="footer-tagline">{{ __('footer.tagline') }}</p>
+                    @php
+                        $footerProfile  = \App\Models\BusinessProfile::instance();
+                        $footerLocale   = app()->getLocale();
+                        $footerTagline  = $footerLocale === 'en'
+                            ? ($footerProfile->extra['tagline_en'] ?? $footerProfile->tagline ?? '')
+                            : ($footerProfile->tagline ?? '');
+                    @endphp
+                    @if($footerTagline)
+                    <p class="footer-tagline">{{ $footerTagline }}</p>
+                    @endif
                     @php
                         $footerSocials = [
                             'instagram' => ['key' => 'social_instagram', 'icon' => 'bi-instagram',  'label' => 'Instagram'],
