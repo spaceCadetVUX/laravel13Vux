@@ -219,13 +219,16 @@ class BusinessProfileResource extends Resource
                                     Placeholder::make('jsonld_preview')
                                         ->label('')
                                         ->content(function (): HtmlString {
-                                            $schemas = app(BusinessJsonldService::class)->getSchemas();
+                                            $service = app(BusinessJsonldService::class);
                                             $html = '';
-                                            foreach ($schemas as $schema) {
-                                                $type = htmlspecialchars($schema['@type'] ?? 'Unknown');
-                                                $json = htmlspecialchars(json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                                                $html .= "<p style='font-weight:600;font-size:0.85rem;color:#1e293b;margin:16px 0 4px;'>{$type}</p>";
-                                                $html .= "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;'>{$json}</pre>";
+                                            foreach (['vi' => '🇻🇳 VI', 'en' => '🇬🇧 EN'] as $locale => $label) {
+                                                $html .= "<h3 style='font-size:0.9rem;font-weight:700;color:#1e293b;margin:24px 0 8px;border-bottom:2px solid #e2e8f0;padding-bottom:6px;'>{$label}</h3>";
+                                                foreach ($service->getSchemas($locale) as $schema) {
+                                                    $type = htmlspecialchars($schema['@type'] ?? 'Unknown');
+                                                    $json = htmlspecialchars(json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                                                    $html .= "<p style='font-weight:600;font-size:0.85rem;color:#1e293b;margin:12px 0 4px;'>{$type}</p>";
+                                                    $html .= "<pre style='white-space:pre-wrap;font-size:0.72rem;line-height:1.6;background:#0f172a;border-radius:6px;padding:14px;color:#e2e8f0;overflow-x:auto;'>{$json}</pre>";
+                                                }
                                             }
                                             return new HtmlString($html ?: '<em>No schemas generated.</em>');
                                         })
