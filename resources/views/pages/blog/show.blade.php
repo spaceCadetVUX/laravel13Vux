@@ -184,12 +184,7 @@
                             $authorRoute = $bcLocale === 'vi' ? 'vi.author.show' : 'en.author.show';
                         @endphp
                         <a href="{{ route($authorRoute, $blog->author->slug) }}" class="blog-article-meta-author">
-                            @if($blog->author->avatar_url)
-                            <img src="{{ $blog->author->avatar_url }}" alt="{{ $blog->author->name }}" class="blog-author-avatar">
-                            @else
-                            <span class="blog-author-avatar blog-author-avatar--initial">{{ mb_strtoupper(mb_substr($blog->author->name, 0, 1)) }}</span>
-                            @endif
-                            <span>{{ $blog->author->name }}</span>
+                            <strong>{{ $blog->author->name }}</strong>
                         </a>
                         @endif
 
