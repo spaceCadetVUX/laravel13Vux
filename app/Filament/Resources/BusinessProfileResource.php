@@ -160,8 +160,26 @@ class BusinessProfileResource extends Resource
                                 ->columnSpanFull(),
 
                             Forms\Components\Repeater::make('extra.faq')
-                                ->label('FAQ (schema.org FAQPage)')
-                                ->helperText('Câu hỏi thường gặp — tự động inject JSON-LD FAQPage vào trang chủ.')
+                                ->label('🇻🇳 FAQ — Tiếng Việt (schema.org FAQPage)')
+                                ->helperText('Câu hỏi thường gặp — inject JSON-LD FAQPage vào trang chủ /vi/.')
+                                ->schema([
+                                    Forms\Components\TextInput::make('question')
+                                        ->label('Câu hỏi')
+                                        ->required()
+                                        ->columnSpanFull(),
+                                    Forms\Components\Textarea::make('answer')
+                                        ->label('Trả lời')
+                                        ->required()
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+                                ])
+                                ->reorderable()
+                                ->addActionLabel('+ Thêm câu hỏi')
+                                ->columnSpanFull(),
+
+                            Forms\Components\Repeater::make('extra.faq_en')
+                                ->label('🇬🇧 FAQ — English (schema.org FAQPage)')
+                                ->helperText('Frequently asked questions — injected into JSON-LD FAQPage on /en/ homepage.')
                                 ->schema([
                                     Forms\Components\TextInput::make('question')
                                         ->label('Question')
@@ -174,7 +192,7 @@ class BusinessProfileResource extends Resource
                                         ->columnSpanFull(),
                                 ])
                                 ->reorderable()
-                                ->addActionLabel('Thêm câu hỏi')
+                                ->addActionLabel('+ Add Q&A')
                                 ->columnSpanFull(),
                         ]),
 

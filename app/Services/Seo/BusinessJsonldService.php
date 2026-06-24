@@ -13,18 +13,21 @@ class BusinessJsonldService
 
     /**
      * Returns all global JSON-LD schemas (Organization, WebSite, LocalBusiness).
-     * Cached in Redis for 24 hours. Invalidated by BusinessProfileObserver on save.
+     * Cached in Redis for 24 hours per locale. Invalidated by BusinessProfileObserver on save.
      */
-    public function getSchemas(): array
+    public function getSchemas(?string $locale = null): array
     {
+        $locale  = $locale ?? app()->getLocale();
+        $cacheKey = self::CACHE_KEY . '_' . $locale;
+
         try {
             return Cache::store('redis')->remember(
-                self::CACHE_KEY,
+                $cacheKey,
                 now()->addHours(24),
-                fn (): array => $this->buildSchemas()
+                fn (): array => $this->buildSchemas($locale)
             );
         } catch (\Throwable) {
-            return $this->buildSchemas();
+            return $this->buildSchemas($locale);
         }
     }
 
@@ -58,14 +61,15 @@ class BusinessJsonldService
     public function flushCache(): void
     {
         try {
-            Cache::store('redis')->forget(self::CACHE_KEY);
+            Cache::store('redis')->forget(self::CACHE_KEY . '_vi');
+            Cache::store('redis')->forget(self::CACHE_KEY . '_en');
         } catch (\Throwable) {
         }
     }
 
     // ── Schema builders ───────────────────────────────────────────────────────
 
-    private function buildSchemas(): array
+    private function buildSchemas(string $locale = 'vi'): array
     {
         $profile = BusinessProfile::instance();
         $schemas = [
@@ -77,7 +81,8 @@ class BusinessJsonldService
             $schemas[] = $this->localBusiness($profile);
         }
 
-        $faq = (array) ($profile->extra['faq'] ?? []);
+        $faqKey = $locale === 'en' ? 'faq_en' : 'faq';
+        $faq    = (array) ($profile->extra[$faqKey] ?? []);
         if (! empty($faq)) {
             $schemas[] = $this->faqPage($faq);
         }

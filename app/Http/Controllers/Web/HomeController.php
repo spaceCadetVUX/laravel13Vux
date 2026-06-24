@@ -19,7 +19,7 @@ class HomeController extends Controller
             'en' => route('en.index'),
         ]);
 
-        $businessSchemas = $this->jsonld->getSchemas();
+        $businessSchemas = $this->jsonld->getSchemas($locale);
         $profile         = BusinessProfile::instance();
 
         // FAQ items for the visible FAQ section on the page
