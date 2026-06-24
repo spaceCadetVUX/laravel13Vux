@@ -350,7 +350,7 @@
 @endpush
 
 @if(!empty($latestBlogs) && $latestBlogs->isNotEmpty())
-<section class="home-latest-blogs">
+<section class="home-latest-blogs" style="padding: 72px 0 60px;">
     <div class="container">
         <div class="hcp-header" style="margin-bottom:24px;">
             <a href="{{ route(current_locale() . '.blog.index') }}" class="hcp-title">{{ $locale === 'vi' ? 'Bài viết mới nhất' : 'Latest Articles' }}</a>
