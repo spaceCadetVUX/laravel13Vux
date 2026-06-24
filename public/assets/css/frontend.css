@@ -1550,6 +1550,7 @@ calibre-blog-grid .carousel-dot {
 .pc-wrap {
   display: flex;
   flex-direction: column;
+  height: 100%;
   background: #fff;
   border: 1px solid #e8e8e8;
   border-radius: 8px;
