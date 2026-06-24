@@ -115,7 +115,7 @@
 {{-- Lock body scroll so the two columns scroll independently --}}
 <style>
 @media (min-width: 992px) {
-    body { overflow: hidden; }
+    html, body { height: 100%; overflow: hidden; }
     #page-wrapper, #page-content { height: 100%; overflow: hidden; }
 }
 </style>
