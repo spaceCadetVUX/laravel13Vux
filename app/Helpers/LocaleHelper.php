@@ -61,3 +61,21 @@ if (! function_exists('is_supported_locale')) {
         return in_array($locale, config('app.supported_locales', ['vi', 'en']), true);
     }
 }
+
+if (! function_exists('format_price')) {
+    function format_price(float|int|null $amount, ?string $currency = null): ?string
+    {
+        if ($amount === null || $amount <= 0) return null;
+
+        $currency = strtoupper($currency ?? 'VND');
+
+        return match($currency) {
+            'USD'  => '$' . number_format($amount, 0, '.', ','),
+            'EUR'  => '€' . number_format($amount, 0, '.', ','),
+            'JPY', 'KRW', 'CNY' => '¥' . number_format($amount, 0, '.', ','),
+            'SGD'  => 'S$' . number_format($amount, 0, '.', ','),
+            'THB'  => '฿' . number_format($amount, 0, '.', ','),
+            default => number_format($amount, 0, ',', '.') . 'đ', // VND
+        };
+    }
+}

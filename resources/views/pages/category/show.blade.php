@@ -112,10 +112,10 @@
                             ?? $product->product->categories->first()?->name
                             ?? $product->product->brand?->name,
                         'price'    => (($product->sale_price > 0 && $product->sale_price < $product->price)
-                            ? number_format($product->sale_price, 0, ',', '.') . 'đ'
-                            : ($product->price > 0 ? number_format($product->price, 0, ',', '.') . 'đ' : null)),
+                            ? format_price($product->sale_price, $product->currency)
+                            : ($product->price > 0 ? format_price($product->price, $product->currency) : null)),
                         'oldPrice' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price)
-                            ? number_format($product->price, 0, ',', '.') . 'đ' : null,
+                            ? format_price($product->price, $product->currency) : null,
                         'onSale'   => ($product->sale_price > 0 && $product->sale_price < $product->price),
                         'discount' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? round((1 - $product->sale_price / $product->price) * 100) : null,
                     ])
