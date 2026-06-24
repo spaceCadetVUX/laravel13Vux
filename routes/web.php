@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\AboutController;
+use App\Http\Controllers\Web\AuthorController;
 use App\Http\Controllers\Web\BlogController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\HealthController;
@@ -128,6 +129,10 @@ Route::prefix('vi')
             return redirect(\App\Support\LocaleUrl::forBlogPost($post, 'vi'), 301);
         })->name('vi.blog.show.legacy');
 
+        // ── Tác giả ───────────────────────────────────────────────────────────
+        Route::get('tac-gia/{slug}', [AuthorController::class, 'show'])
+            ->name('vi.author.show');
+
         // ── Trang tĩnh — catch-all, phải đặt cuối cùng ───────────────────────
         Route::get('{slug}', [PageController::class, 'show'])
             ->name('vi.page.show');
@@ -205,6 +210,10 @@ Route::prefix('en')
             // Serve as blog category page
             return app(\App\Http\Controllers\Web\BlogController::class)->category($locale, $slug);
         })->name('en.blog.category');
+
+        // ── Authors ───────────────────────────────────────────────────────────
+        Route::get('authors/{slug}', [AuthorController::class, 'show'])
+            ->name('en.author.show');
 
         // ── Static pages — catch-all, must be last ────────────────────────────
         Route::get('{slug}', [PageController::class, 'show'])

@@ -33,10 +33,22 @@
         ? (str_starts_with($logoRaw, 'http') ? $logoRaw : url(asset($logoRaw)))
         : url(asset('assets/img/logo/logo.png'));
 
-    $authorName  = $blog->author?->name;
-    $blogAuthor  = $authorName && strtolower($authorName) !== 'admin'
-        ? ['@type' => 'Person', 'name' => $authorName]
-        : ['@type' => 'Organization', 'name' => 'Casambi Vietnam', '@id' => config('app.url') . '/#organization'];
+    $authorModel = $blog->author;
+    $authorName  = $authorModel?->name;
+    if ($authorModel && filled($authorModel->slug) && strtolower($authorName) !== 'admin') {
+        $authorBaseUrl = rtrim((string) config('app.url'), '/');
+        $blogAuthor = ['@type' => 'Person', 'name' => $authorName,
+            '@id' => $authorBaseUrl . '/authors/' . $authorModel->slug . '#person',
+            'url' => $authorBaseUrl . '/authors/' . $authorModel->slug,
+        ];
+        if ($authorModel->avatar_url) $blogAuthor['image'] = $authorModel->avatar_url;
+        if (filled($authorModel->title)) $blogAuthor['jobTitle'] = $authorModel->title;
+        $sameAs = $authorModel->same_as;
+        if (!empty($sameAs)) $blogAuthor['sameAs'] = count($sameAs) === 1 ? $sameAs[0] : $sameAs;
+    } else {
+        $blogAuthor = ['@type' => 'Organization', 'name' => 'Casambi Vietnam',
+            '@id' => config('app.url') . '/#organization'];
+    }
 
     $blogUrl = route(app()->getLocale() . '.blog.show', [$blog->category_slug, $blog->slug]);
 
@@ -166,6 +178,21 @@
                     <h1 class="blog-article-title">{{ $blog->title }}</h1>
 
                     <div class="blog-article-meta">
+                        {{-- Author chip --}}
+                        @if($blog->author && strtolower($blog->author->name) !== 'admin')
+                        @php
+                            $authorRoute = $bcLocale === 'vi' ? 'vi.author.show' : 'en.author.show';
+                        @endphp
+                        <a href="{{ route($authorRoute, $blog->author->slug) }}" class="blog-article-meta-author">
+                            @if($blog->author->avatar_url)
+                            <img src="{{ $blog->author->avatar_url }}" alt="{{ $blog->author->name }}" class="blog-author-avatar">
+                            @else
+                            <span class="blog-author-avatar blog-author-avatar--initial">{{ mb_strtoupper(mb_substr($blog->author->name, 0, 1)) }}</span>
+                            @endif
+                            <span>{{ $blog->author->name }}</span>
+                        </a>
+                        @endif
+
                         <div class="blog-article-meta-item">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>

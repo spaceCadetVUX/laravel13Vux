@@ -5111,6 +5111,35 @@ calibre-blog-grid .carousel-dot {
   color: var(--color-mid);
 }
 
+.blog-article-meta-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-charcoal);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.blog-article-meta-author:hover { color: var(--color-accent); }
+
+.blog-author-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.blog-author-avatar--initial {
+  background: var(--color-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
 /* Featured Image */
 .blog-article-img {
   width: 100%;
