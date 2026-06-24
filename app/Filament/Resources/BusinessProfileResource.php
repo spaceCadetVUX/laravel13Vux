@@ -83,6 +83,16 @@ class BusinessProfileResource extends Resource
                                 ->imagePreviewHeight('120')
                                 ->columnSpanFull(),
 
+                            Forms\Components\FileUpload::make('extra.favicon')
+                                ->label('Favicon')
+                                ->helperText('Hiển thị trên tab trình duyệt và kết quả Google Search. Yêu cầu: file .ico hoặc PNG tối thiểu 48×48px. SVG không được Google Search hỗ trợ.')
+                                ->image()
+                                ->disk('public')
+                                ->directory('favicon')
+                                ->acceptedFileTypes(['image/x-icon', 'image/vnd.microsoft.icon', 'image/png', 'image/gif'])
+                                ->imagePreviewHeight('80')
+                                ->columnSpanFull(),
+
                             Forms\Components\TextInput::make('currency')
                                 ->label('Currency')
                                 ->default('VND'),

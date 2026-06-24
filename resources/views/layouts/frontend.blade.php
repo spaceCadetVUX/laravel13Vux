@@ -23,13 +23,18 @@
     <meta name="msvalidate.01" content="BE8FDF5FCE7C392F768C9CC5EAC49DEB" />
     {{-- Favicon --}}
     @php
-        $faviconRaw = \App\Models\Setting::get('site_favicon');
+        $faviconRaw = \App\Models\BusinessProfile::instance()->extra['favicon'] ?? null;
+        $faviconRaw = $faviconRaw ?: \App\Models\Setting::get('site_favicon');
         $faviconUrl = $faviconRaw
-            ? (str_starts_with($faviconRaw, 'http') ? $faviconRaw : asset($faviconRaw))
-            : asset('images/casambi/favicon.svg');
+            ? (str_starts_with($faviconRaw, 'http') ? $faviconRaw : asset('storage/' . ltrim($faviconRaw, '/')))
+            : null;
     @endphp
+    @if($faviconUrl)
     <link rel="icon" href="{{ $faviconUrl }}">
-    <link rel="shortcut icon" href="{{ $faviconUrl }}">
+    <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
+    @else
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/casambi/favicon.svg') }}">
+    @endif
     {{-- AI crawler discovery --}}
     <link rel="llms" href="{{ url('/llms.txt') }}">
     <link rel="llms-full" href="{{ url('/llms-full.txt') }}">
