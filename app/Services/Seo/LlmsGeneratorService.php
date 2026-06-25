@@ -35,6 +35,14 @@ class LlmsGeneratorService
         LlmsDocument::where('is_active', true)->each(
             fn (LlmsDocument $document) => $this->generateDocument($document)
         );
+
+        // Clear localized Redis cache so next request rebuilds from fresh files.
+        try {
+            foreach (config('app.supported_locales', ['vi', 'en']) as $locale) {
+                Cache::store('redis')->forget("llms_{$locale}");
+            }
+        } catch (\Throwable) {
+        }
     }
 
     /**
@@ -574,13 +582,13 @@ class LlmsGeneratorService
         $sections = [];
 
         // ── Business document (file-based, no llms_entries) ───────────────────
-        $businessSlug = $locale === 'vi' ? 'business' : 'business-' . $locale;
-        $businessDoc  = LlmsDocument::where('slug', $businessSlug)
+        $businessDoc = LlmsDocument::where('locale', $locale)
             ->where('is_active', true)
+            ->where('slug', 'like', 'business%')
             ->first();
 
         if ($businessDoc) {
-            $path = 'llms/' . $businessSlug . '.txt';
+            $path = 'llms/' . $businessDoc->slug . '.txt';
             if (! Storage::disk('public')->exists($path)) {
                 $this->generateBusinessDocument($businessDoc);
             }
