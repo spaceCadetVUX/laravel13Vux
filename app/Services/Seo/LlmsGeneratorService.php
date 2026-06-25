@@ -456,8 +456,9 @@ class LlmsGeneratorService
             $detailLines[] = ($vi ? '- Mã số thuế: ' : '- VAT Number: ') . $profile->vat_number;
         }
 
+        $extraSkip = ['faq', 'faq_en', 'favicon', 'og_image', 'description', 'description_en', 'description_vi'];
         foreach ((array) ($profile->extra ?? []) as $key => $value) {
-            if ($key === 'faq' || $key === 'faq_en') { continue; }
+            if (in_array($key, $extraSkip, true)) { continue; }
             // Skip locale-specific variants that don't match current locale
             if ($vi && str_ends_with($key, '_en')) { continue; }
             if (! $vi && str_ends_with($key, '_vi')) { continue; }
