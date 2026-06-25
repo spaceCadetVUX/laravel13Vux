@@ -15,6 +15,7 @@ class LlmsDocument extends Model
         'description',
         'scope',
         'model_type',
+        'locale',
         'entry_count',
         'last_generated_at',
         'is_active',
