@@ -571,21 +571,38 @@ class LlmsGeneratorService
      */
     private function buildLocaleContent(string $locale): string
     {
+        $sections = [];
+
+        // ── Business document (file-based, no llms_entries) ───────────────────
+        $businessSlug = $locale === 'vi' ? 'business' : 'business-' . $locale;
+        $businessDoc  = LlmsDocument::where('slug', $businessSlug)
+            ->where('is_active', true)
+            ->first();
+
+        if ($businessDoc) {
+            $path = 'llms/' . $businessSlug . '.txt';
+            if (! Storage::disk('public')->exists($path)) {
+                $this->generateBusinessDocument($businessDoc);
+            }
+            $sections[] = trim((string) Storage::disk('public')->get($path));
+        }
+
+        // ── Entry-based documents ─────────────────────────────────────────────
         $documents = LlmsDocument::where('locale', $locale)
             ->where('is_active', true)
-            ->where('slug', '!=', 'business')
+            ->where('slug', 'not like', 'business%')
             ->orderBy('slug')
             ->get();
 
-        if ($documents->isEmpty()) {
-            return '# LLMs — ' . strtoupper($locale) . PHP_EOL . PHP_EOL . '_No documents available._' . PHP_EOL;
-        }
-
-        $sections = $documents->map(function (LlmsDocument $document): string {
+        foreach ($documents as $document) {
             $entries = LlmsEntry::where('llms_document_id', $document->id)
                 ->where('is_active', true)
                 ->orderBy('title')
                 ->get();
+
+            if ($entries->isEmpty()) {
+                continue;
+            }
 
             $lines   = [];
             $lines[] = '# ' . ($document->title ?? $document->slug);
@@ -597,9 +614,7 @@ class LlmsGeneratorService
 
             $lines[] = '';
 
-            if ($entries->isEmpty()) {
-                $lines[] = '_No entries yet._';
-            } elseif ($document->scope === LlmsScope::Index) {
+            if ($document->scope === LlmsScope::Index) {
                 foreach ($entries as $entry) {
                     $lines[] = $this->buildIndexLine($entry);
                 }
@@ -608,8 +623,12 @@ class LlmsGeneratorService
                 $lines[] = implode("\n\n---\n\n", $blocks->toArray());
             }
 
-            return implode("\n", $lines);
-        })->all();
+            $sections[] = implode("\n", $lines);
+        }
+
+        if (empty($sections)) {
+            return '# LLMs — ' . strtoupper($locale) . PHP_EOL . PHP_EOL . '_No documents available._' . PHP_EOL;
+        }
 
         return implode("\n\n===\n\n", $sections) . PHP_EOL;
     }
