@@ -377,7 +377,9 @@ class LlmsGeneratorService
 
         $lines[] = '# ' . $profile->name;
 
-        $intro = $profile->description ?? $profile->tagline ?? '';
+        $intro = $vi
+            ? ($profile->description ?? $profile->tagline ?? '')
+            : ($profile->extra['description_en'] ?? $profile->extra['tagline_en'] ?? $profile->description ?? $profile->tagline ?? '');
         if (filled($intro)) {
             $lines[] = '';
             $lines[] = $intro;
@@ -455,10 +457,14 @@ class LlmsGeneratorService
         }
 
         foreach ((array) ($profile->extra ?? []) as $key => $value) {
-            if ($key === 'faq') { continue; }
-            $label = ucfirst($key);
+            if ($key === 'faq' || $key === 'faq_en') { continue; }
+            // Skip locale-specific variants that don't match current locale
+            if ($vi && str_ends_with($key, '_en')) { continue; }
+            if (! $vi && str_ends_with($key, '_vi')) { continue; }
+            // Strip _en suffix for display label in EN doc
+            $baseKey = (! $vi && str_ends_with($key, '_en')) ? substr($key, 0, -3) : $key;
+            $label   = ucfirst($baseKey);
             if (is_array($value)) {
-                // Serialize flat string arrays as comma-separated
                 $flat = array_filter($value, fn ($v) => ! is_array($v));
                 if (! empty($flat)) {
                     $detailLines[] = "- {$label}: " . implode(', ', $flat);
@@ -474,8 +480,10 @@ class LlmsGeneratorService
             $lines[] = '';
         }
 
-        // FAQ
-        $faq = (array) ($profile->extra['faq'] ?? []);
+        // FAQ — prefer locale-specific key, fall back to 'faq'
+        $faq = (array) ($vi
+            ? ($profile->extra['faq'] ?? [])
+            : ($profile->extra['faq_en'] ?? $profile->extra['faq'] ?? []));
         if (! empty($faq)) {
             $lines[] = $vi ? '## Câu hỏi thường gặp' : '## FAQ';
             foreach ($faq as $item) {
