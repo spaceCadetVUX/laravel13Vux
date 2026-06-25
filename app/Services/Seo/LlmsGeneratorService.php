@@ -579,23 +579,36 @@ class LlmsGeneratorService
      */
     private function buildLocaleContent(string $locale): string
     {
-        $sections = [];
+        $vi      = $locale === 'vi';
+        $profile = \App\Models\BusinessProfile::instance();
+        $base    = rtrim((string) config('app.url'), '/');
+        $lines   = [];
 
-        // ── Business document (file-based, no llms_entries) ───────────────────
-        $businessDoc = LlmsDocument::where('locale', $locale)
-            ->where('is_active', true)
-            ->where('slug', 'like', 'business%')
-            ->first();
+        // ── 1. H1 (required by spec) ──────────────────────────────────────────
+        $lines[] = '# ' . ($profile->name ?: config('app.name'));
+        $lines[] = '';
 
-        if ($businessDoc) {
-            $path = 'llms/' . $businessDoc->slug . '.txt';
-            if (! Storage::disk('public')->exists($path)) {
-                $this->generateBusinessDocument($businessDoc);
-            }
-            $sections[] = trim((string) Storage::disk('public')->get($path));
+        // ── 2. Blockquote summary ─────────────────────────────────────────────
+        $summary = $vi
+            ? ($profile->description ?? $profile->tagline ?? '')
+            : ($profile->extra['description_en'] ?? $profile->extra['tagline_en'] ?? '');
+        if (filled($summary)) {
+            $lines[] = '> ' . $summary;
+            $lines[] = '';
         }
 
-        // ── Entry-based documents ─────────────────────────────────────────────
+        // ── 3. Key Pages (always present — satisfies "must contain links") ────
+        $lines[] = $vi ? '## Trang chính' : '## Key Pages';
+        $lines[] = '';
+        try {
+            $lines[] = '- [' . ($vi ? 'Trang chủ' : 'Home') . '](' . route($locale . '.index') . ')';
+            $lines[] = '- [' . ($vi ? 'Bài viết' : 'Blog') . '](' . route($locale . '.blog.index') . ')';
+        } catch (\Throwable) {
+            $lines[] = '- [' . ($vi ? 'Trang chủ' : 'Home') . '](' . $base . '/' . $locale . '/)';
+        }
+        $lines[] = '';
+
+        // ── 4. Entry-based documents (products, blog posts, etc.) ────────────
         $documents = LlmsDocument::where('locale', $locale)
             ->where('is_active', true)
             ->where('slug', 'not like', 'business%')
@@ -612,14 +625,7 @@ class LlmsGeneratorService
                 continue;
             }
 
-            $lines   = [];
-            $lines[] = '# ' . ($document->title ?? $document->slug);
-
-            if (filled($document->description)) {
-                $lines[] = '';
-                $lines[] = $document->description;
-            }
-
+            $lines[] = '## ' . ($document->title ?? $document->slug);
             $lines[] = '';
 
             if ($document->scope === LlmsScope::Index) {
@@ -627,18 +633,41 @@ class LlmsGeneratorService
                     $lines[] = $this->buildIndexLine($entry);
                 }
             } else {
-                $blocks  = $entries->map(fn (LlmsEntry $entry) => $this->buildEntryBlock($entry));
-                $lines[] = implode("\n\n---\n\n", $blocks->toArray());
+                foreach ($entries as $entry) {
+                    $lines[] = $this->buildIndexLine($entry);
+                }
             }
 
-            $sections[] = implode("\n", $lines);
+            $lines[] = '';
         }
 
-        if (empty($sections)) {
-            return '# LLMs — ' . strtoupper($locale) . PHP_EOL . PHP_EOL . '_No documents available._' . PHP_EOL;
+        // ── 5. Optional — business profile details ────────────────────────────
+        $businessDoc = LlmsDocument::where('locale', $locale)
+            ->where('is_active', true)
+            ->where('slug', 'like', 'business%')
+            ->first();
+
+        if ($businessDoc) {
+            $path = 'llms/' . $businessDoc->slug . '.txt';
+            if (! Storage::disk('public')->exists($path)) {
+                $this->generateBusinessDocument($businessDoc);
+            }
+            $businessContent = trim((string) Storage::disk('public')->get($path));
+            // Strip the H1 line (already have our own H1) then append under Optional
+            $businessLines = explode("\n", $businessContent);
+            if (str_starts_with($businessLines[0] ?? '', '# ')) {
+                array_shift($businessLines);
+            }
+            $businessBody = trim(implode("\n", $businessLines));
+            if (filled($businessBody)) {
+                $lines[] = '## Optional';
+                $lines[] = '';
+                $lines[] = $businessBody;
+                $lines[] = '';
+            }
         }
 
-        return implode("\n\n===\n\n", $sections) . PHP_EOL;
+        return implode("\n", $lines);
     }
 
     /**
