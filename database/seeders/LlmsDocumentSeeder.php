@@ -68,7 +68,7 @@ class LlmsDocumentSeeder extends Seeder
                 $slug = "{$tpl['slug']}-{$locale}";
 
                 DB::table('llms_documents')->updateOrInsert(
-                    ['name' => $name, 'locale' => $locale],
+                    ['name' => $name],
                     [
                         'name'              => $name,
                         'slug'              => $slug,
