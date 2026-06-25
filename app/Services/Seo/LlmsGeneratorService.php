@@ -379,7 +379,7 @@ class LlmsGeneratorService
 
         $intro = $vi
             ? ($profile->description ?? $profile->tagline ?? '')
-            : ($profile->extra['description_en'] ?? $profile->extra['tagline_en'] ?? $profile->description ?? $profile->tagline ?? '');
+            : ($profile->extra['description_en'] ?? $profile->extra['tagline_en'] ?? '');
         if (filled($intro)) {
             $lines[] = '';
             $lines[] = $intro;
@@ -483,7 +483,7 @@ class LlmsGeneratorService
         // FAQ — prefer locale-specific key, fall back to 'faq'
         $faq = (array) ($vi
             ? ($profile->extra['faq'] ?? [])
-            : ($profile->extra['faq_en'] ?? $profile->extra['faq'] ?? []));
+            : ($profile->extra['faq_en'] ?? []));
         if (! empty($faq)) {
             $lines[] = $vi ? '## Câu hỏi thường gặp' : '## FAQ';
             foreach ($faq as $item) {
