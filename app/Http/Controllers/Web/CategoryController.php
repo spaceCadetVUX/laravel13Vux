@@ -18,9 +18,30 @@ use Tiptap\Nodes\Image as TiptapImage;
 
 class CategoryController extends Controller
 {
-    public function index(string $locale): \Illuminate\Http\Response
+    public function index(string $locale): View
     {
-        return response("Categories — {$locale}", 200);
+        view()->share('alternateUrls', [
+            'vi' => route('vi.product.category'),
+            'en' => route('en.product.category'),
+        ]);
+
+        $categories = CategoryTranslation::where('locale', $locale)
+            ->whereHas('category', fn ($q) => $q->where('is_active', true))
+            ->with(['category' => fn ($q) => $q->withCount([
+                'products as product_count' => fn ($q2) => $q2->where('is_active', true),
+            ])])
+            ->orderBy('name')
+            ->get()
+            ->filter(fn ($tr) => $tr->category !== null);
+
+        $fallbackTitle = $locale === 'vi' ? 'Danh mục sản phẩm' : 'Product Categories';
+        $fallbackDescription = $locale === 'vi'
+            ? 'Khám phá tất cả danh mục sản phẩm chiếu sáng thông minh Casambi.'
+            : 'Browse all Casambi smart lighting product categories.';
+
+        return view('pages.category.index', compact(
+            'locale', 'categories', 'fallbackTitle', 'fallbackDescription'
+        ));
     }
 
     public function show(string $locale, string $slug): View|RedirectResponse
