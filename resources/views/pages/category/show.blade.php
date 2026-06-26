@@ -111,13 +111,10 @@
                         'category' => $product->product->categories->first()?->translations->first()?->name
                             ?? $product->product->categories->first()?->name
                             ?? $product->product->brand?->name,
-                        'price'    => (($product->sale_price > 0 && $product->sale_price < $product->price)
-                            ? format_price($product->sale_price, $product->currency)
-                            : ($product->price > 0 ? format_price($product->price, $product->currency) : null)),
-                        'oldPrice' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price)
-                            ? format_price($product->price, $product->currency) : null,
-                        'onSale'   => ($product->sale_price > 0 && $product->sale_price < $product->price),
-                        'discount' => ($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? round((1 - $product->sale_price / $product->price) * 100) : null,
+                        'price'    => ($product->product->show_price ?? true) ? (($product->sale_price > 0 && $product->sale_price < $product->price) ? format_price($product->sale_price, $product->currency) : ($product->price > 0 ? format_price($product->price, $product->currency) : null)) : null,
+                        'oldPrice' => ($product->product->show_price ?? true) ? (($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? format_price($product->price, $product->currency) : null) : null,
+                        'onSale'   => ($product->product->show_price ?? true) && ($product->sale_price > 0 && $product->sale_price < $product->price),
+                        'discount' => ($product->product->show_price ?? true) ? (($product->sale_price > 0 && $product->price > 0 && $product->sale_price < $product->price) ? round((1 - $product->sale_price / $product->price) * 100) : null) : null,
                     ])
                 </div>
                 @endforeach

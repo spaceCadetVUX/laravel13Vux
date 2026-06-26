@@ -1665,6 +1665,13 @@ calibre-blog-grid .carousel-dot {
   white-space: nowrap;
 }
 
+.pc-contact-price {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-accent-dark);
+  letter-spacing: 0.02em;
+}
+
 .pc-old-price {
   font-size: 0.72rem;
   font-weight: 400;

@@ -32,6 +32,8 @@
                     @if($oldPrice)
                         <span class="pc-old-price">{{ $oldPrice }}</span>
                     @endif
+                @else
+                    <span class="pc-contact-price">{{ app()->getLocale() === 'vi' ? 'Liên hệ báo giá' : 'Contact for price' }}</span>
                 @endif
             </div>
             <button class="pc-cart-btn" onclick="event.preventDefault()" aria-label="Thêm vào giỏ">
