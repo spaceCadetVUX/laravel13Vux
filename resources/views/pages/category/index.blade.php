@@ -5,15 +5,24 @@
 
 @section('content')
 
-<section class="cat-index-hero">
-    <div class="container">
-        <p class="cat-index-hero__label">{{ $locale === 'vi' ? 'SẢN PHẨM' : 'PRODUCTS' }}</p>
-        <h1 class="cat-index-hero__title">{{ $fallbackTitle }}</h1>
-        @if($locale === 'vi')
-        <p class="cat-index-hero__sub">Khám phá toàn bộ danh mục thiết bị chiếu sáng thông minh Casambi.</p>
-        @else
-        <p class="cat-index-hero__sub">Browse the full range of Casambi smart lighting product categories.</p>
-        @endif
+<section class="shop-hero position-relative overflow-hidden">
+    <img src="{{ asset('images/casambi/bbc.jpg') }}"
+         alt="Casambi Smart Lighting"
+         class="shop-hero-bg w-100 h-100 position-absolute top-0 start-0 object-fit-cover"
+         style="z-index:0; filter:brightness(1);">
+    <div class="container position-relative h-100 d-flex align-items-center" style="z-index:2;">
+        <div>
+            <p class="font-xs text-white fw-bold letter-wide m-0" style="margin-bottom:6px !important;">CASAMBI LIGHTING CONTROL</p>
+            <p class="font-xs text-white-50 m-0" style="margin-bottom:20px !important;">
+                {{ $locale === 'vi' ? 'Bluetooth Mesh / Không Hub / Không Gateway' : 'Bluetooth Mesh / No Hub / No Gateway' }}
+            </p>
+            <h1 class="shop-hero-title text-white fw-black m-0" style="font-size:clamp(3rem,8vw,8rem); line-height:0.9; letter-spacing:0.05em; text-transform:uppercase;">
+                <span class="d-block" style="font-size:clamp(0.9rem,1.5vw,1.4rem); letter-spacing:0.2em; font-weight:500; margin-bottom:4px; opacity:0.75;">
+                    {{ $locale === 'vi' ? 'DANH MỤC SẢN PHẨM' : 'PRODUCT CATEGORIES' }}
+                </span>
+                <img src="{{ asset('images/casambi/casambiwhite.svg') }}" alt="Casambi" class="responsive-img" style="max-width:400px; width:80%; height:auto; padding-top:20px;">
+            </h1>
+        </div>
     </div>
 </section>
 
@@ -62,32 +71,6 @@
 
 @push('head')
 <style>
-.cat-index-hero {
-    padding: 64px 0 40px;
-    background: var(--color-off-white);
-    border-bottom: 1px solid var(--color-border);
-}
-.cat-index-hero__label {
-    font-size: 0.65rem;
-    font-weight: var(--fw-bold);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-accent-dark);
-    margin-bottom: 0.5rem;
-}
-.cat-index-hero__title {
-    font-size: clamp(1.8rem, 4vw, 3rem);
-    font-weight: var(--fw-black);
-    letter-spacing: -0.02em;
-    margin-bottom: 0.75rem;
-    color: var(--color-dark);
-}
-.cat-index-hero__sub {
-    color: var(--color-mid);
-    font-size: 0.95rem;
-    max-width: 520px;
-    margin: 0;
-}
 .cat-index-grid {
     padding: 56px 0 80px;
 }
