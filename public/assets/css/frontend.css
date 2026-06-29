@@ -2934,6 +2934,55 @@ calibre-blog-grid .carousel-dot {
   margin-bottom: 0.25rem;
 }
 
+/* Variant selector */
+.pd-opt-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-black);
+  margin-bottom: 6px;
+}
+.pd-opt-label .pd-opt-selected {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  margin-left: 4px;
+}
+.pd-opt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border: 1.5px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #111;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  line-height: 1.4;
+}
+.pd-opt-btn:hover:not(.disabled) {
+  border-color: #111;
+}
+.pd-opt-btn.active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+.pd-opt-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.pd-variant-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
 .pd-option-group { margin-bottom: 1.1rem; }
 
 .pd-option-label {

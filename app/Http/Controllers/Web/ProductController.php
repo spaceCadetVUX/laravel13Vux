@@ -159,6 +159,10 @@ class ProductController extends Controller
                 'product.manufacturer',
                 'product.attributes',
                 'product.videos',
+                'product.optionTypes.values',
+                'product.variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order'),
+                'product.variants.optionValues.optionType',
+                'product.variants.image',
             ])
             ->first();
 
@@ -233,10 +237,35 @@ class ProductController extends Controller
 
         view()->share('alternateUrls', $alternateUrls);
 
+        // Build variants JSON for frontend selector
+        $variantsData = $product->variants->map(fn ($v) => [
+            'id'         => $v->id,
+            'sku'        => $v->sku,
+            'price'      => (float) ($v->sale_price && $v->sale_price < $v->price ? $v->sale_price : $v->price),
+            'base_price' => (float) $v->price,
+            'sale_price' => $v->sale_price ? (float) $v->sale_price : null,
+            'stock'      => $v->stock_quantity,
+            'image_url'  => $v->image?->url,
+            'options'    => $v->optionValues->map(fn ($ov) => [
+                'type_id'  => $ov->option_type_id,
+                'value_id' => $ov->id,
+                'value'    => $ov->value,
+            ])->values()->all(),
+        ])->values()->all();
+
+        $optionTypesData = $product->optionTypes->map(fn ($t) => [
+            'id'     => $t->id,
+            'name'   => $t->name,
+            'values' => $t->values->map(fn ($v) => [
+                'id'    => $v->id,
+                'value' => $v->value,
+            ])->values()->all(),
+        ])->values()->all();
+
         return view('pages.product.show', compact(
             'product', 'translation', 'alternateUrls', 'seoMeta', 'jsonldSchemas', 'locale',
             'fallbackTitle', 'fallbackDescription', 'fallbackImage', 'ogType',
-            'relatedProducts'
+            'relatedProducts', 'variantsData', 'optionTypesData'
         ));
     }
 }

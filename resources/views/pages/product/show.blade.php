@@ -152,7 +152,7 @@
                     {{-- Meta row --}}
                     <div class="pd-meta-rows mb-3">
                         <div class="pd-meta-row">
-                            <span class="pd-meta-item">SKU: <strong>{{ $product->sku }}</strong></span>
+                            <span class="pd-meta-item">SKU: <strong id="pdMainSku">{{ $product->sku }}</strong></span>
                             @if($product->brand)
                                 <span class="pd-meta-item">{{ $isVi ? 'Hãng' : 'Brand' }}: <strong>{{ $product->brand->name }}</strong></span>
                             @endif
@@ -184,18 +184,45 @@
                             : $currencySymbol . number_format($v, 2, '.', ',');
                         $discountPct = $hasDiscount ? round((1 - $salePrice / $price) * 100) : 0;
                     @endphp
-                    <div class="pd-price-block mb-3">
+                    <div class="pd-price-block mb-3" id="pdPriceBlock">
                         @if($hasDiscount)
-                            <div class="pd-price-main">
-                                <span class="pd-price-sale">{{ $fmtPrice($salePrice) }}</span>
-                                <span class="pd-discount-pill">-{{ $discountPct }}%</span>
+                            <div class="pd-price-main" id="pdPriceMain">
+                                <span class="pd-price-sale" id="pdPriceSale">{{ $fmtPrice($salePrice) }}</span>
+                                <span class="pd-discount-pill" id="pdDiscountPill">-{{ $discountPct }}%</span>
                             </div>
-                            <div class="pd-price-orig">{{ $fmtPrice($price) }}</div>
+                            <div class="pd-price-orig" id="pdPriceOrig">{{ $fmtPrice($price) }}</div>
                         @else
-                            <div class="pd-price-main">
-                                <span class="pd-price-sale">{{ $fmtPrice($price) }}</span>
+                            <div class="pd-price-main" id="pdPriceMain">
+                                <span class="pd-price-sale" id="pdPriceSale">{{ $fmtPrice($price) }}</span>
                             </div>
                         @endif
+                    </div>
+                    @endif
+
+                    {{-- Variant selector --}}
+                    @if(count($optionTypesData) > 0)
+                    <div class="pd-variants mb-3" id="pdVariants">
+                        @foreach($optionTypesData as $optType)
+                        <div class="pd-opt-group mb-2">
+                            <div class="pd-opt-label">
+                                {{ $optType['name'] }}:
+                                <span class="pd-opt-selected" id="opt-sel-{{ $optType['id'] }}"></span>
+                            </div>
+                            <div class="pd-opt-btns d-flex flex-wrap gap-2 mt-1">
+                                @foreach($optType['values'] as $val)
+                                <button type="button"
+                                        class="pd-opt-btn"
+                                        data-type-id="{{ $optType['id'] }}"
+                                        data-value-id="{{ $val['id'] }}"
+                                        data-value="{{ $val['value'] }}">{{ $val['value'] }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endforeach
+
+                        <div class="pd-variant-meta mt-2" id="pdVariantMeta" style="display:none;">
+                            <span class="pd-meta-item">SKU: <strong id="pdVariantSku"></strong></span>
+                        </div>
                     </div>
                     @endif
 
@@ -487,5 +514,124 @@ function toggleFaq(index) {
         btn.setAttribute('aria-expanded', 'true');
     }
 }
+
+// ── Variant selector ─────────────────────────────────────────────────────────
+(function () {
+    const variants     = @json($variantsData);
+    const optionTypes  = @json($optionTypesData);
+    const showPrice    = {{ $product->show_price ? 'true' : 'false' }};
+    const currency     = '{{ $currencySymbol }}';
+
+    if (!optionTypes.length) return;
+
+    const selected = {}; // { typeId: valueId }
+
+    function fmt(v) {
+        if (currency === 'đ') return v.toLocaleString('vi-VN') + 'đ';
+        return currency + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function findVariant() {
+        return variants.find(v =>
+            optionTypes.every(t => {
+                const sel = selected[t.id];
+                if (!sel) return false;
+                return v.options.some(o => o.type_id === t.id && o.value_id === sel);
+            })
+        ) || null;
+    }
+
+    function updateDisplay(variant) {
+        // SKU
+        const skuEl = document.getElementById('pdMainSku');
+        if (skuEl && variant?.sku) skuEl.textContent = variant.sku;
+
+        // Price
+        if (showPrice && variant) {
+            const saleEl   = document.getElementById('pdPriceSale');
+            const origEl   = document.getElementById('pdPriceOrig');
+            const pillEl   = document.getElementById('pdDiscountPill');
+            const blockEl  = document.getElementById('pdPriceBlock');
+
+            if (blockEl) blockEl.style.display = '';
+
+            if (saleEl) {
+                saleEl.textContent = fmt(variant.price);
+            }
+
+            if (variant.sale_price && variant.sale_price < variant.base_price) {
+                const pct = Math.round((1 - variant.sale_price / variant.base_price) * 100);
+                if (origEl) { origEl.textContent = fmt(variant.base_price); origEl.style.display = ''; }
+                if (pillEl) { pillEl.textContent = '-' + pct + '%'; pillEl.style.display = ''; }
+            } else {
+                if (origEl) origEl.style.display = 'none';
+                if (pillEl) pillEl.style.display = 'none';
+            }
+        }
+
+        // Variant-specific image
+        if (variant?.image_url) {
+            const mainImg = document.getElementById('mainImage');
+            if (mainImg) mainImg.src = variant.image_url;
+        }
+
+        // Variant meta (SKU row under selectors)
+        const metaEl = document.getElementById('pdVariantMeta');
+        const varSkuEl = document.getElementById('pdVariantSku');
+        if (metaEl && varSkuEl && variant?.sku) {
+            varSkuEl.textContent = variant.sku;
+            metaEl.style.display = '';
+        }
+    }
+
+    function updateBtnStates() {
+        document.querySelectorAll('.pd-opt-btn').forEach(btn => {
+            const typeId  = parseInt(btn.dataset.typeId);
+            const valueId = parseInt(btn.dataset.valueId);
+
+            // Check if this option value is part of any variant that can still be reached
+            const reachable = variants.some(v =>
+                v.options.some(o => o.type_id === typeId && o.value_id === valueId) &&
+                optionTypes.every(t => {
+                    if (t.id === typeId) return true;
+                    const sel = selected[t.id];
+                    if (!sel) return true;
+                    return v.options.some(o => o.type_id === t.id && o.value_id === sel);
+                })
+            );
+
+            btn.classList.toggle('disabled', !reachable);
+            btn.classList.toggle('active', selected[typeId] === valueId);
+        });
+
+        // Update selected labels
+        optionTypes.forEach(t => {
+            const el = document.getElementById('opt-sel-' + t.id);
+            if (!el) return;
+            const selId = selected[t.id];
+            const val   = selId ? t.values.find(v => v.id === selId) : null;
+            el.textContent = val ? val.value : '';
+        });
+    }
+
+    // Auto-select first available combination
+    optionTypes.forEach(t => {
+        const first = t.values[0];
+        if (first) selected[t.id] = first.id;
+    });
+    updateBtnStates();
+    updateDisplay(findVariant());
+
+    document.querySelectorAll('.pd-opt-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const typeId  = parseInt(this.dataset.typeId);
+            const valueId = parseInt(this.dataset.valueId);
+            if (this.classList.contains('disabled')) return;
+            selected[typeId] = valueId;
+            updateBtnStates();
+            updateDisplay(findVariant());
+        });
+    });
+})();
 </script>
 @endpush
