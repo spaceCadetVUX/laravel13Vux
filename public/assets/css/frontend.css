@@ -2935,52 +2935,71 @@ calibre-blog-grid .carousel-dot {
 }
 
 /* Variant selector */
-.pd-opt-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-black);
-  margin-bottom: 6px;
+.pd-variants {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
 }
-.pd-opt-label .pd-opt-selected {
-  font-weight: 400;
+.pd-opt-group {}
+.pd-opt-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #111;
+  margin-bottom: 10px;
+}
+.pd-opt-sep {
+  color: #ccc;
+  font-weight: 300;
+}
+.pd-opt-selected {
+  font-weight: 500;
   text-transform: none;
   letter-spacing: 0;
-  color: var(--color-text-muted);
-  margin-left: 4px;
+  color: #555;
+  font-size: 0.8rem;
+}
+.pd-opt-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .pd-opt-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 16px;
-  border: 1.5px solid #ccc;
-  border-radius: 4px;
+  padding: 7px 20px;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
   background: #fff;
-  font-size: 0.82rem;
+  font-size: 0.83rem;
   font-weight: 500;
-  color: #111;
+  color: #333;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
   line-height: 1.4;
+  white-space: nowrap;
 }
-.pd-opt-btn:hover:not(.disabled) {
-  border-color: #111;
+.pd-opt-btn:hover:not(.disabled):not(.active) {
+  border-color: #888;
+  color: #111;
 }
 .pd-opt-btn.active {
   border-color: #111;
   background: #111;
   color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 .pd-opt-btn.disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   cursor: not-allowed;
   text-decoration: line-through;
-}
-.pd-variant-meta {
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
+  pointer-events: none;
 }
 
 .pd-option-group { margin-bottom: 1.1rem; }

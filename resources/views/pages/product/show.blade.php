@@ -201,14 +201,15 @@
 
                     {{-- Variant selector --}}
                     @if(count($optionTypesData) > 0)
-                    <div class="pd-variants mb-3" id="pdVariants">
+                    <div class="pd-variants" id="pdVariants">
                         @foreach($optionTypesData as $optType)
-                        <div class="pd-opt-group mb-2">
+                        <div class="pd-opt-group">
                             <div class="pd-opt-label">
-                                {{ $optType['name'] }}:
+                                <span class="pd-opt-label-key">{{ $optType['name'] }}</span>
+                                <span class="pd-opt-sep">·</span>
                                 <span class="pd-opt-selected" id="opt-sel-{{ $optType['id'] }}"></span>
                             </div>
-                            <div class="pd-opt-btns d-flex flex-wrap gap-2 mt-1">
+                            <div class="pd-opt-btns">
                                 @foreach($optType['values'] as $val)
                                 <button type="button"
                                         class="pd-opt-btn"
@@ -219,10 +220,6 @@
                             </div>
                         </div>
                         @endforeach
-
-                        <div class="pd-variant-meta mt-2" id="pdVariantMeta" style="display:none;">
-                            <span class="pd-meta-item">SKU: <strong id="pdVariantSku"></strong></span>
-                        </div>
                     </div>
                     @endif
 
@@ -573,14 +570,6 @@ function toggleFaq(index) {
         if (variant?.image_url) {
             const mainImg = document.getElementById('mainImage');
             if (mainImg) mainImg.src = variant.image_url;
-        }
-
-        // Variant meta (SKU row under selectors)
-        const metaEl = document.getElementById('pdVariantMeta');
-        const varSkuEl = document.getElementById('pdVariantSku');
-        if (metaEl && varSkuEl && variant?.sku) {
-            varSkuEl.textContent = variant.sku;
-            metaEl.style.display = '';
         }
     }
 
