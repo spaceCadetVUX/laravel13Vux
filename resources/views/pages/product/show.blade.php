@@ -35,7 +35,10 @@
         ['name' => __('common.products'), 'url' => $shopUrl],
     ];
     if ($firstCat) {
-        $breadcrumbItems[] = ['name' => $firstCat->name, 'url' => route($locale . '.category.show', $firstCat->slug)];
+        $firstCatTr   = $firstCat->translations->where('locale', $locale)->first();
+        $firstCatSlug = $firstCatTr?->slug ?? $firstCat->slug;
+        $firstCatName = $firstCatTr?->name ?? $firstCat->name;
+        $breadcrumbItems[] = ['name' => $firstCatName, 'url' => route($locale . '.category.show', $firstCatSlug)];
     }
     $breadcrumbItems[] = ['name' => $translation->name];
 
@@ -141,8 +144,13 @@
                     @if($product->categories->isNotEmpty())
                     <div class="pd-cat-tags mb-3">
                         @foreach($product->categories as $cat)
-                            <a href="{{ route($locale . '.category.show', $cat->slug) }}"
-                               class="pd-cat-tag text-decoration-none">{{ $cat->name }}</a>
+                            @php
+                                $catTr   = $cat->translations->where('locale', $locale)->first();
+                                $catSlug = $catTr?->slug ?? $cat->slug;
+                                $catName = $catTr?->name ?? $cat->name;
+                            @endphp
+                            <a href="{{ route($locale . '.category.show', $catSlug) }}"
+                               class="pd-cat-tag text-decoration-none">{{ $catName }}</a>
                         @endforeach
                     </div>
                     @endif

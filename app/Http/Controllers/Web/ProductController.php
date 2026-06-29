@@ -152,7 +152,7 @@ class ProductController extends Controller
         $translation = ProductTranslation::where('locale', $locale)
             ->where('slug', $slug)
             ->with([
-                'product.categories',
+                'product.categories.translations',
                 'product.thumbnail',
                 'product.images',
                 'product.brand',
